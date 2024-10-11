@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>University Recommendation System</title>
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+      body {
+        background-color: #f4f4f4;
+      }
+      h1 {
+        color: #2c3e50;
+        margin-bottom: 30px;
+      }
+      .loading {
+        display: none;
+        text-align: center;
+        margin-top: 10px;
+      }
+      .error-message {
+        color: red;
+        margin-top: 10px;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="text-center mt-5">Find University</h1>
+      <div class="row justify-content-center">
+        <div class="col-md-8">
+          <form
+            action="/recommend"
+            method="POST"
+            class="bg-white p-5 rounded shadow"
+          >
+            <div class="form-group">
+              <label for="location">Preferred Location:</label>
+              <select id="location" name="location" class="form-control">
+                <option value="">All States</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="course">Preferred Course:</label>
+              <select id="course" name="course" class="form-control">
+                <option value="">Select Course</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+              Find Universities
+            </button>
+          </form>
+          <div id="loading" class="loading">
+            <div class="spinner-border text-primary" role="status">
+              <span class="sr-only">Loading courses...</span>
+            </div>
+            <p>Loading courses...</p>
+          </div>
+          <div id="error-message" class="error-message"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        function showLoading() {
+          $("#loading").show();
+        }
+
+        function hideLoading() {
+          $("#loading").hide();
+        }
+
+        function showError(message) {
+          $("#error-message").text(message).show();
+        }
+
+        function hideError() {
+          $("#error-message").hide();
+        }
+
+        function loadCourses(state = "") {
+          showLoading();
+          hideError();
+          $.getJSON("/api/courses_by_state", { state: state }, function (data) {
+            $("#course")
+              .empty()
+              .append('<option value="">Select Course</option>');
+            if (data.length === 0) {
+              showError("No courses found for the selected state.");
+            } else {
+              $.each(data, function (key, value) {
+                $("#course").append(
+                  '<option value="' + value + '">' + value + "</option>"
+                );
+              });
+            }
+          })
+            .fail(function () {
+              showError("Failed to load courses. Please try again later.");
+            })
+            .always(function () {
+              hideLoading();
+            });
+        }
+
+        // Fetch locations
+        $.getJSON("/api/locations", function (data) {
+          if (data.length === 0) {
+            showError("No locations found.");
+          } else {
+            $.each(data, function (key, value) {
+              $("#location").append(
+                '<option value="' + value + '">' + value + "</option>"
+              );
+            });
+          }
+        }).fail(function () {
+          showError("Failed to load locations. Please try again later.");
+        });
+
+        // Load all courses on initial page load
+        loadCourses();
+
+        // Update course options when location changes
+        $("#location").change(function () {
+          var selectedState = $(this).val();
+          loadCourses(selectedState);
+        });
+      });
+    </script>
+  </body>
+</html>

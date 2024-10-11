@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Recommended Universities</title>
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+      body {
+        background-color: #f0f0f0;
+      }
+      .container {
+        background-color: white;
+        border-radius: 5px;
+        padding: 20px;
+        margin-top: 30px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #333;
+        margin-bottom: 20px;
+      }
+      .search-criteria {
+        margin-bottom: 20px;
+        font-style: italic;
+      }
+      .back-link {
+        display: inline-block;
+        margin-top: 20px;
+      }
+      .modal-body ul {
+        list-style-type: disc;
+        padding-left: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Recommended Universities</h1>
+      <div class="search-criteria">
+        {% if location or course %}
+        <p>
+          Search criteria: {% if location %}<strong>Location:</strong> {{
+          location }}{% endif %} {% if location and course %} | {% endif %} {%
+          if course %}<strong>Course:</strong> {{ course }}{% endif %}
+        </p>
+        {% endif %}
+      </div>
+
+      {% if recommendations %}
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead class="thead-dark">
+            <tr>
+              {% for column in recommendations[0].keys() %} {% if column not in
+              ['id', 'courses'] %}
+              <th>{{ column }}</th>
+              {% endif %} {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for uni in recommendations %}
+            <tr>
+              {% for key, value in uni.items() %} {% if key not in ['id',
+              'courses'] %} {% if key == 'University' %}
+              <td>
+                <a
+                  href="#"
+                  data-toggle="modal"
+                  data-target="#uniModal{{ uni['id'] }}"
+                  >{{ value }}</a
+                >
+              </td>
+              {% else %}
+              <td>{{ value }}</td>
+              {% endif %} {% endif %} {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modals for each university -->
+      {% for uni in recommendations %}
+      <div
+        class="modal fade"
+        id="uniModal{{ uni['id'] }}"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="uniModalLabel{{ uni['id'] }}"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog modal-lg" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="uniModalLabel{{ uni['id'] }}">
+                {{ uni['University'] }}
+              </h5>
+              <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <!-- Display university details -->
+              <ul class="list-group list-group-flush">
+                {% for key, value in uni.items() %} {% if key not in ['id',
+                'University', 'courses'] and value %}
+                <li class="list-group-item">
+                  <strong>{{ key }}:</strong> {{ value }}
+                </li>
+                {% endif %} {% endfor %}
+              </ul>
+              <!-- Display list of courses with safeguard -->
+              {% if uni['courses'] is defined and uni['courses'] is iterable and
+              uni['courses'] is not string %}
+              <h5 class="mt-4">Courses Offered:</h5>
+              <ul>
+                {% for course in uni['courses'] %}
+                <li>{{ course }}</li>
+                {% endfor %}
+              </ul>
+              {% elif uni['courses'] is defined %}
+              <p class="mt-4">
+                No courses information available for this university.
+              </p>
+              {% endif %}
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %} {% else %}
+      <p>No matching universities found.</p>
+      {% endif %}
+      <a href="/" class="btn btn-primary mt-3">Search Again</a>
+    </div>
+
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
