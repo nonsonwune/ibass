@@ -46,49 +46,75 @@ def get_locations():
         return jsonify([])
 
 
-# API route to get courses by state
-@app.route("/api/courses_by_state", methods=["GET"])
-def get_courses_by_state():
+# API route to get universities
+@app.route("/api/universities", methods=["GET"])
+def get_universities():
     state = request.args.get("state")
-    if "course_name" in courses_df.columns:
-        if state and "state" in universities_df.columns:
-            # Filter universities by state
-            state_universities = universities_df[universities_df["state"] == state][
-                "university_name"
-            ].tolist()
-            # Filter courses by the universities in the selected state
-            state_courses = (
-                courses_df[courses_df["university_name"].isin(state_universities)][
-                    "course_name"
-                ]
+    if "university_name" in universities_df.columns:
+        if state:
+            universities = (
+                universities_df[universities_df["state"] == state]["university_name"]
                 .dropna()
                 .unique()
                 .tolist()
             )
-            return jsonify(sorted(state_courses))
         else:
-            # Return all unique courses when no state is selected
-            all_courses = courses_df["course_name"].dropna().unique().tolist()
-            return jsonify(sorted(all_courses))
+            universities = universities_df["university_name"].dropna().unique().tolist()
+        return jsonify(sorted(universities))
+    else:
+        logging.error("University_name column not found in universities_df.")
+        return jsonify([])
+
+
+# API route to get courses
+@app.route("/api/courses", methods=["GET"])
+def get_courses():
+    state = request.args.get("state")
+    university = request.args.get("university")
+    if "course_name" in courses_df.columns:
+        filtered_courses = courses_df
+        if state:
+            state_universities = universities_df[universities_df["state"] == state][
+                "university_name"
+            ].tolist()
+            filtered_courses = filtered_courses[
+                filtered_courses["university_name"].isin(state_universities)
+            ]
+        if university:
+            filtered_courses = filtered_courses[
+                filtered_courses["university_name"] == university
+            ]
+        courses = filtered_courses["course_name"].dropna().unique().tolist()
+        return jsonify(sorted(courses))
     else:
         logging.error("Missing course_name column in courses_df")
         return jsonify([])
 
 
 # Recommendation route - process user input and give recommendations
-@app.route("/recommend", methods=["POST"])
+@app.route("/recommend", methods=["GET", "POST"])
 def recommend():
-    location = request.form.get("location")
-    preferred_course = request.form.get("course")
+    if request.method == "POST":
+        location = request.form.get("location")
+        preferred_university = request.form.get("university")
+        preferred_course = request.form.get("course")
+    else:  # GET request
+        location = request.args.get("location")
+        preferred_university = request.args.get("university")
+        preferred_course = request.args.get("course")
 
     logging.info(
-        f"Recommendation request - Location: {location}, Course: {preferred_course}"
+        f"Recommendation request - Location: {location}, University: {preferred_university}, Course: {preferred_course}"
     )
 
     filtered_universities = universities_df.copy()
     if location:
         filtered_universities = filtered_universities[
             filtered_universities["state"] == location
+        ]
+    if preferred_university:
+        filtered_universities = filtered_universities[
+            filtered_universities["university_name"] == preferred_university
         ]
 
     logging.info(f"Filtered universities: {filtered_universities.shape[0]}")
@@ -128,7 +154,6 @@ def recommend():
             "abbrv": "Abbreviation",
         }
 
-        # Ensure columns are in the DataFrame before selecting
         existing_columns = [col for col in display_columns if col in result.columns]
         result = result[existing_columns]
         result.rename(columns=rename_dict, inplace=True)
@@ -147,7 +172,6 @@ def recommend():
         result = result.reset_index(drop=True)
         result["id"] = result.index
 
-        # Create a mapping of university_name to list of courses
         courses_per_uni = (
             courses_df.groupby("university_name")["course_name"]
             .apply(lambda x: x.tolist() if not x.empty else [])
@@ -156,9 +180,7 @@ def recommend():
         logging.info(
             f"Courses per university created. Sample: {list(courses_per_uni.items())[:5]}"
         )
-        logging.debug(f"Full courses_per_uni dictionary: {courses_per_uni}")
 
-        # Map the courses to each university
         result["courses"] = result["University"].map(courses_per_uni)
 
         recommendations = result.to_dict(orient="records")
@@ -171,7 +193,59 @@ def recommend():
         "recommend.html",
         recommendations=recommendations,
         location=location,
+        university=preferred_university,
         course=preferred_course,
+    )
+
+
+# Search API endpoint
+@app.route("/api/search", methods=["GET"])
+def search():
+    query = request.args.get("q", "").lower()
+    if not query:
+        return jsonify({"universities": [], "courses": []})
+
+    try:
+        universities = (
+            universities_df[
+                universities_df["university_name"].str.lower().str.contains(query)
+            ]["university_name"]
+            .unique()
+            .tolist()
+        )
+
+        course_search_criteria = [
+            courses_df["course_name"].str.lower().str.contains(query),
+            courses_df["abbrv"].str.lower().str.contains(query),
+        ]
+
+        courses = (
+            courses_df[pd.concat(course_search_criteria, axis=1).any(axis=1)][
+                "course_name"
+            ]
+            .unique()
+            .tolist()
+        )
+
+        logging.info(
+            f"Search query '{query}' returned {len(universities)} universities and {len(courses)} courses."
+        )
+        return jsonify({"universities": universities, "courses": courses})
+    except Exception as e:
+        logging.error(f"Error in search function: {str(e)}")
+        return jsonify({"error": "An error occurred while processing your search"}), 500
+
+
+# Search results route
+@app.route("/search", methods=["GET"])
+def search_results():
+    query = request.args.get("q", "")
+    search_results = search().get_json()
+    return render_template(
+        "search_results.html",
+        query=query,
+        universities=search_results["universities"],
+        courses=search_results["courses"],
     )
 
 

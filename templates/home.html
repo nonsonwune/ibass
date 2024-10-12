@@ -3,35 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>University Recommendation System</title>
+    <title>Nigerian Degree Awarding INstitutions Recommendation System</title>
     <!-- Bootstrap CSS -->
     <link
       rel="stylesheet"
       href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
     />
-    <style>
-      body {
-        background-color: #f4f4f4;
-      }
-      h1 {
-        color: #2c3e50;
-        margin-bottom: 30px;
-      }
-      .loading {
-        display: none;
-        text-align: center;
-        margin-top: 10px;
-      }
-      .error-message {
-        color: red;
-        margin-top: 10px;
-        display: none;
-      }
-    </style>
   </head>
   <body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+      <!-- Navigation bar content remains the same -->
+    </nav>
+
     <div class="container">
-      <h1 class="text-center mt-5">Find University</h1>
+      <h1 class="text-center mt-5">Find Institution</h1>
       <div class="row justify-content-center">
         <div class="col-md-8">
           <form
@@ -48,18 +33,24 @@
             <div class="form-group">
               <label for="course">Preferred Course:</label>
               <select id="course" name="course" class="form-control">
-                <option value="">Select Course</option>
+                <option value="">All Courses</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="university">Preferred Institution:</label>
+              <select id="university" name="university" class="form-control">
+                <option value="">All Institutions</option>
               </select>
             </div>
             <button type="submit" class="btn btn-primary btn-block">
-              Find Universities
+              Find Institution
             </button>
           </form>
           <div id="loading" class="loading">
             <div class="spinner-border text-primary" role="status">
-              <span class="sr-only">Loading courses...</span>
+              <span class="sr-only">Loading...</span>
             </div>
-            <p>Loading courses...</p>
+            <p>Loading options...</p>
           </div>
           <div id="error-message" class="error-message"></div>
         </div>
@@ -87,53 +78,67 @@
           $("#error-message").hide();
         }
 
-        function loadCourses(state = "") {
+        function loadOptions(url, params, targetElement, defaultText) {
           showLoading();
           hideError();
-          $.getJSON("/api/courses_by_state", { state: state }, function (data) {
-            $("#course")
+          $.getJSON(url, params, function (data) {
+            targetElement
               .empty()
-              .append('<option value="">Select Course</option>');
+              .append(`<option value="">${defaultText}</option>`);
             if (data.length === 0) {
-              showError("No courses found for the selected state.");
+              showError("No options found for the selected criteria.");
             } else {
               $.each(data, function (key, value) {
-                $("#course").append(
+                targetElement.append(
                   '<option value="' + value + '">' + value + "</option>"
                 );
               });
             }
           })
             .fail(function () {
-              showError("Failed to load courses. Please try again later.");
+              showError("Failed to load options. Please try again later.");
             })
             .always(function () {
               hideLoading();
             });
         }
 
-        // Fetch locations
-        $.getJSON("/api/locations", function (data) {
-          if (data.length === 0) {
-            showError("No locations found.");
-          } else {
-            $.each(data, function (key, value) {
-              $("#location").append(
-                '<option value="' + value + '">' + value + "</option>"
-              );
-            });
-          }
-        }).fail(function () {
-          showError("Failed to load locations. Please try again later.");
-        });
+        // Load initial data
+        loadOptions("/api/locations", {}, $("#location"), "All States");
+        loadOptions(
+          "/api/universities",
+          {},
+          $("#university"),
+          "All Institutions"
+        );
+        loadOptions("/api/courses", {}, $("#course"), "All Courses");
 
-        // Load all courses on initial page load
-        loadCourses();
-
-        // Update course options when location changes
+        // Update options when selections change
         $("#location").change(function () {
           var selectedState = $(this).val();
-          loadCourses(selectedState);
+          loadOptions(
+            "/api/universities",
+            { state: selectedState },
+            $("#university"),
+            "All Institutions"
+          );
+          loadOptions(
+            "/api/courses",
+            { state: selectedState },
+            $("#course"),
+            "All Courses"
+          );
+        });
+
+        $("#university").change(function () {
+          var selectedState = $("#location").val();
+          var selectedUniversity = $(this).val();
+          loadOptions(
+            "/api/courses",
+            { state: selectedState, university: selectedUniversity },
+            $("#course"),
+            "All Courses"
+          );
         });
       });
     </script>

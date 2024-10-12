@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      Search Results - Degree Awarding Institution Recommendation System
+    </title>
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <style>
+      body {
+        background-color: #f4f4f4;
+      }
+      h1,
+      h2 {
+        color: #2c3e50;
+      }
+      .navbar {
+        background-color: #2c3e50;
+      }
+      .navbar-brand {
+        color: #ffffff;
+      }
+      .nav-link {
+        color: #ffffff;
+      }
+      .search-form {
+        display: flex;
+      }
+      .search-input {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      .search-button {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
+      .result-item {
+        background-color: #ffffff;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+      <a class="navbar-brand" href="/">Institution Finder</a>
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-toggle="collapse"
+        data-target="#navbarNav"
+        aria-controls="navbarNav"
+        aria-expanded="false"
+        aria-label="Toggle navigation"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="/">Home</a>
+          </li>
+        </ul>
+        <form
+          class="form-inline my-2 my-lg-0 search-form"
+          action="/search"
+          method="GET"
+        >
+          <input
+            class="form-control mr-sm-2 search-input"
+            type="search"
+            placeholder="Search universities or courses"
+            aria-label="Search"
+            name="q"
+            value="{{ query }}"
+          />
+          <button
+            class="btn btn-outline-light my-2 my-sm-0 search-button"
+            type="submit"
+          >
+            Search
+          </button>
+        </form>
+      </div>
+    </nav>
+
+    <div class="container mt-4">
+      <h1>Search Results for "{{ query }}"</h1>
+
+      <div class="row mt-4">
+        <div class="col-md-6">
+          <h2>Institutions</h2>
+          {% if universities %} {% for university in universities %}
+          <div class="result-item">
+            <h3>{{ university }}</h3>
+            <a
+              href="/recommend?university={{ university | urlencode }}"
+              class="btn btn-primary"
+              >View Details</a
+            >
+          </div>
+          {% endfor %} {% else %}
+          <p>No Institutions found matching your search.</p>
+          {% endif %}
+        </div>
+
+        <div class="col-md-6">
+          <h2>Courses</h2>
+          {% if courses %} {% for course in courses %}
+          <div class="result-item">
+            <h3>{{ course }}</h3>
+            <a
+              href="/recommend?course={{ course | urlencode }}"
+              class="btn btn-primary"
+              >View Institutions Offering This Course</a
+            >
+          </div>
+          {% endfor %} {% else %}
+          <p>No courses found matching your search.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <a href="/" class="btn btn-secondary mt-4">Back to Home</a>
+    </div>
+
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

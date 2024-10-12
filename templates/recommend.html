@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Recommended Universities</title>
+    <title>Recommended Institutions</title>
     <!-- Bootstrap CSS -->
     <link
       rel="stylesheet"
@@ -34,17 +34,81 @@
         list-style-type: disc;
         padding-left: 20px;
       }
+      .navbar {
+        background-color: #2c3e50;
+      }
+      .navbar-brand {
+        color: #ffffff;
+      }
+      .nav-link {
+        color: #ffffff;
+      }
+      .search-form {
+        display: flex;
+      }
+      .search-input {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      .search-button {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+      }
     </style>
   </head>
   <body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+      <a class="navbar-brand" href="/">Institution Finder</a>
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-toggle="collapse"
+        data-target="#navbarNav"
+        aria-controls="navbarNav"
+        aria-expanded="false"
+        aria-label="Toggle navigation"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mr-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="/">Home</a>
+          </li>
+        </ul>
+        <form
+          class="form-inline my-2 my-lg-0 search-form"
+          action="/search"
+          method="GET"
+        >
+          <input
+            class="form-control mr-sm-2 search-input"
+            type="search"
+            placeholder="Search universities or courses"
+            aria-label="Search"
+            name="q"
+          />
+          <button
+            class="btn btn-outline-light my-2 my-sm-0 search-button"
+            type="submit"
+          >
+            Search
+          </button>
+        </form>
+      </div>
+    </nav>
+
     <div class="container">
-      <h1>Recommended Universities</h1>
+      <h1>Recommended Institutions</h1>
       <div class="search-criteria">
-        {% if location or course %}
+        {% if location or university or course %}
         <p>
           Search criteria: {% if location %}<strong>Location:</strong> {{
-          location }}{% endif %} {% if location and course %} | {% endif %} {%
-          if course %}<strong>Course:</strong> {{ course }}{% endif %}
+          location }}{% endif %} {% if location and (university or course) %} |
+          {% endif %} {% if university %}<strong>University:</strong> {{
+          university }}{% endif %} {% if (location or university) and course %}
+          | {% endif %} {% if course %}<strong>Course:</strong> {{ course }}{%
+          endif %}
         </p>
         {% endif %}
       </div>
@@ -61,7 +125,9 @@
             </tr>
           </thead>
           <tbody>
-            {% for uni in recommendations %}
+            {% for uni in
+            recommendations|sort(attribute='State')|sort(attribute='University'
+            if 'University' in recommendations[0] else 'Course') %}
             <tr>
               {% for key, value in uni.items() %} {% if key not in ['id',
               'courses'] %} {% if key == 'University' %}
@@ -96,7 +162,8 @@
           <div class="modal-content">
             <div class="modal-header">
               <h5 class="modal-title" id="uniModalLabel{{ uni['id'] }}">
-                {{ uni['University'] }}
+                {{ uni['University'] if 'University' in uni else uni['Course']
+                }}
               </h5>
               <button
                 type="button"
@@ -122,13 +189,13 @@
               uni['courses'] is not string %}
               <h5 class="mt-4">Courses Offered:</h5>
               <ul>
-                {% for course in uni['courses'] %}
+                {% for course in uni['courses']|sort %}
                 <li>{{ course }}</li>
                 {% endfor %}
               </ul>
               {% elif uni['courses'] is defined %}
               <p class="mt-4">
-                No courses information available for this university.
+                No courses information available for this institution.
               </p>
               {% endif %}
             </div>
@@ -145,7 +212,7 @@
         </div>
       </div>
       {% endfor %} {% else %}
-      <p>No matching universities found.</p>
+      <p>No matching institution found.</p>
       {% endif %}
       <a href="/" class="btn btn-primary mt-3">Search Again</a>
     </div>
@@ -153,5 +220,22 @@
     <!-- jQuery and Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Modal Initialization Script -->
+    <script>
+      $(document).ready(function () {
+        // Initialize all modals
+        $(".modal").modal({
+          show: false,
+        });
+
+        // Handle modal triggers
+        $('[data-toggle="modal"]').click(function (e) {
+          e.preventDefault();
+          var targetModal = $(this).data("target");
+          $(targetModal).modal("show");
+        });
+      });
+    </script>
   </body>
 </html>
