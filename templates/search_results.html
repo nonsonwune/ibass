@@ -3,141 +3,365 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>
-      Search Results - Degree Awarding Institution Recommendation System
-    </title>
-    <!-- Bootstrap CSS -->
+    <title>Search Results - Nigerian Institutions Finder</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
-      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
     <style>
       body {
-        background-color: #f4f4f4;
-        padding-top: 56px; /* Add padding to account for the fixed navbar */
-      }
-      h1,
-      h2 {
-        color: #2c3e50;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f8f9fa;
       }
       .navbar {
         background-color: #2c3e50;
-        position: fixed; /* Make the navbar fixed */
-        top: 0; /* Stick it to the top */
-        width: 100%; /* Full width */
-        z-index: 1000; /* Ensure it stays on top of other content */
       }
-      .navbar-brand {
-        color: #ffffff;
+      .result-card {
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
       }
-      .nav-link {
-        color: #ffffff;
+      .result-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       }
-      .search-form {
-        display: flex;
-      }
-      .search-input {
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-      .search-button {
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
-      }
-      .result-item {
-        background-color: #ffffff;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 15px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      .footer {
+        background-color: #2c3e50;
+        color: white;
       }
     </style>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-      <a class="navbar-brand" href="/">Institution Finder</a>
-      <button
-        class="navbar-toggler"
-        type="button"
-        data-toggle="collapse"
-        data-target="#navbarNav"
-        aria-controls="navbarNav"
-        aria-expanded="false"
-        aria-label="Toggle navigation"
-      >
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav mr-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="/">Home</a>
-          </li>
-        </ul>
-        <form
-          class="form-inline my-2 my-lg-0 search-form"
-          action="/search"
-          method="GET"
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+      <div class="container">
+        <a class="navbar-brand" href="/">Nigerian Institutions Finder</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
         >
-          <input
-            class="form-control mr-sm-2 search-input"
-            type="search"
-            placeholder="Search universities or courses"
-            aria-label="Search"
-            name="q"
-            value="{{ query }}"
-          />
-          <button
-            class="btn btn-outline-light my-2 my-sm-0 search-button"
-            type="submit"
-          >
-            Search
-          </button>
-        </form>
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/about">About</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/contact">Contact</a>
+            </li>
+          </ul>
+          <form class="d-flex" id="search-form">
+            <input
+              class="form-control me-2"
+              type="search"
+              placeholder="Search universities or courses"
+              id="search-input"
+              value="{{ query }}"
+              aria-label="Search"
+            />
+            <button class="btn btn-outline-light" type="submit">Search</button>
+          </form>
+        </div>
       </div>
     </nav>
 
-    <div class="container mt-4">
-      <h1>Search Results for "{{ query }}"</h1>
+    <div class="container mt-5">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/">Home</a></li>
+          <li class="breadcrumb-item active" aria-current="page">
+            Search Results
+          </li>
+        </ol>
+      </nav>
 
-      <div class="row mt-4">
-        <div class="col-md-6">
-          <h2>Institutions</h2>
-          {% if universities %} {% for university in universities %}
-          <div class="result-item">
-            <h3>{{ university }}</h3>
-            <a
-              href="/recommend?university={{ university | urlencode }}"
-              class="btn btn-primary"
-              >View Details</a
-            >
-          </div>
-          {% endfor %} {% else %}
-          <p>No Institutions found matching your search.</p>
-          {% endif %}
+      <h1 class="mb-4">Search Results for "<span id="search-query"></span>"</h1>
+
+      <div class="row">
+        <div class="col-md-3 mb-4">
+          <h4>Filters</h4>
+          <form id="filter-form">
+            <div class="mb-3">
+              <label for="state-filter" class="form-label">State</label>
+              <select id="state-filter" class="form-select">
+                <option value="">All States</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="program-type-filter" class="form-label"
+                >Program Type</label
+              >
+              <select id="program-type-filter" class="form-select">
+                <option value="">All Types</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+          </form>
         </div>
-
-        <div class="col-md-6">
-          <h2>Courses</h2>
-          {% if courses %} {% for course in courses %}
-          <div class="result-item">
-            <h3>{{ course }}</h3>
-            <a
-              href="/recommend?course={{ course | urlencode }}"
-              class="btn btn-primary"
-              >View Institutions Offering This Course</a
+        <div class="col-md-9">
+          <ul class="nav nav-tabs mb-4" id="resultTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link active"
+                id="universities-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#universities"
+                type="button"
+                role="tab"
+              >
+                Universities
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link"
+                id="courses-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#courses"
+                type="button"
+                role="tab"
+              >
+                Courses
+              </button>
+            </li>
+          </ul>
+          <div class="tab-content" id="resultTabsContent">
+            <div
+              class="tab-pane fade show active"
+              id="universities"
+              role="tabpanel"
             >
+              <div
+                id="universities-results"
+                class="row row-cols-1 row-cols-md-2 g-4"
+              >
+                <!-- Universities results will be dynamically inserted here -->
+              </div>
+            </div>
+            <div class="tab-pane fade" id="courses" role="tabpanel">
+              <div
+                id="courses-results"
+                class="row row-cols-1 row-cols-md-2 g-4"
+              >
+                <!-- Courses results will be dynamically inserted here -->
+              </div>
+            </div>
           </div>
-          {% endfor %} {% else %}
-          <p>No courses found matching your search.</p>
-          {% endif %}
+          <div
+            id="no-results"
+            class="alert alert-info mt-4"
+            style="display: none"
+          >
+            No results found. Please try a different search term.
+          </div>
         </div>
       </div>
-
-      <a href="/" class="btn btn-secondary mt-4">Back to Home</a>
     </div>
 
-    <!-- jQuery and Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <footer class="footer py-4 mt-5">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6">
+            <h5>Nigerian Institutions Finder</h5>
+            <p>
+              Helping students find their perfect educational path in Nigeria.
+            </p>
+          </div>
+          <div class="col-md-3">
+            <h5>Quick Links</h5>
+            <ul class="list-unstyled">
+              <li><a href="/" class="text-white">Home</a></li>
+              <li><a href="/about" class="text-white">About</a></li>
+              <li><a href="/contact" class="text-white">Contact</a></li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <h5>Follow Us</h5>
+            <a href="#" class="text-white me-2"
+              ><i class="fab fa-facebook-f"></i
+            ></a>
+            <a href="#" class="text-white me-2"
+              ><i class="fab fa-twitter"></i
+            ></a>
+            <a href="#" class="text-white me-2"
+              ><i class="fab fa-instagram"></i
+            ></a>
+          </div>
+        </div>
+        <hr class="mt-4 mb-3" />
+        <p class="text-center mb-0">
+          &copy; 2023 Nigerian Institutions Finder. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      $(document).ready(function () {
+        const searchInput = $("#search-input");
+        const searchQuery = $("#search-query");
+        const universitiesResults = $("#universities-results");
+        const coursesResults = $("#courses-results");
+        const noResults = $("#no-results");
+        const stateFilter = $("#state-filter");
+        const programTypeFilter = $("#program-type-filter");
+
+        function performSearch(query) {
+          $.ajax({
+            url: "/api/search",
+            method: "GET",
+            data: { q: query },
+            success: function (data) {
+              updateResults(data);
+              updateFilters(data);
+            },
+            error: function () {
+              alert("An error occurred while searching. Please try again.");
+            },
+          });
+        }
+
+        function updateResults(data) {
+          universitiesResults.empty();
+          coursesResults.empty();
+          noResults.hide();
+
+          if (data.universities.length === 0 && data.courses.length === 0) {
+            noResults.show();
+          } else {
+            data.universities.forEach(function (uni) {
+              universitiesResults.append(`
+                            <div class="col">
+                                <div class="card h-100 result-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${
+                                          uni.university_name
+                                        }</h5>
+                                        <p class="card-text">
+                                            <strong>State:</strong> ${
+                                              uni.state
+                                            }<br>
+                                            <strong>Program Type:</strong> ${
+                                              uni.program_type
+                                            }
+                                        </p>
+                                        <a href="/recommend?university=${encodeURIComponent(
+                                          uni.university_name
+                                        )}" class="btn btn-primary">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+            });
+
+            data.courses.forEach(function (course) {
+              coursesResults.append(`
+                            <div class="col">
+                                <div class="card h-100 result-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${course.course_name}</h5>
+                                        <p class="card-text">
+                                            <strong>University:</strong> ${course.university_name}<br>
+                                            <strong>Abbreviation:</strong> ${course.abbrv}
+                                        </p>
+                                        <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#courseModal${course.id}">View Details</a>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+
+              $("body").append(`
+                            <div class="modal fade" id="courseModal${course.id}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-lg">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">${course.course_name}</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p><strong>University:</strong> ${course.university_name}</p>
+                                            <p><strong>Abbreviation:</strong> ${course.abbrv}</p>
+                                            <p><strong>Direct Entry Requirements:</strong> ${course.direct_entry_requirements}</p>
+                                            <p><strong>UTME Requirements:</strong> ${course.utme_requirements}</p>
+                                            <p><strong>Subjects:</strong> ${course.subjects}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+            });
+          }
+        }
+
+        function updateFilters(data) {
+          const states = [
+            ...new Set(data.universities.map((uni) => uni.state)),
+          ];
+          const programTypes = [
+            ...new Set(data.universities.map((uni) => uni.program_type)),
+          ];
+
+          stateFilter.empty().append('<option value="">All States</option>');
+          programTypeFilter
+            .empty()
+            .append('<option value="">All Types</option>');
+
+          states.forEach((state) => {
+            stateFilter.append(`<option value="${state}">${state}</option>`);
+          });
+
+          programTypes.forEach((type) => {
+            programTypeFilter.append(
+              `<option value="${type}">${type}</option>`
+            );
+          });
+        }
+
+        $("#search-form").on("submit", function (e) {
+          e.preventDefault();
+          const query = searchInput.val().trim();
+          if (query) {
+            searchQuery.text(query);
+            performSearch(query);
+          }
+        });
+
+        $("#filter-form").on("submit", function (e) {
+          e.preventDefault();
+          const query = searchInput.val().trim();
+          const state = stateFilter.val();
+          const programType = programTypeFilter.val();
+
+          if (query) {
+            $.ajax({
+              url: "/api/search",
+              method: "GET",
+              data: { q: query, state: state, program_type: programType },
+              success: function (data) {
+                updateResults(data);
+              },
+              error: function () {
+                alert("An error occurred while filtering. Please try again.");
+              },
+            });
+          }
+        });
+
+        // Initial search on page load
+        const initialQuery = searchInput.val().trim();
+        if (initialQuery) {
+          searchQuery.text(initialQuery);
+          performSearch(initialQuery);
+        }
+      });
+    </script>
   </body>
 </html>

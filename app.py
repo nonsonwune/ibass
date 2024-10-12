@@ -1,8 +1,11 @@
+# app.py
+
 # Import required libraries
 from flask import Flask, request, render_template, jsonify
 import pandas as pd
 import os
 import logging
+import math
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -172,14 +175,23 @@ def recommend():
         result = result.reset_index(drop=True)
         result["id"] = result.index
 
+        # Refactored: Ensure all courses are lists and handle NaN values
         courses_per_uni = (
             courses_df.groupby("university_name")["course_name"]
-            .apply(lambda x: x.tolist() if not x.empty else [])
+            .apply(lambda x: x.dropna().tolist() if isinstance(x, pd.Series) else [])
             .to_dict()
         )
         logging.info(
             f"Courses per university created. Sample: {list(courses_per_uni.items())[:5]}"
         )
+
+        # Replace any non-list entries with empty lists to prevent TypeError
+        for uni in result["University"]:
+            if uni in courses_per_uni:
+                if not isinstance(courses_per_uni[uni], list):
+                    courses_per_uni[uni] = []
+            else:
+                courses_per_uni[uni] = []
 
         result["courses"] = result["University"].map(courses_per_uni)
 
@@ -219,12 +231,13 @@ def search():
             courses_df["abbrv"].str.lower().str.contains(query),
         ]
 
+        # Combine search criteria using bitwise OR
+        combined_criteria = course_search_criteria[0]
+        for criteria in course_search_criteria[1:]:
+            combined_criteria = combined_criteria | criteria
+
         courses = (
-            courses_df[pd.concat(course_search_criteria, axis=1).any(axis=1)][
-                "course_name"
-            ]
-            .unique()
-            .tolist()
+            courses_df[combined_criteria]["course_name"].dropna().unique().tolist()
         )
 
         logging.info(
@@ -244,8 +257,8 @@ def search_results():
     return render_template(
         "search_results.html",
         query=query,
-        universities=search_results["universities"],
-        courses=search_results["courses"],
+        universities=search_results.get("universities", []),
+        courses=search_results.get("courses", []),
     )
 
 

@@ -1,186 +1,177 @@
+<!-- templates/recommend.html -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Recommended Institutions</title>
-    <!-- Bootstrap CSS -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      Recommended Institutions - Degree Awarding Institution Recommendation
+      System
+    </title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
-      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
     <style>
       body {
-        background-color: #f0f0f0;
-        padding-top: 56px; /* Add padding to the body to prevent content from being hidden behind the fixed navbar */
-      }
-      .container {
-        background-color: white;
-        border-radius: 5px;
-        padding: 20px;
-        margin-top: 30px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      h1 {
-        color: #333;
-        margin-bottom: 20px;
-      }
-      .search-criteria {
-        margin-bottom: 20px;
-        font-style: italic;
-      }
-      .back-link {
-        display: inline-block;
-        margin-top: 20px;
-      }
-      .modal-body ul {
-        list-style-type: disc;
-        padding-left: 20px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f8f9fa;
       }
       .navbar {
         background-color: #2c3e50;
-        position: fixed; /* Make the navbar fixed */
-        top: 0; /* Stick it to the top */
-        width: 100%; /* Full width */
-        z-index: 1000; /* Ensure it stays on top of other content */
       }
-      .navbar-brand {
-        color: #ffffff;
+      .recommendation-card {
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
       }
-      .nav-link {
-        color: #ffffff;
+      .recommendation-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       }
-      .search-form {
-        display: flex;
-      }
-      .search-input {
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-      .search-button {
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
+      .footer {
+        background-color: #2c3e50;
+        color: white;
       }
     </style>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-      <a class="navbar-brand" href="/">Institution Finder</a>
-      <button
-        class="navbar-toggler"
-        type="button"
-        data-toggle="collapse"
-        data-target="#navbarNav"
-        aria-controls="navbarNav"
-        aria-expanded="false"
-        aria-label="Toggle navigation"
-      >
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav mr-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="/">Home</a>
-          </li>
-        </ul>
-        <form
-          class="form-inline my-2 my-lg-0 search-form"
-          action="/search"
-          method="GET"
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+      <div class="container">
+        <a class="navbar-brand" href="/">Institution Finder</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
         >
-          <input
-            class="form-control mr-sm-2 search-input"
-            type="search"
-            placeholder="Search universities or courses"
-            aria-label="Search"
-            name="q"
-          />
-          <button
-            class="btn btn-outline-light my-2 my-sm-0 search-button"
-            type="submit"
-          >
-            Search
-          </button>
-        </form>
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/about">About</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/contact">Contact</a>
+            </li>
+          </ul>
+          <form class="d-flex" action="/search" method="GET">
+            <input
+              class="form-control me-2"
+              type="search"
+              placeholder="Search universities or courses"
+              name="q"
+              aria-label="Search"
+            />
+            <button class="btn btn-outline-light" type="submit">Search</button>
+          </form>
+        </div>
       </div>
     </nav>
 
-    <div class="container">
-      <h1>Recommended Institutions</h1>
-      <div class="search-criteria">
+    <div class="container mt-5">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/">Home</a></li>
+          <li class="breadcrumb-item active" aria-current="page">
+            Recommended Institutions
+          </li>
+        </ol>
+      </nav>
+
+      <h1 class="mb-4">Recommended Institutions</h1>
+
+      <div class="search-criteria mb-4">
         {% if location or university or course %}
         <p>
-          Search criteria: {% if location %}<strong>Location:</strong> {{
-          location }}{% endif %} {% if location and (university or course) %} |
-          {% endif %} {% if university %}<strong>University:</strong> {{
-          university }}{% endif %} {% if (location or university) and course %}
-          | {% endif %} {% if course %}<strong>Course:</strong> {{ course }}{%
-          endif %}
+          Search criteria: {% if location %}
+          <span class="badge bg-primary">Location: {{ location }}</span>
+          {% endif %} {% if university %}
+          <span class="badge bg-primary">University: {{ university }}</span>
+          {% endif %} {% if course %}
+          <span class="badge bg-primary">Course: {{ course }}</span>
+          {% endif %}
         </p>
         {% endif %}
       </div>
 
       {% if recommendations %}
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead class="thead-dark">
-            <tr>
-              {% for column in recommendations[0].keys() %} {% if column not in
-              ['id', 'courses'] %}
-              <th>{{ column }}</th>
-              {% endif %} {% endfor %}
-            </tr>
-          </thead>
-          <tbody>
-            {% for uni in
-            recommendations|sort(attribute='State')|sort(attribute='University'
-            if 'University' in recommendations[0] else 'Course') %}
-            <tr>
-              {% for key, value in uni.items() %} {% if key not in ['id',
-              'courses'] %} {% if key == 'University' %}
-              <td>
-                <a
-                  href="#"
-                  data-toggle="modal"
-                  data-target="#uniModal{{ uni['id'] }}"
-                  >{{ value }}</a
-                >
-              </td>
-              {% else %}
-              <td>{{ value }}</td>
-              {% endif %} {% endif %} {% endfor %}
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {% for uni in recommendations %}
+        <div class="col">
+          <div class="card h-100 recommendation-card">
+            <div class="card-body">
+              <h3 class="card-title">{{ uni.University }}</h3>
+              <h6 class="card-subtitle mb-2 text-muted">{{ uni.State }}</h6>
+              <p class="card-text">
+                <strong>Program Type:</strong> {{ uni['Program Type'] }}<br />
+                {% if uni.Course %}
+                <strong>Course:</strong> {{ uni.Course }}<br />
+                {% endif %}
+              </p>
+            </div>
+            <ul class="list-group list-group-flush">
+              {% if uni['UTME Requirements'] %}
+              <li class="list-group-item">
+                <strong>UTME Requirements:</strong> {{ uni['UTME Requirements']
+                }}
+              </li>
+              {% endif %} {% if uni['UTME Subjects'] %}
+              <li class="list-group-item">
+                <strong>UTME Subjects:</strong> {{ uni['UTME Subjects'] }}
+              </li>
+              {% endif %} {% if uni['Direct Entry Requirements'] %}
+              <li class="list-group-item">
+                <strong>Direct Entry Requirements:</strong> {{ uni['Direct Entry
+                Requirements'] }}
+              </li>
+              {% endif %}
+            </ul>
+            <div class="card-footer">
+              <button
+                class="btn btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#uniModal{{ uni.id }}"
+              >
+                View Details
+              </button>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
       </div>
-
-      <!-- Modals for each university -->
-      {% for uni in recommendations %}
+      {% else %}
+      <div class="alert alert-info" role="alert">
+        No matching institutions found. Please try different search criteria.
+      </div>
+      {% endif %} {% for uni in recommendations %}
       <div
         class="modal fade"
-        id="uniModal{{ uni['id'] }}"
+        id="uniModal{{ uni.id }}"
         tabindex="-1"
-        role="dialog"
-        aria-labelledby="uniModalLabel{{ uni['id'] }}"
+        aria-labelledby="uniModalLabel{{ uni.id }}"
         aria-hidden="true"
       >
-        <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-dialog modal-lg">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title" id="uniModalLabel{{ uni['id'] }}">
-                {{ uni['University'] if 'University' in uni else uni['Course']
-                }}
+              <h5 class="modal-title" id="uniModalLabel{{ uni.id }}">
+                {{ uni.University }}
               </h5>
               <button
                 type="button"
-                class="close"
-                data-dismiss="modal"
+                class="btn-close"
+                data-bs-dismiss="modal"
                 aria-label="Close"
-              >
-                <span aria-hidden="true">&times;</span>
-              </button>
+              ></button>
             </div>
             <div class="modal-body">
-              <!-- Display university details -->
               <ul class="list-group list-group-flush">
                 {% for key, value in uni.items() %} {% if key not in ['id',
                 'University', 'courses'] and value %}
@@ -189,26 +180,22 @@
                 </li>
                 {% endif %} {% endfor %}
               </ul>
-              <!-- Display list of courses with safeguard -->
-              {% if uni['courses'] is defined and uni['courses'] is iterable and
-              uni['courses'] is not string %}
+              {% if uni.courses %}
               <h5 class="mt-4">Courses Offered:</h5>
               <ul>
-                {% for course in uni['courses']|sort %}
+                {% for course in uni.courses|sort %}
                 <li>{{ course }}</li>
                 {% endfor %}
               </ul>
-              {% elif uni['courses'] is defined %}
-              <p class="mt-4">
-                No courses information available for this institution.
-              </p>
+              {% else %}
+              <p>No courses available for this institution.</p>
               {% endif %}
             </div>
             <div class="modal-footer">
               <button
                 type="button"
                 class="btn btn-secondary"
-                data-dismiss="modal"
+                data-bs-dismiss="modal"
               >
                 Close
               </button>
@@ -216,31 +203,48 @@
           </div>
         </div>
       </div>
-      {% endfor %} {% else %}
-      <p>No matching institution found.</p>
-      {% endif %}
-      <a href="/" class="btn btn-primary mt-3">Search Again</a>
+      {% endfor %}
+
+      <a href="/" class="btn btn-primary mt-4">New Search</a>
     </div>
 
-    <!-- jQuery and Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <footer class="footer py-4 mt-5">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6">
+            <h5>Institution Finder</h5>
+            <p>
+              Helping students find their perfect educational path in Nigeria.
+            </p>
+          </div>
+          <div class="col-md-3">
+            <h5>Quick Links</h5>
+            <ul class="list-unstyled">
+              <li><a href="/" class="text-white">Home</a></li>
+              <li><a href="/about" class="text-white">About</a></li>
+              <li><a href="/contact" class="text-white">Contact</a></li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <h5>Follow Us</h5>
+            <a href="#" class="text-white me-2"
+              ><i class="fab fa-facebook-f"></i
+            ></a>
+            <a href="#" class="text-white me-2"
+              ><i class="fab fa-twitter"></i
+            ></a>
+            <a href="#" class="text-white me-2"
+              ><i class="fab fa-instagram"></i
+            ></a>
+          </div>
+        </div>
+        <hr class="mt-4 mb-3" />
+        <p class="text-center mb-0">
+          &copy; 2023 Institution Finder. All rights reserved.
+        </p>
+      </div>
+    </footer>
 
-    <!-- Modal Initialization Script -->
-    <script>
-      $(document).ready(function () {
-        // Initialize all modals
-        $(".modal").modal({
-          show: false,
-        });
-
-        // Handle modal triggers
-        $('[data-toggle="modal"]').click(function (e) {
-          e.preventDefault();
-          var targetModal = $(this).data("target");
-          $(targetModal).modal("show");
-        });
-      });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>

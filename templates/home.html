@@ -3,188 +3,217 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nigerian Degree Awarding INstitutions Recommendation System</title>
-    <!-- Bootstrap CSS -->
+    <title>Nigerian Degree Awarding Institutions Recommendation System</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
-      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
     />
     <style>
       body {
-        background-color: #f0f0f0;
-      }
-      .container {
-        background-color: white;
-        border-radius: 5px;
-        padding: 20px;
-        margin-top: 30px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      h1 {
-        color: #333;
-        margin-bottom: 20px;
-      }
-      .search-criteria {
-        margin-bottom: 20px;
-        font-style: italic;
-      }
-      .back-link {
-        display: inline-block;
-        margin-top: 20px;
-      }
-      .modal-body ul {
-        list-style-type: disc;
-        padding-left: 20px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f8f9fa;
       }
       .navbar {
         background-color: #2c3e50;
       }
-      .navbar-brand {
-        color: #ffffff;
+      .hero {
+        background: linear-gradient(
+            rgba(44, 62, 80, 0.7),
+            rgba(44, 62, 80, 0.7)
+          ),
+          url("https://example.com/hero-image.jpg");
+        background-size: cover;
+        background-position: center;
+        color: white;
+        padding: 100px 0;
       }
-      .nav-link {
-        color: #ffffff;
+      .feature-card {
+        transition: transform 0.3s ease-in-out;
       }
-      .search-form {
-        display: flex;
+      .feature-card:hover {
+        transform: translateY(-5px);
       }
-      .search-input {
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-      .search-button {
-        border-top-left-radius: 0;
-        border-bottom-left-radius: 0;
+      .footer {
+        background-color: #2c3e50;
+        color: white;
       }
     </style>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-      <a class="navbar-brand" href="/">Institution Finder</a>
-      <button
-        class="navbar-toggler"
-        type="button"
-        data-toggle="collapse"
-        data-target="#navbarNav"
-        aria-controls="navbarNav"
-        aria-expanded="false"
-        aria-label="Toggle navigation"
-      >
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav mr-auto"></ul>
-        <form
-          class="form-inline my-2 my-lg-0 search-form"
-          action="/search"
-          method="GET"
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+      <div class="container">
+        <a class="navbar-brand" href="/">Institution Finder</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
         >
-          <input
-            class="form-control mr-sm-2 search-input"
-            type="search"
-            placeholder="Search universities or courses"
-            aria-label="Search"
-            name="q"
-          />
-          <button
-            class="btn btn-outline-light my-2 my-sm-0 search-button"
-            type="submit"
-          >
-            Search
-          </button>
-        </form>
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav me-auto">
+            <li class="nav-item">
+              <a class="nav-link active" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/about">About</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/contact">Contact</a>
+            </li>
+          </ul>
+          <form class="d-flex" action="/search" method="GET">
+            <input
+              class="form-control me-2"
+              type="search"
+              placeholder="Search universities or courses"
+              name="q"
+              aria-label="Search"
+            />
+            <button class="btn btn-outline-light" type="submit">Search</button>
+          </form>
+        </div>
       </div>
     </nav>
 
-    <div class="container">
-      <h1 class="text-center mt-5">Find Institution</h1>
-      <div class="row justify-content-center">
-        <div class="col-md-8">
-          <form
-            action="/recommend"
-            method="POST"
-            class="bg-white p-5 rounded shadow"
-          >
-            <div class="form-group">
-              <label for="location">Preferred Location:</label>
-              <select id="location" name="location" class="form-control">
-                <option value="">All States</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="course">Preferred Course:</label>
-              <select id="course" name="course" class="form-control">
-                <option value="">All Courses</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="university">Preferred Institution:</label>
-              <select id="university" name="university" class="form-control">
-                <option value="">All Institutions</option>
-              </select>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">
-              Find Institution
-            </button>
-          </form>
-          <div id="loading" class="loading">
-            <div class="spinner-border text-primary" role="status">
-              <span class="sr-only">Loading...</span>
-            </div>
-            <p>Loading options...</p>
+    <section class="hero text-center">
+      <div class="container">
+        <h1 class="display-4 mb-4">Find Your Perfect Institution</h1>
+        <p class="lead mb-5">
+          Discover top Nigerian universities and courses tailored to your
+          preferences.
+        </p>
+        <form
+          action="/recommend"
+          method="POST"
+          class="mx-auto"
+          style="max-width: 500px"
+        >
+          <div class="input-group input-group-lg mb-3">
+            <select id="location" name="location" class="form-select">
+              <option value="">All States</option>
+            </select>
           </div>
-          <div id="error-message" class="error-message"></div>
+          <div class="input-group input-group-lg mb-3">
+            <select id="course" name="course" class="form-select">
+              <option value="">All Courses</option>
+            </select>
+          </div>
+          <div class="input-group input-group-lg mb-3">
+            <select id="university" name="university" class="form-select">
+              <option value="">All Institutions</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-100">
+            Find Institution
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="py-5">
+      <div class="container">
+        <h2 class="text-center mb-5">Why Choose Us?</h2>
+        <div class="row">
+          <div class="col-md-4 mb-4">
+            <div class="card h-100 feature-card">
+              <div class="card-body text-center">
+                <i class="fas fa-search fa-3x mb-3 text-primary"></i>
+                <h5 class="card-title">Comprehensive Database</h5>
+                <p class="card-text">
+                  Access information on all accredited Nigerian institutions and
+                  courses.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4 mb-4">
+            <div class="card h-100 feature-card">
+              <div class="card-body text-center">
+                <i class="fas fa-filter fa-3x mb-3 text-primary"></i>
+                <h5 class="card-title">Personalized Recommendations</h5>
+                <p class="card-text">
+                  Get tailored suggestions based on your preferences and
+                  requirements.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4 mb-4">
+            <div class="card h-100 feature-card">
+              <div class="card-body text-center">
+                <i class="fas fa-chart-bar fa-3x mb-3 text-primary"></i>
+                <h5 class="card-title">Detailed Insights</h5>
+                <p class="card-text">
+                  View comprehensive information about each institution and
+                  course.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- jQuery and Bootstrap JS -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <footer class="footer py-4">
+      <div class="container">
+        <div class="row">
+          <div class="col-md-6">
+            <h5>Institution Finder</h5>
+            <p>
+              Helping students find their perfect educational path in Nigeria.
+            </p>
+          </div>
+          <div class="col-md-3">
+            <h5>Quick Links</h5>
+            <ul class="list-unstyled">
+              <li><a href="/" class="text-white">Home</a></li>
+              <li><a href="/about" class="text-white">About</a></li>
+              <li><a href="/contact" class="text-white">Contact</a></li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <h5>Follow Us</h5>
+            <a href="#" class="text-white me-2"
+              ><i class="fab fa-facebook-f"></i
+            ></a>
+            <a href="#" class="text-white me-2"
+              ><i class="fab fa-twitter"></i
+            ></a>
+            <a href="#" class="text-white me-2"
+              ><i class="fab fa-instagram"></i
+            ></a>
+          </div>
+        </div>
+        <hr class="mt-4 mb-3" />
+        <p class="text-center mb-0">
+          &copy; 2023 Institution Finder. All rights reserved.
+        </p>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
       $(document).ready(function () {
-        function showLoading() {
-          $("#loading").show();
-        }
-
-        function hideLoading() {
-          $("#loading").hide();
-        }
-
-        function showError(message) {
-          $("#error-message").text(message).show();
-        }
-
-        function hideError() {
-          $("#error-message").hide();
-        }
-
         function loadOptions(url, params, targetElement, defaultText) {
-          showLoading();
-          hideError();
           $.getJSON(url, params, function (data) {
             targetElement
               .empty()
               .append(`<option value="">${defaultText}</option>`);
-            if (data.length === 0) {
-              showError("No options found for the selected criteria.");
-            } else {
-              $.each(data, function (key, value) {
-                targetElement.append(
-                  '<option value="' + value + '">' + value + "</option>"
-                );
-              });
-            }
-          })
-            .fail(function () {
-              showError("Failed to load options. Please try again later.");
-            })
-            .always(function () {
-              hideLoading();
+            $.each(data, function (key, value) {
+              targetElement.append(
+                $("<option></option>").attr("value", value).text(value)
+              );
             });
+          });
         }
 
-        // Load initial data
         loadOptions("/api/locations", {}, $("#location"), "All States");
         loadOptions(
           "/api/universities",
@@ -194,7 +223,6 @@
         );
         loadOptions("/api/courses", {}, $("#course"), "All Courses");
 
-        // Update options when selections change
         $("#location").change(function () {
           var selectedState = $(this).val();
           loadOptions(
