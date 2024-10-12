@@ -1,4 +1,3 @@
-<!-- templates/recommend.html -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -173,8 +172,15 @@
             </div>
             <div class="modal-body">
               <ul class="list-group list-group-flush">
-                {% for key, value in uni.items() %} {% if key not in ['id',
-                'University', 'Course', 'courses'] and value %}
+                {% if uni['Program Type'] %}
+                <li class="list-group-item">
+                  <strong>Program Type:</strong> {{ uni['Program Type'] }} {% if
+                  uni.Course %} <br /><strong>Course:</strong> {{ uni.Course }}
+                  {% endif %}
+                </li>
+                {% endif %} {% for key, value in uni.items() %} {% if key not in
+                ['id', 'University', 'Course', 'courses', 'Program Type'] and
+                value %}
                 <li class="list-group-item">
                   <strong>{{ key }}:</strong> {{ value }}
                 </li>
@@ -188,7 +194,7 @@
                 {% endfor %}
               </ul>
               {% else %}
-              <p>No courses available for this institution.</p>
+              <p>No additional courses available for this institution.</p>
               {% endif %}
             </div>
             <div class="modal-footer">
