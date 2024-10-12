@@ -5,28 +5,60 @@ from flask import Flask, request, render_template, jsonify
 import pandas as pd
 import os
 import logging
-import math
 
 # Initialize Flask app
 app = Flask(__name__)
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
+
 
 # Load CSV data
-if os.path.exists("universities.csv") and os.path.exists("courses.csv"):
-    try:
-        universities_df = pd.read_csv("universities.csv")
-        courses_df = pd.read_csv("courses.csv")
-        logging.info("CSV files loaded successfully.")
-    except Exception as e:
-        logging.error(f"Error loading CSV files: {e}")
-        universities_df = pd.DataFrame()
-        courses_df = pd.DataFrame()
-else:
-    logging.warning("CSV files not found.")
-    universities_df = pd.DataFrame()
-    courses_df = pd.DataFrame()
+def load_data():
+    universities = pd.DataFrame()
+    courses = pd.DataFrame()
+    if os.path.exists("universities.csv") and os.path.exists("courses.csv"):
+        try:
+            universities = pd.read_csv("universities.csv")
+            courses = pd.read_csv("courses.csv")
+            logging.info("CSV files loaded successfully.")
+        except Exception as e:
+            logging.error(f"Error loading CSV files: {e}")
+    else:
+        logging.warning("CSV files not found.")
+    return universities, courses
+
+
+universities_df, courses_df = load_data()
+
+required_university_columns = {"university_name", "state", "program_type"}
+required_course_columns = {
+    "course_name",
+    "university_name",
+    "abbrv",
+    "direct_entry_requirements",
+    "utme_requirements",
+    "subjects",
+}
+
+
+# Validate columns
+def validate_columns(df, required_columns, df_name):
+    missing = required_columns - set(df.columns)
+    if missing:
+        logging.error(f"Missing columns in {df_name}: {missing}")
+    return not missing
+
+
+valid_universities = validate_columns(
+    universities_df, required_university_columns, "universities_df"
+)
+valid_courses = validate_columns(courses_df, required_course_columns, "courses_df")
+
+if not valid_universities:
+    universities_df = pd.DataFrame(columns=required_university_columns)
+if not valid_courses:
+    courses_df = pd.DataFrame(columns=required_course_columns)
 
 logging.info(f"Universities DataFrame columns: {universities_df.columns.tolist()}")
 logging.info(f"Courses DataFrame columns: {courses_df.columns.tolist()}")
@@ -56,14 +88,19 @@ def get_universities():
     if "university_name" in universities_df.columns:
         if state:
             universities = (
-                universities_df[universities_df["state"] == state]["university_name"]
+                universities_df[universities_df["state"] == state][
+                    ["university_name", "state", "program_type"]
+                ]
                 .dropna()
-                .unique()
-                .tolist()
+                .to_dict(orient="records")
             )
         else:
-            universities = universities_df["university_name"].dropna().unique().tolist()
-        return jsonify(sorted(universities))
+            universities = (
+                universities_df[["university_name", "state", "program_type"]]
+                .dropna()
+                .to_dict(orient="records")
+            )
+        return jsonify(universities)
     else:
         logging.error("University_name column not found in universities_df.")
         return jsonify([])
@@ -75,7 +112,7 @@ def get_courses():
     state = request.args.get("state")
     university = request.args.get("university")
     if "course_name" in courses_df.columns:
-        filtered_courses = courses_df
+        filtered_courses = courses_df.copy()
         if state:
             state_universities = universities_df[universities_df["state"] == state][
                 "university_name"
@@ -87,8 +124,25 @@ def get_courses():
             filtered_courses = filtered_courses[
                 filtered_courses["university_name"] == university
             ]
-        courses = filtered_courses["course_name"].dropna().unique().tolist()
-        return jsonify(sorted(courses))
+        # Drop duplicates based on 'course_name'
+        filtered_courses = filtered_courses.drop_duplicates(subset=["course_name"])
+        # Sort courses alphabetically
+        filtered_courses = filtered_courses.sort_values(by="course_name")
+        courses = (
+            filtered_courses[
+                [
+                    "course_name",
+                    "university_name",
+                    "abbrv",
+                    "direct_entry_requirements",
+                    "utme_requirements",
+                    "subjects",
+                ]
+            ]
+            .dropna()
+            .to_dict(orient="records")
+        )
+        return jsonify(courses)
     else:
         logging.error("Missing course_name column in courses_df")
         return jsonify([])
@@ -178,7 +232,7 @@ def recommend():
         # Refactored: Ensure all courses are lists and handle NaN values
         courses_per_uni = (
             courses_df.groupby("university_name")["course_name"]
-            .apply(lambda x: x.dropna().tolist() if isinstance(x, pd.Series) else [])
+            .apply(lambda x: sorted(x.dropna().tolist()))
             .to_dict()
         )
         logging.info(
@@ -194,6 +248,9 @@ def recommend():
                 courses_per_uni[uni] = []
 
         result["courses"] = result["University"].map(courses_per_uni)
+
+        # Sort the recommendations alphabetically by University
+        result = result.sort_values(by="University")
 
         recommendations = result.to_dict(orient="records")
     else:
@@ -214,18 +271,31 @@ def recommend():
 @app.route("/api/search", methods=["GET"])
 def search():
     query = request.args.get("q", "").lower()
+    state = request.args.get("state")
+    program_type = request.args.get("program_type")
     if not query:
         return jsonify({"universities": [], "courses": []})
 
     try:
+        # Search universities
+        uni_criteria = (
+            universities_df["university_name"].str.lower().str.contains(query)
+        )
+        if state:
+            uni_criteria &= universities_df["state"].str.lower() == state.lower()
+        if program_type:
+            uni_criteria &= (
+                universities_df["program_type"].str.lower() == program_type.lower()
+            )
         universities = (
-            universities_df[
-                universities_df["university_name"].str.lower().str.contains(query)
-            ]["university_name"]
-            .unique()
-            .tolist()
+            universities_df[uni_criteria][["university_name", "state", "program_type"]]
+            .dropna()
+            .drop_duplicates(subset=["university_name"])
+            .sort_values(by="university_name")
+            .to_dict(orient="records")
         )
 
+        # Search courses
         course_search_criteria = [
             courses_df["course_name"].str.lower().str.contains(query),
             courses_df["abbrv"].str.lower().str.contains(query),
@@ -237,7 +307,20 @@ def search():
             combined_criteria = combined_criteria | criteria
 
         courses = (
-            courses_df[combined_criteria]["course_name"].dropna().unique().tolist()
+            courses_df[combined_criteria][
+                [
+                    "course_name",
+                    "university_name",
+                    "abbrv",
+                    "direct_entry_requirements",
+                    "utme_requirements",
+                    "subjects",
+                ]
+            ]
+            .dropna()
+            .drop_duplicates(subset=["course_name"])
+            .sort_values(by="course_name")
+            .to_dict(orient="records")
         )
 
         logging.info(

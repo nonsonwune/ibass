@@ -201,53 +201,153 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
       $(document).ready(function () {
-        function loadOptions(url, params, targetElement, defaultText) {
+        /**
+         * Function to load and sort unique options into a select element.
+         * @param {string} url - The API endpoint to fetch data from.
+         * @param {object} params - Query parameters for the API request.
+         * @param {jQuery} targetElement - The jQuery selector for the target <select> element.
+         * @param {string} defaultText - The default option text.
+         * @param {string} [property] - The property to extract from each object (if applicable).
+         */
+        function loadOptions(
+          url,
+          params,
+          targetElement,
+          defaultText,
+          property
+        ) {
           $.getJSON(url, params, function (data) {
+            // Sort the data alphabetically
+            if (property) {
+              data.sort(function (a, b) {
+                const nameA = a[property].toUpperCase(); // Ignore case
+                const nameB = b[property].toUpperCase(); // Ignore case
+                if (nameA < nameB) {
+                  return -1;
+                }
+                if (nameA > nameB) {
+                  return 1;
+                }
+                return 0; // Names must be equal
+              });
+            } else {
+              data.sort(function (a, b) {
+                const nameA = a.toUpperCase(); // Ignore case
+                const nameB = b.toUpperCase(); // Ignore case
+                if (nameA < nameB) {
+                  return -1;
+                }
+                if (nameA > nameB) {
+                  return 1;
+                }
+                return 0; // Names must be equal
+              });
+            }
+
+            // Initialize a Set to track unique values
+            const uniqueSet = new Set();
+            const uniqueData = [];
+
+            // Filter out duplicates
+            $.each(data, function (index, item) {
+              const value = property ? item[property] : item;
+              if (!uniqueSet.has(value)) {
+                uniqueSet.add(value);
+                uniqueData.push(item);
+              }
+            });
+
+            // Clear existing options and add the default option
             targetElement
               .empty()
               .append(`<option value="">${defaultText}</option>`);
-            $.each(data, function (key, value) {
-              targetElement.append(
-                $("<option></option>").attr("value", value).text(value)
-              );
+
+            // Populate the dropdown with sorted and unique options
+            $.each(uniqueData, function (index, item) {
+              if (property && item[property]) {
+                targetElement.append(
+                  $("<option></option>")
+                    .attr("value", item[property])
+                    .text(item[property])
+                );
+              } else if (!property && typeof item === "string") {
+                targetElement.append(
+                  $("<option></option>").attr("value", item).text(item)
+                );
+              }
             });
+          }).fail(function () {
+            console.error(`Failed to load options from ${url}`);
           });
         }
 
+        /**
+         * Function to load and sort unique options based on the selected state.
+         * @param {string} state - The selected state to filter options.
+         * @param {string} type - The type of options to load ('university' or 'course').
+         */
+        function loadFilteredOptions(state, type) {
+          const url =
+            type === "university" ? "/api/universities" : "/api/courses";
+          const params = {};
+
+          if (type === "university") {
+            if (state) {
+              params.state = state;
+            }
+          } else if (type === "course") {
+            if (state) {
+              params.state = state;
+            }
+            const selectedUniversity = $("#university").val();
+            if (selectedUniversity) {
+              params.university = selectedUniversity;
+            }
+          }
+
+          const targetElement =
+            type === "university" ? $("#university") : $("#course");
+          const defaultText =
+            type === "university" ? "All Institutions" : "All Courses";
+          const property =
+            type === "university" ? "university_name" : "course_name";
+
+          loadOptions(url, params, targetElement, defaultText, property);
+        }
+
+        // Load States (array of strings)
         loadOptions("/api/locations", {}, $("#location"), "All States");
+
+        // Load Universities with 'university_name' property
         loadOptions(
           "/api/universities",
           {},
           $("#university"),
-          "All Institutions"
+          "All Institutions",
+          "university_name"
         );
-        loadOptions("/api/courses", {}, $("#course"), "All Courses");
 
+        // Load Courses with 'course_name' property
+        loadOptions(
+          "/api/courses",
+          {},
+          $("#course"),
+          "All Courses",
+          "course_name"
+        );
+
+        // When a state is selected, filter universities and courses based on the selected state
         $("#location").change(function () {
           var selectedState = $(this).val();
-          loadOptions(
-            "/api/universities",
-            { state: selectedState },
-            $("#university"),
-            "All Institutions"
-          );
-          loadOptions(
-            "/api/courses",
-            { state: selectedState },
-            $("#course"),
-            "All Courses"
-          );
+          loadFilteredOptions(selectedState, "university");
+          loadFilteredOptions(selectedState, "course");
         });
 
+        // When a university is selected, filter courses based on the selected university and state
         $("#university").change(function () {
           var selectedState = $("#location").val();
           var selectedUniversity = $(this).val();
-          loadOptions(
-            "/api/courses",
-            { state: selectedState, university: selectedUniversity },
-            $("#course"),
-            "All Courses"
-          );
+          loadFilteredOptions(selectedState, "course");
         });
       });
     </script>

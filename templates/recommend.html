@@ -128,8 +128,8 @@
               </li>
               {% endif %} {% if uni['Direct Entry Requirements'] %}
               <li class="list-group-item">
-                <strong>Direct Entry Requirements:</strong> {{ uni['Direct Entry
-                Requirements'] }}
+                <strong>Direct Entry Requirements:</strong>
+                {{ uni['Direct Entry Requirements'] }}
               </li>
               {% endif %}
             </ul>
@@ -174,7 +174,7 @@
             <div class="modal-body">
               <ul class="list-group list-group-flush">
                 {% for key, value in uni.items() %} {% if key not in ['id',
-                'University', 'courses'] and value %}
+                'University', 'Course', 'courses'] and value %}
                 <li class="list-group-item">
                   <strong>{{ key }}:</strong> {{ value }}
                 </li>
@@ -183,7 +183,7 @@
               {% if uni.courses %}
               <h5 class="mt-4">Courses Offered:</h5>
               <ul>
-                {% for course in uni.courses|sort %}
+                {% for course in uni.courses %}
                 <li>{{ course }}</li>
                 {% endfor %}
               </ul>

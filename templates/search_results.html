@@ -82,7 +82,9 @@
         </ol>
       </nav>
 
-      <h1 class="mb-4">Search Results for "<span id="search-query"></span>"</h1>
+      <h1 class="mb-4">
+        Search Results for "<span id="search-query">{{ query }}</span>"
+      </h1>
 
       <div class="row">
         <div class="col-md-3 mb-4">
@@ -92,6 +94,7 @@
               <label for="state-filter" class="form-label">State</label>
               <select id="state-filter" class="form-select">
                 <option value="">All States</option>
+                <!-- Options will be dynamically populated -->
               </select>
             </div>
             <div class="mb-3">
@@ -100,6 +103,7 @@
               >
               <select id="program-type-filter" class="form-select">
                 <option value="">All Types</option>
+                <!-- Options will be dynamically populated -->
               </select>
             </div>
             <button type="submit" class="btn btn-primary">Apply Filters</button>
@@ -214,14 +218,16 @@
         const stateFilter = $("#state-filter");
         const programTypeFilter = $("#program-type-filter");
 
-        function performSearch(query) {
+        function performSearch(query, state = "", programType = "") {
           $.ajax({
             url: "/api/search",
             method: "GET",
-            data: { q: query },
+            data: { q: query, state: state, program_type: programType },
             success: function (data) {
               updateResults(data);
-              updateFilters(data);
+              if (state === "" && programType === "") {
+                updateFilters(data);
+              }
             },
             error: function () {
               alert("An error occurred while searching. Please try again.");
@@ -237,66 +243,64 @@
           if (data.universities.length === 0 && data.courses.length === 0) {
             noResults.show();
           } else {
+            // Populate Universities
             data.universities.forEach(function (uni) {
               universitiesResults.append(`
-                            <div class="col">
-                                <div class="card h-100 result-card">
-                                    <div class="card-body">
-                                        <h5 class="card-title">${
-                                          uni.university_name
-                                        }</h5>
-                                        <p class="card-text">
-                                            <strong>State:</strong> ${
-                                              uni.state
-                                            }<br>
-                                            <strong>Program Type:</strong> ${
-                                              uni.program_type
-                                            }
-                                        </p>
-                                        <a href="/recommend?university=${encodeURIComponent(
-                                          uni.university_name
-                                        )}" class="btn btn-primary">View Details</a>
-                                    </div>
-                                </div>
-                            </div>
-                        `);
+                <div class="col">
+                  <div class="card h-100 result-card">
+                    <div class="card-body">
+                      <h5 class="card-title">${uni.university_name}</h5>
+                      <p class="card-text">
+                        <strong>State:</strong> ${uni.state}<br>
+                        <strong>Program Type:</strong> ${uni.program_type}
+                      </p>
+                      <a href="/recommend?university=${encodeURIComponent(
+                        uni.university_name
+                      )}" class="btn btn-primary">View Details</a>
+                    </div>
+                  </div>
+                </div>
+              `);
             });
 
-            data.courses.forEach(function (course) {
+            // Populate Courses
+            data.courses.forEach(function (course, index) {
+              const modalId = `courseModal${index}`;
               coursesResults.append(`
-                            <div class="col">
-                                <div class="card h-100 result-card">
-                                    <div class="card-body">
-                                        <h5 class="card-title">${course.course_name}</h5>
-                                        <p class="card-text">
-                                            <strong>University:</strong> ${course.university_name}<br>
-                                            <strong>Abbreviation:</strong> ${course.abbrv}
-                                        </p>
-                                        <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#courseModal${course.id}">View Details</a>
-                                    </div>
-                                </div>
-                            </div>
-                        `);
+                <div class="col">
+                  <div class="card h-100 result-card">
+                    <div class="card-body">
+                      <h5 class="card-title">${course.course_name}</h5>
+                      <p class="card-text">
+                        <strong>University:</strong> ${course.university_name}<br>
+                        <strong>Abbreviation:</strong> ${course.abbrv}
+                      </p>
+                      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#${modalId}">View Details</button>
+                    </div>
+                  </div>
+                </div>
+              `);
 
+              // Append Modal
               $("body").append(`
-                            <div class="modal fade" id="courseModal${course.id}" tabindex="-1" aria-hidden="true">
-                                <div class="modal-dialog modal-lg">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">${course.course_name}</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p><strong>University:</strong> ${course.university_name}</p>
-                                            <p><strong>Abbreviation:</strong> ${course.abbrv}</p>
-                                            <p><strong>Direct Entry Requirements:</strong> ${course.direct_entry_requirements}</p>
-                                            <p><strong>UTME Requirements:</strong> ${course.utme_requirements}</p>
-                                            <p><strong>Subjects:</strong> ${course.subjects}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        `);
+                <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
+                  <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">${course.course_name}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p><strong>University:</strong> ${course.university_name}</p>
+                        <p><strong>Abbreviation:</strong> ${course.abbrv}</p>
+                        <p><strong>Direct Entry Requirements:</strong> ${course.direct_entry_requirements}</p>
+                        <p><strong>UTME Requirements:</strong> ${course.utme_requirements}</p>
+                        <p><strong>Subjects:</strong> ${course.subjects}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `);
             });
           }
         }
@@ -341,17 +345,8 @@
           const programType = programTypeFilter.val();
 
           if (query) {
-            $.ajax({
-              url: "/api/search",
-              method: "GET",
-              data: { q: query, state: state, program_type: programType },
-              success: function (data) {
-                updateResults(data);
-              },
-              error: function () {
-                alert("An error occurred while filtering. Please try again.");
-              },
-            });
+            searchQuery.text(query);
+            performSearch(query, state, programType);
           }
         });
 
