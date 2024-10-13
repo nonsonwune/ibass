@@ -1,143 +1,223 @@
 <!-- templates/contact.html -->
 {% extends "base.html" %} {% block title %}Contact Us - Nigerian Institutions
 Finder{% endblock %} {% block content %}
-<h1 class="mb-4">Contact Us</h1>
-<p>
-  We value your feedback and are here to assist you. Please feel free to reach
-  out to us using the contact form below or through our other contact channels.
-</p>
+<div class="container my-5">
+  <h1 class="mb-4 text-center">Contact Us</h1>
+  <p class="text-center">
+    We value your feedback and are here to assist you. Please feel free to reach
+    out to us using the contact form below or through our other contact
+    channels.
+  </p>
 
-<div class="row mt-4">
-  <!-- Contact Form Section -->
-  <div class="col-md-6">
-    <h2>Contact Form</h2>
-    <form action="{{ url_for('contact') }}" method="POST">
-      <div class="mb-3">
-        <label for="name" class="form-label">Name</label>
-        <input
-          type="text"
-          class="form-control"
-          id="name"
-          name="name"
-          required
-        />
-      </div>
-      <div class="mb-3">
-        <label for="email" class="form-label">Email address</label>
-        <input
-          type="email"
-          class="form-control"
-          id="email"
-          name="email"
-          required
-        />
-      </div>
-      <div class="mb-3">
-        <label for="subject" class="form-label">Subject</label>
-        <input
-          type="text"
-          class="form-control"
-          id="subject"
-          name="subject"
-          required
-        />
-      </div>
-      <div class="mb-3">
-        <label for="message" class="form-label">Message</label>
-        <textarea
-          class="form-control"
-          id="message"
-          name="message"
-          rows="5"
-          required
-        ></textarea>
-      </div>
-      <button type="submit" class="btn btn-primary">Send Message</button>
-    </form>
-  </div>
-
-  <!-- Comments Section -->
-  <div class="col-md-6">
-    <h2>Comments</h2>
-    <div class="comments-section">
-      <div class="comments-container">
-        <h3>Recent Comments</h3>
-        {% for comment in comments %}
-        <div class="comment">
-          <p>
-            <strong>{{ comment.author.username }}</strong>: {{ comment.content
-            }}
-          </p>
-          <small class="text-muted"
-            >Posted on: {{ comment.date_posted.strftime('%Y-%m-%d %H:%M:%S')
-            }}</small
-          >
-          <div class="comment-actions">
-            <button
-              class="btn btn-sm btn-outline-primary vote-btn"
-              data-comment-id="{{ comment.id }}"
-              data-vote-type="like"
-            >
-              <i class="fas fa-thumbs-up"></i> Like
-            </button>
-            <button
-              class="btn btn-sm btn-outline-danger vote-btn"
-              data-comment-id="{{ comment.id }}"
-              data-vote-type="dislike"
-            >
-              <i class="fas fa-thumbs-down"></i> Dislike
-            </button>
-            {% if current_user.is_authenticated and (current_user.id ==
-            comment.user_id or current_user.is_admin) %}
-            <form
-              action="{{ url_for('delete_comment', comment_id=comment.id) }}"
-              method="POST"
-              class="d-inline"
-            >
-              <button
-                type="submit"
-                class="btn btn-sm btn-danger delete-comment"
+  <div class="row mt-5">
+    <!-- Contact Form Section -->
+    <div class="col-md-6 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h2 class="h5 mb-0">
+            <i class="fas fa-envelope me-2"></i>Contact Form
+          </h2>
+        </div>
+        <div class="card-body">
+          <form action="{{ url_for('contact') }}" method="POST" novalidate>
+            <div class="mb-3">
+              <label for="name" class="form-label"
+                >Name <span class="text-danger">*</span></label
               >
-                Delete
-              </button>
-            </form>
-            {% endif %}
-          </div>
-          <span class="comment-score">Score: {{ comment.score }}</span>
+              <input
+                type="text"
+                class="form-control"
+                id="name"
+                name="name"
+                placeholder="Enter your full name"
+                required
+              />
+              <div class="invalid-feedback">Please enter your name.</div>
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label"
+                >Email Address <span class="text-danger">*</span></label
+              >
+              <input
+                type="email"
+                class="form-control"
+                id="email"
+                name="email"
+                placeholder="Enter your email"
+                required
+              />
+              <div class="invalid-feedback">
+                Please enter a valid email address.
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="subject" class="form-label"
+                >Subject <span class="text-danger">*</span></label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="subject"
+                name="subject"
+                placeholder="Subject of your message"
+                required
+              />
+              <div class="invalid-feedback">Please enter a subject.</div>
+            </div>
+            <div class="mb-3">
+              <label for="message" class="form-label"
+                >Message <span class="text-danger">*</span></label
+              >
+              <textarea
+                class="form-control"
+                id="message"
+                name="message"
+                rows="5"
+                placeholder="Write your message here..."
+                required
+              ></textarea>
+              <div class="invalid-feedback">Please enter your message.</div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="fas fa-paper-plane me-2"></i> Send Message
+            </button>
+          </form>
         </div>
-        {% else %}
-        <p>No comments yet. Be the first to comment!</p>
-        {% endfor %}
       </div>
+    </div>
 
-      {% if current_user.is_authenticated %}
-      <form action="{{ url_for('add_comment') }}" method="POST" class="mb-4">
-        <div class="mb-3">
-          <label for="comment" class="form-label">Add a comment</label>
-          <textarea
-            class="form-control comment-input"
-            id="comment"
-            name="comment"
-            rows="3"
-            maxlength="200"
-            required
-          ></textarea>
-          <small id="charCount" class="form-text text-muted">
-            200 characters remaining
-          </small>
+    <!-- Comments Section -->
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div
+          class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
+        >
+          <h2 class="h5 mb-0"><i class="fas fa-comments me-2"></i>Comments</h2>
+          {% if current_user.is_authenticated %}
+          <button
+            class="btn btn-sm btn-light"
+            data-bs-toggle="modal"
+            data-bs-target="#addCommentModal"
+          >
+            <i class="fas fa-plus-circle me-1"></i> Add Comment
+          </button>
+          {% endif %}
         </div>
-        <button type="submit" class="btn btn-primary">Post Comment</button>
-      </form>
-      {% else %}
-      <p>
-        Please <a href="{{ url_for('login') }}">login</a> or
-        <a href="{{ url_for('signup') }}">sign up</a> to add a comment.
-      </p>
-      {% endif %}
+        <div class="card-body">
+          <div class="comments-section">
+            <h3 class="h6 mb-3">Recent Comments</h3>
+            {% for comment in comments %}
+            <div class="list-group mb-3">
+              <div class="list-group-item">
+                <div class="d-flex w-100 justify-content-between">
+                  <h5 class="mb-1">{{ comment.author.username }}</h5>
+                  <small class="text-muted"
+                    >{{ comment.date_posted.strftime('%Y-%m-%d %H:%M') }}</small
+                  >
+                </div>
+                <p class="mb-1">{{ comment.content }}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                  <div>
+                    <button
+                      class="btn btn-sm btn-outline-primary me-2 vote-btn"
+                      data-comment-id="{{ comment.id }}"
+                      data-vote-type="like"
+                    >
+                      <i class="fas fa-thumbs-up"></i> Like
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-danger me-2 vote-btn"
+                      data-comment-id="{{ comment.id }}"
+                      data-vote-type="dislike"
+                    >
+                      <i class="fas fa-thumbs-down"></i> Dislike
+                    </button>
+                    <span class="badge bg-secondary"
+                      >Score: {{ comment.score }}</span
+                    >
+                  </div>
+                  {% if current_user.is_authenticated and (current_user.id ==
+                  comment.user_id or current_user.is_admin) %}
+                  <form
+                    action="{{ url_for('delete_comment', comment_id=comment.id) }}"
+                    method="POST"
+                    class="d-inline"
+                  >
+                    <button type="submit" class="btn btn-sm btn-danger">
+                      <i class="fas fa-trash-alt"></i> Delete
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% else %}
+            <p class="text-muted">No comments yet. Be the first to comment!</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
-{% endblock %} {% block extra_scripts %}
+
+<!-- Add Comment Modal -->
+{% if current_user.is_authenticated %}
+<div
+  class="modal fade"
+  id="addCommentModal"
+  tabindex="-1"
+  aria-labelledby="addCommentModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="{{ url_for('add_comment') }}" method="POST" novalidate>
+        <div class="modal-header">
+          <h5 class="modal-title" id="addCommentModalLabel">
+            <i class="fas fa-comment-dots me-2"></i>Add a Comment
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="comment" class="form-label">Your Comment</label>
+            <textarea
+              class="form-control"
+              id="comment"
+              name="comment"
+              rows="4"
+              maxlength="200"
+              placeholder="Write your comment here..."
+              required
+            ></textarea>
+            <div class="form-text text-end" id="charCount">
+              200 characters remaining
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-1"></i> Close
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-paper-plane me-1"></i> Post Comment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %} {% endblock %} {% block extra_scripts %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     // Fetch and apply user votes
@@ -153,6 +233,32 @@ Finder{% endblock %} {% block content %}
         });
       })
       .catch((error) => console.error("Error fetching user votes:", error));
+
+    // Character count for comment textarea
+    const commentTextarea = document.getElementById("comment");
+    const charCount = document.getElementById("charCount");
+    if (commentTextarea && charCount) {
+      commentTextarea.addEventListener("input", function () {
+        const remaining = 200 - this.value.length;
+        charCount.textContent = `${remaining} characters remaining`;
+      });
+    }
+
+    // Bootstrap form validation
+    const forms = document.querySelectorAll("form[novalidate]");
+    Array.from(forms).forEach((form) => {
+      form.addEventListener(
+        "submit",
+        function (event) {
+          if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          form.classList.add("was-validated");
+        },
+        false
+      );
+    });
   });
 </script>
 {% endblock %}
