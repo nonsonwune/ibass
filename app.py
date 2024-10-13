@@ -56,6 +56,10 @@ def init_db():
                          username TEXT UNIQUE NOT NULL,
                          password TEXT NOT NULL)"""
         )
+        conn.execute(
+            "INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)",
+            ("admin", generate_password_hash("adminpassword")),
+        )
 
 
 # Initialize database
@@ -354,6 +358,44 @@ def admin():
     feedback = conn.execute("SELECT * FROM feedback ORDER BY id DESC").fetchall()
     conn.close()
     return render_template("admin.html", feedback=feedback)
+
+
+# Add this new route to your app.py file
+
+
+@app.route("/change_password", methods=["POST"])
+@login_required
+def change_password():
+    old_password = request.form.get("old_password")
+    new_password = request.form.get("new_password")
+    confirm_password = request.form.get("confirm_password")
+
+    if not old_password or not new_password or not confirm_password:
+        flash("All fields are required", "error")
+        return redirect(url_for("admin"))
+
+    if new_password != confirm_password:
+        flash("New passwords do not match", "error")
+        return redirect(url_for("admin"))
+
+    conn = get_db_connection()
+    user = conn.execute(
+        "SELECT * FROM users WHERE id = ?", (current_user.id,)
+    ).fetchone()
+
+    if not check_password_hash(user["password"], old_password):
+        flash("Incorrect old password", "error")
+        return redirect(url_for("admin"))
+
+    hashed_password = generate_password_hash(new_password)
+    conn.execute(
+        "UPDATE users SET password = ? WHERE id = ?", (hashed_password, current_user.id)
+    )
+    conn.commit()
+    conn.close()
+
+    flash("Password updated successfully", "success")
+    return redirect(url_for("admin"))
 
 
 # Run Flask app
