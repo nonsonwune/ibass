@@ -1,70 +1,92 @@
-# app.py
-
-# Import required libraries
-from flask import Flask, request, render_template, jsonify
-import pandas as pd
-import os
+from flask import Flask, request, render_template, jsonify, redirect, url_for, flash
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    login_user,
+    login_required,
+    logout_user,
+    current_user,
+)
+import sqlite3
 import logging
+import os
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Initialize Flask app
 app = Flask(__name__)
+app.config["SECRET_KEY"] = "your-secret-key"  # Replace with a real secret key
+login_manager = LoginManager(app)
+login_manager.login_view = "login"
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
 
 
-# Load CSV data
-def load_data():
-    universities = pd.DataFrame()
-    courses = pd.DataFrame()
-    if os.path.exists("universities.csv") and os.path.exists("courses.csv"):
-        try:
-            universities = pd.read_csv("universities.csv")
-            courses = pd.read_csv("courses.csv")
-            logging.info("CSV files loaded successfully.")
-        except Exception as e:
-            logging.error(f"Error loading CSV files: {e}")
-    else:
-        logging.warning("CSV files not found.")
-    return universities, courses
+# Database initialization
+def init_db():
+    with sqlite3.connect("university_courses.db") as conn:
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS universities
+                        (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                         university_name TEXT NOT NULL,
+                         state TEXT NOT NULL,
+                         program_type TEXT NOT NULL)"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS courses
+                        (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                         course_name TEXT NOT NULL,
+                         university_name TEXT NOT NULL,
+                         abbrv TEXT,
+                         direct_entry_requirements TEXT,
+                         utme_requirements TEXT,
+                         subjects TEXT)"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS feedback
+                        (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                         name TEXT NOT NULL,
+                         email TEXT NOT NULL,
+                         subject TEXT NOT NULL,
+                         message TEXT NOT NULL)"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS users
+                        (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                         username TEXT UNIQUE NOT NULL,
+                         password TEXT NOT NULL)"""
+        )
 
 
-universities_df, courses_df = load_data()
-
-required_university_columns = {"university_name", "state", "program_type"}
-required_course_columns = {
-    "course_name",
-    "university_name",
-    "abbrv",
-    "direct_entry_requirements",
-    "utme_requirements",
-    "subjects",
-}
+# Initialize database
+init_db()
 
 
-# Validate columns
-def validate_columns(df, required_columns, df_name):
-    missing = required_columns - set(df.columns)
-    if missing:
-        logging.error(f"Missing columns in {df_name}: {missing}")
-    return not missing
+# User model for Flask-Login
+class User(UserMixin):
+    def __init__(self, id, username):
+        self.id = id
+        self.username = username
 
 
-valid_universities = validate_columns(
-    universities_df, required_university_columns, "universities_df"
-)
-valid_courses = validate_columns(courses_df, required_course_columns, "courses_df")
-
-if not valid_universities:
-    universities_df = pd.DataFrame(columns=required_university_columns)
-if not valid_courses:
-    courses_df = pd.DataFrame(columns=required_course_columns)
-
-logging.info(f"Universities DataFrame columns: {universities_df.columns.tolist()}")
-logging.info(f"Courses DataFrame columns: {courses_df.columns.tolist()}")
+@login_manager.user_loader
+def load_user(user_id):
+    conn = get_db_connection()
+    user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    conn.close()
+    if user:
+        return User(user["id"], user["username"])
+    return None
 
 
-# Home route - form for user input
+# Database connection helper
+def get_db_connection():
+    conn = sqlite3.connect("university_courses.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+# Home route
 @app.route("/")
 def home():
     return render_template("home.html")
@@ -73,37 +95,30 @@ def home():
 # API route to get locations
 @app.route("/api/locations", methods=["GET"])
 def get_locations():
-    if "state" in universities_df.columns:
-        locations = sorted(universities_df["state"].dropna().unique().tolist())
-        return jsonify(locations)
-    else:
-        logging.error("State column not found in universities_df.")
-        return jsonify([])
+    conn = get_db_connection()
+    locations = conn.execute(
+        "SELECT DISTINCT state FROM universities ORDER BY state"
+    ).fetchall()
+    conn.close()
+    return jsonify([location["state"] for location in locations])
 
 
 # API route to get universities
 @app.route("/api/universities", methods=["GET"])
 def get_universities():
     state = request.args.get("state")
-    if "university_name" in universities_df.columns:
-        if state:
-            universities = (
-                universities_df[universities_df["state"] == state][
-                    ["university_name", "state", "program_type"]
-                ]
-                .dropna()
-                .to_dict(orient="records")
-            )
-        else:
-            universities = (
-                universities_df[["university_name", "state", "program_type"]]
-                .dropna()
-                .to_dict(orient="records")
-            )
-        return jsonify(universities)
+    conn = get_db_connection()
+    if state:
+        universities = conn.execute(
+            "SELECT university_name, state, program_type FROM universities WHERE state = ?",
+            (state,),
+        ).fetchall()
     else:
-        logging.error("University_name column not found in universities_df.")
-        return jsonify([])
+        universities = conn.execute(
+            "SELECT university_name, state, program_type FROM universities"
+        ).fetchall()
+    conn.close()
+    return jsonify([dict(uni) for uni in universities])
 
 
 # API route to get courses
@@ -111,44 +126,25 @@ def get_universities():
 def get_courses():
     state = request.args.get("state")
     university = request.args.get("university")
-    if "course_name" in courses_df.columns:
-        filtered_courses = courses_df.copy()
-        if state:
-            state_universities = universities_df[universities_df["state"] == state][
-                "university_name"
-            ].tolist()
-            filtered_courses = filtered_courses[
-                filtered_courses["university_name"].isin(state_universities)
-            ]
-        if university:
-            filtered_courses = filtered_courses[
-                filtered_courses["university_name"] == university
-            ]
-        # Drop duplicates based on 'course_name'
-        filtered_courses = filtered_courses.drop_duplicates(subset=["course_name"])
-        # Sort courses alphabetically
-        filtered_courses = filtered_courses.sort_values(by="course_name")
-        courses = (
-            filtered_courses[
-                [
-                    "course_name",
-                    "university_name",
-                    "abbrv",
-                    "direct_entry_requirements",
-                    "utme_requirements",
-                    "subjects",
-                ]
-            ]
-            .dropna()
-            .to_dict(orient="records")
-        )
-        return jsonify(courses)
-    else:
-        logging.error("Missing course_name column in courses_df")
-        return jsonify([])
+    conn = get_db_connection()
+    query = """SELECT c.course_name, c.university_name, c.abbrv, c.direct_entry_requirements, c.utme_requirements, c.subjects
+               FROM courses c
+               JOIN universities u ON c.university_name = u.university_name
+               WHERE 1=1"""
+    params = []
+    if state:
+        query += " AND u.state = ?"
+        params.append(state)
+    if university:
+        query += " AND c.university_name = ?"
+        params.append(university)
+    query += " ORDER BY c.course_name"
+    courses = conn.execute(query, params).fetchall()
+    conn.close()
+    return jsonify([dict(course) for course in courses])
 
 
-# Recommendation route - process user input and give recommendations
+# Recommendation route
 @app.route("/recommend", methods=["GET", "POST"])
 def recommend():
     if request.method == "POST":
@@ -164,99 +160,69 @@ def recommend():
         f"Recommendation request - Location: {location}, University: {preferred_university}, Course: {preferred_course}"
     )
 
-    filtered_universities = universities_df.copy()
+    conn = get_db_connection()
+    query = """SELECT u.university_name, u.state, u.program_type, 
+                      c.course_name, c.utme_requirements, c.subjects, 
+                      c.direct_entry_requirements, c.abbrv
+               FROM universities u
+               LEFT JOIN courses c ON u.university_name = c.university_name
+               WHERE 1=1"""
+    params = []
+
     if location:
-        filtered_universities = filtered_universities[
-            filtered_universities["state"] == location
-        ]
+        query += " AND u.state = ?"
+        params.append(location)
     if preferred_university:
-        filtered_universities = filtered_universities[
-            filtered_universities["university_name"] == preferred_university
-        ]
-
-    logging.info(f"Filtered universities: {filtered_universities.shape[0]}")
-
+        query += " AND u.university_name = ?"
+        params.append(preferred_university)
     if preferred_course:
-        course_universities = courses_df[courses_df["course_name"] == preferred_course][
-            "university_name"
-        ].tolist()
-        filtered_universities = filtered_universities[
-            filtered_universities["university_name"].isin(course_universities)
-        ]
+        query += " AND c.course_name = ?"
+        params.append(preferred_course)
 
-        course_info = courses_df[courses_df["course_name"] == preferred_course]
-        result = pd.merge(
-            filtered_universities, course_info, on="university_name", how="inner"
-        )
+    query += " ORDER BY u.university_name, c.course_name"
 
-        display_columns = [
-            "university_name",
-            "state",
-            "program_type",
-            "course_name",
-            "utme_requirements",
-            "subjects",
-            "direct_entry_requirements",
-            "abbrv",
-        ]
+    results = conn.execute(query, params).fetchall()
+    conn.close()
 
-        rename_dict = {
-            "university_name": "University",
-            "state": "State",
-            "program_type": "Program Type",
-            "course_name": "Course",
-            "utme_requirements": "UTME Requirements",
-            "subjects": "UTME Subjects",
-            "direct_entry_requirements": "Direct Entry Requirements",
-            "abbrv": "Abbreviation",
-        }
+    grouped_recommendations = {}
+    for row in results:
+        uni_name = row["university_name"]
+        if uni_name not in grouped_recommendations:
+            grouped_recommendations[uni_name] = {
+                "id": len(grouped_recommendations),
+                "university_name": uni_name,
+                "state": row["state"],
+                "program_type": row["program_type"],
+                "courses": [],
+                "added_courses": set(),
+            }
 
-        existing_columns = [col for col in display_columns if col in result.columns]
-        result = result[existing_columns]
-        result.rename(columns=rename_dict, inplace=True)
-    else:
-        result = filtered_universities[["university_name", "state", "program_type"]]
-        result.rename(
-            columns={
-                "university_name": "University",
-                "state": "State",
-                "program_type": "Program Type",
-            },
-            inplace=True,
-        )
+        if (
+            row["course_name"]
+            and row["course_name"]
+            not in grouped_recommendations[uni_name]["added_courses"]
+        ):
+            grouped_recommendations[uni_name]["courses"].append(
+                {
+                    "course_name": row["course_name"],
+                    "utme_requirements": row["utme_requirements"],
+                    "subjects": row["subjects"],
+                    "direct_entry_requirements": row["direct_entry_requirements"],
+                    "abbrv": row["abbrv"],
+                }
+            )
+            grouped_recommendations[uni_name]["added_courses"].add(row["course_name"])
 
-    if not result.empty:
-        result = result.reset_index(drop=True)
-        result["id"] = result.index
-
-        # Refactored: Ensure all courses are lists and handle NaN values
-        courses_per_uni = (
-            courses_df.groupby("university_name")["course_name"]
-            .apply(lambda x: sorted(x.dropna().tolist()))
-            .to_dict()
-        )
-        logging.info(
-            f"Courses per university created. Sample: {list(courses_per_uni.items())[:5]}"
-        )
-
-        # Replace any non-list entries with empty lists to prevent TypeError
-        for uni in result["University"]:
-            if uni in courses_per_uni:
-                if not isinstance(courses_per_uni[uni], list):
-                    courses_per_uni[uni] = []
-            else:
-                courses_per_uni[uni] = []
-
-        result["courses"] = result["University"].map(courses_per_uni)
-
-        # Sort the recommendations alphabetically by University
-        result = result.sort_values(by="University")
-
-        recommendations = result.to_dict(orient="records")
-    else:
-        recommendations = []
+    # Remove the "added_courses" set before passing to template
+    recommendations = [
+        {k: v for k, v in uni.items() if k != "added_courses"}
+        for uni in grouped_recommendations.values()
+    ]
 
     logging.info(f"Number of recommendations: {len(recommendations)}")
+    logging.debug(
+        f"Sample recommendation: {recommendations[0] if recommendations else 'No recommendations'}"
+    )
 
     return render_template(
         "recommend.html",
@@ -273,63 +239,36 @@ def search():
     query = request.args.get("q", "").lower()
     state = request.args.get("state")
     program_type = request.args.get("program_type")
-    if not query:
-        return jsonify({"universities": [], "courses": []})
 
-    try:
-        # Search universities
-        uni_criteria = (
-            universities_df["university_name"].str.lower().str.contains(query)
-        )
-        if state:
-            uni_criteria &= universities_df["state"].str.lower() == state.lower()
-        if program_type:
-            uni_criteria &= (
-                universities_df["program_type"].str.lower() == program_type.lower()
-            )
-        universities = (
-            universities_df[uni_criteria][["university_name", "state", "program_type"]]
-            .dropna()
-            .drop_duplicates(subset=["university_name"])
-            .sort_values(by="university_name")
-            .to_dict(orient="records")
-        )
+    conn = get_db_connection()
+    uni_query = """SELECT university_name, state, program_type
+                   FROM universities
+                   WHERE LOWER(university_name) LIKE ?"""
+    uni_params = [f"%{query}%"]
 
-        # Search courses
-        course_search_criteria = [
-            courses_df["course_name"].str.lower().str.contains(query),
-            courses_df["abbrv"].str.lower().str.contains(query),
-        ]
+    if state:
+        uni_query += " AND LOWER(state) = ?"
+        uni_params.append(state.lower())
+    if program_type:
+        uni_query += " AND LOWER(program_type) = ?"
+        uni_params.append(program_type.lower())
 
-        # Combine search criteria using bitwise OR
-        combined_criteria = course_search_criteria[0]
-        for criteria in course_search_criteria[1:]:
-            combined_criteria = combined_criteria | criteria
+    universities = conn.execute(uni_query, uni_params).fetchall()
 
-        courses = (
-            courses_df[combined_criteria][
-                [
-                    "course_name",
-                    "university_name",
-                    "abbrv",
-                    "direct_entry_requirements",
-                    "utme_requirements",
-                    "subjects",
-                ]
-            ]
-            .dropna()
-            .drop_duplicates(subset=["course_name"])
-            .sort_values(by="course_name")
-            .to_dict(orient="records")
-        )
+    course_query = """SELECT course_name, university_name, abbrv, direct_entry_requirements, utme_requirements, subjects
+                      FROM courses
+                      WHERE LOWER(course_name) LIKE ? OR LOWER(abbrv) LIKE ?"""
+    course_params = [f"%{query}%", f"%{query}%"]
 
-        logging.info(
-            f"Search query '{query}' returned {len(universities)} universities and {len(courses)} courses."
-        )
-        return jsonify({"universities": universities, "courses": courses})
-    except Exception as e:
-        logging.error(f"Error in search function: {str(e)}")
-        return jsonify({"error": "An error occurred while processing your search"}), 500
+    courses = conn.execute(course_query, course_params).fetchall()
+    conn.close()
+
+    return jsonify(
+        {
+            "universities": [dict(uni) for uni in universities],
+            "courses": [dict(course) for course in courses],
+        }
+    )
 
 
 # Search results route
@@ -345,14 +284,76 @@ def search_results():
     )
 
 
+# About route
 @app.route("/about")
 def about():
     return render_template("about.html")
 
 
+# Contact route
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
+
+
+# Feedback submission route
+@app.route("/submit_feedback", methods=["POST"])
+def submit_feedback():
+    name = request.form.get("name")
+    email = request.form.get("email")
+    subject = request.form.get("subject")
+    message = request.form.get("message")
+
+    conn = get_db_connection()
+    conn.execute(
+        "INSERT INTO feedback (name, email, subject, message) VALUES (?, ?, ?, ?)",
+        (name, email, subject, message),
+    )
+    conn.commit()
+    conn.close()
+
+    flash("Thank you for your feedback!", "success")
+    return redirect(url_for("contact"))
+
+
+# Login route
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        conn = get_db_connection()
+        user = conn.execute(
+            "SELECT * FROM users WHERE username = ?", (username,)
+        ).fetchone()
+        conn.close()
+
+        if user and check_password_hash(user["password"], password):
+            user_obj = User(user["id"], user["username"])
+            login_user(user_obj)
+            return redirect(url_for("admin"))
+
+        flash("Invalid username or password", "error")
+
+    return render_template("login.html")
+
+
+# Logout route
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("home"))
+
+
+# Admin route
+@app.route("/admin")
+@login_required
+def admin():
+    conn = get_db_connection()
+    feedback = conn.execute("SELECT * FROM feedback ORDER BY id DESC").fetchall()
+    conn.close()
+    return render_template("admin.html", feedback=feedback)
 
 
 # Run Flask app
