@@ -1,355 +1,219 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nigerian Degree Awarding Institutions Recommendation System</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-    />
-    <style>
-      body {
-        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f8f9fa;
-      }
-      .navbar {
-        background-color: #2c3e50;
-      }
-      .hero {
-        background: linear-gradient(
-            rgba(44, 62, 80, 0.7),
-            rgba(44, 62, 80, 0.7)
-          ),
-          url("https://example.com/hero-image.jpg");
-        background-size: cover;
-        background-position: center;
-        color: white;
-        padding: 100px 0;
-      }
-      .feature-card {
-        transition: transform 0.3s ease-in-out;
-      }
-      .feature-card:hover {
-        transform: translateY(-5px);
-      }
-      .footer {
-        background-color: #2c3e50;
-        color: white;
-      }
-    </style>
-  </head>
-  <body>
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-      <div class="container">
-        <a class="navbar-brand" href="/">Nigerian Institutions Finder</a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav me-auto">
-            <li class="nav-item">
-              <a class="nav-link" href="/">Home</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/about">About</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/contact">Contact</a>
-            </li>
-          </ul>
-          <form class="d-flex" action="/search" method="GET">
-            <input
-              class="form-control me-2"
-              type="search"
-              placeholder="Institutions/Courses"
-              name="q"
-              aria-label="Search"
-            />
-            <button class="btn btn-outline-light" type="submit">Search</button>
-          </form>
-        </div>
+<!-- templates/home.html -->
+{% extends "base.html" %} {% block title %}Home - Nigerian Institutions Finder{%
+endblock %} {% block content %}
+<section class="hero text-center">
+  <div class="container">
+    <h1 class="display-4 mb-4">Find Your Perfect Institution</h1>
+    <p class="lead mb-5">
+      Discover top Nigerian universities and courses tailored to your
+      preferences.
+    </p>
+    <form
+      action="/recommend"
+      method="POST"
+      class="mx-auto"
+      id="recommendation-form"
+    >
+      <div class="input-group input-group-lg mb-3">
+        <select id="location" name="location" class="form-select">
+          <option value="">All States</option>
+        </select>
       </div>
-    </nav>
-
-    <section class="hero text-center">
-      <div class="container">
-        <h1 class="display-4 mb-4">Find Your Perfect Institution</h1>
-        <p class="lead mb-5">
-          Discover top Nigerian universities and courses tailored to your
-          preferences.
-        </p>
-        <form
-          action="/recommend"
-          method="POST"
-          class="mx-auto"
-          style="max-width: 500px"
-        >
-          <div class="input-group input-group-lg mb-3">
-            <select id="location" name="location" class="form-select">
-              <option value="">All States</option>
-            </select>
-          </div>
-          <div class="input-group input-group-lg mb-3">
-            <select id="course" name="course" class="form-select">
-              <option value="">All Courses</option>
-            </select>
-          </div>
-          <div class="input-group input-group-lg mb-3">
-            <select id="university" name="university" class="form-select">
-              <option value="">All Institutions</option>
-            </select>
-          </div>
-          <button type="submit" class="btn btn-primary btn-lg w-100">
-            Find Institution
-          </button>
-        </form>
+      <div class="input-group input-group-lg mb-3">
+        <select id="course" name="course" class="form-select">
+          <option value="">All Courses</option>
+        </select>
       </div>
-    </section>
-
-    <section class="py-5">
-      <div class="container">
-        <h2 class="text-center mb-5">Why Choose Us?</h2>
-        <div class="row">
-          <div class="col-md-4 mb-4">
-            <div class="card h-100 feature-card">
-              <div class="card-body text-center">
-                <i class="fas fa-search fa-3x mb-3 text-primary"></i>
-                <h5 class="card-title">Comprehensive Database</h5>
-                <p class="card-text">
-                  Access information on all accredited Nigerian institutions and
-                  courses.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4 mb-4">
-            <div class="card h-100 feature-card">
-              <div class="card-body text-center">
-                <i class="fas fa-filter fa-3x mb-3 text-primary"></i>
-                <h5 class="card-title">Personalized Recommendations</h5>
-                <p class="card-text">
-                  Get tailored suggestions based on your preferences and
-                  requirements.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4 mb-4">
-            <div class="card h-100 feature-card">
-              <div class="card-body text-center">
-                <i class="fas fa-chart-bar fa-3x mb-3 text-primary"></i>
-                <h5 class="card-title">Detailed Insights</h5>
-                <p class="card-text">
-                  View comprehensive information about each institution and
-                  course.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="input-group input-group-lg mb-3">
+        <select id="university" name="university" class="form-select">
+          <option value="">All Institutions</option>
+        </select>
       </div>
-    </section>
+      <button type="submit" class="btn btn-primary btn-lg w-100">
+        Find Institution
+      </button>
+    </form>
+  </div>
+</section>
 
-    <footer class="footer py-4">
-      <div class="container">
-        <div class="row">
-          <div class="col-md-6">
-            <h5>Institution Finder</h5>
-            <p>
-              Helping students find their perfect educational path in Nigeria.
+<section class="py-5">
+  <div class="container">
+    <h2 class="text-center mb-5">Why Choose Us?</h2>
+    <div class="row">
+      <div class="col-md-4 mb-4">
+        <div class="card h-100 feature-card">
+          <div class="card-body text-center">
+            <i class="fas fa-search fa-3x mb-3 text-primary"></i>
+            <h5 class="card-title">Comprehensive Database</h5>
+            <p class="card-text">
+              Access information on all accredited Nigerian institutions and
+              courses.
             </p>
           </div>
-          <div class="col-md-3">
-            <h5>Quick Links</h5>
-            <ul class="list-unstyled">
-              <li><a href="/" class="text-white">Home</a></li>
-              <li><a href="/about" class="text-white">About</a></li>
-              <li><a href="/contact" class="text-white">Contact</a></li>
-            </ul>
-          </div>
-          <div class="col-md-3">
-            <h5>Follow Us</h5>
-            <a href="#" class="text-white me-2"
-              ><i class="fab fa-facebook-f"></i
-            ></a>
-            <a href="#" class="text-white me-2"
-              ><i class="fab fa-twitter"></i
-            ></a>
-            <a href="#" class="text-white me-2"
-              ><i class="fab fa-instagram"></i
-            ></a>
+        </div>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="card h-100 feature-card">
+          <div class="card-body text-center">
+            <i class="fas fa-filter fa-3x mb-3 text-primary"></i>
+            <h5 class="card-title">Personalized Recommendations</h5>
+            <p class="card-text">
+              Get tailored suggestions based on your preferences and
+              requirements.
+            </p>
           </div>
         </div>
-        <hr class="mt-4 mb-3" />
-        <p class="text-center mb-0">
-          &copy; 2023 Institution Finder. All rights reserved.
-        </p>
       </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-      $(document).ready(function () {
-        /**
-         * Function to load and sort unique options into a select element.
-         * @param {string} url - The API endpoint to fetch data from.
-         * @param {object} params - Query parameters for the API request.
-         * @param {jQuery} targetElement - The jQuery selector for the target <select> element.
-         * @param {string} defaultText - The default option text.
-         * @param {string} [property] - The property to extract from each object (if applicable).
-         */
-        function loadOptions(
-          url,
-          params,
-          targetElement,
-          defaultText,
-          property
-        ) {
-          $.getJSON(url, params, function (data) {
-            // Sort the data alphabetically
-            if (property) {
-              data.sort(function (a, b) {
-                const nameA = a[property].toUpperCase(); // Ignore case
-                const nameB = b[property].toUpperCase(); // Ignore case
-                if (nameA < nameB) {
-                  return -1;
-                }
-                if (nameA > nameB) {
-                  return 1;
-                }
-                return 0; // Names must be equal
-              });
-            } else {
-              data.sort(function (a, b) {
-                const nameA = a.toUpperCase(); // Ignore case
-                const nameB = b.toUpperCase(); // Ignore case
-                if (nameA < nameB) {
-                  return -1;
-                }
-                if (nameA > nameB) {
-                  return 1;
-                }
-                return 0; // Names must be equal
-              });
-            }
-
-            // Initialize a Set to track unique values
-            const uniqueSet = new Set();
-            const uniqueData = [];
-
-            // Filter out duplicates
-            $.each(data, function (index, item) {
-              const value = property ? item[property] : item;
-              if (!uniqueSet.has(value)) {
-                uniqueSet.add(value);
-                uniqueData.push(item);
-              }
-            });
-
-            // Clear existing options and add the default option
-            targetElement
-              .empty()
-              .append(`<option value="">${defaultText}</option>`);
-
-            // Populate the dropdown with sorted and unique options
-            $.each(uniqueData, function (index, item) {
-              if (property && item[property]) {
-                targetElement.append(
-                  $("<option></option>")
-                    .attr("value", item[property])
-                    .text(item[property])
-                );
-              } else if (!property && typeof item === "string") {
-                targetElement.append(
-                  $("<option></option>").attr("value", item).text(item)
-                );
-              }
-            });
-          }).fail(function () {
-            console.error(`Failed to load options from ${url}`);
-          });
-        }
-
-        /**
-         * Function to load and sort unique options based on the selected state.
-         * @param {string} state - The selected state to filter options.
-         * @param {string} type - The type of options to load ('university' or 'course').
-         */
-        function loadFilteredOptions(state, type) {
-          const url =
-            type === "university" ? "/api/universities" : "/api/courses";
-          const params = {};
-
-          if (type === "university") {
-            if (state) {
-              params.state = state;
-            }
-          } else if (type === "course") {
-            if (state) {
-              params.state = state;
-            }
-            const selectedUniversity = $("#university").val();
-            if (selectedUniversity) {
-              params.university = selectedUniversity;
-            }
+      <div class="col-md-4 mb-4">
+        <div class="card h-100 feature-card">
+          <div class="card-body text-center">
+            <i class="fas fa-chart-bar fa-3x mb-3 text-primary"></i>
+            <h5 class="card-title">Detailed Insights</h5>
+            <p class="card-text">
+              View comprehensive information about each institution and course.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %} {% block extra_scripts %}
+<!-- Home Page Specific Scripts -->
+<script>
+  /**
+   * Function to load and sort unique options into a select element.
+   * @param {string} url - The API endpoint to fetch data from.
+   * @param {object} params - Query parameters for the API request.
+   * @param {jQuery} targetElement - The jQuery selector for the target <select> element.
+   * @param {string} defaultText - The default option text.
+   * @param {string} [property] - The property to extract from each object (if applicable).
+   */
+  function loadOptions(url, params, targetElement, defaultText, property) {
+    $.getJSON(url, params, function (data) {
+      // Sort the data alphabetically
+      if (property) {
+        data.sort(function (a, b) {
+          const nameA = a[property].toUpperCase(); // Ignore case
+          const nameB = b[property].toUpperCase(); // Ignore case
+          if (nameA < nameB) {
+            return -1;
           }
+          if (nameA > nameB) {
+            return 1;
+          }
+          return 0; // Names must be equal
+        });
+      } else {
+        data.sort(function (a, b) {
+          const nameA = a.toUpperCase(); // Ignore case
+          const nameB = b.toUpperCase(); // Ignore case
+          if (nameA < nameB) {
+            return -1;
+          }
+          if (nameA > nameB) {
+            return 1;
+          }
+          return 0; // Names must be equal
+        });
+      }
 
-          const targetElement =
-            type === "university" ? $("#university") : $("#course");
-          const defaultText =
-            type === "university" ? "All Institutions" : "All Courses";
-          const property =
-            type === "university" ? "university_name" : "course_name";
+      // Initialize a Set to track unique values
+      const uniqueSet = new Set();
+      const uniqueData = [];
 
-          loadOptions(url, params, targetElement, defaultText, property);
+      // Filter out duplicates
+      $.each(data, function (index, item) {
+        const value = property ? item[property] : item;
+        if (!uniqueSet.has(value)) {
+          uniqueSet.add(value);
+          uniqueData.push(item);
         }
-
-        // Load States (array of strings)
-        loadOptions("/api/locations", {}, $("#location"), "All States");
-
-        // Load Universities with 'university_name' property
-        loadOptions(
-          "/api/universities",
-          {},
-          $("#university"),
-          "All Institutions",
-          "university_name"
-        );
-
-        // Load Courses with 'course_name' property
-        loadOptions(
-          "/api/courses",
-          {},
-          $("#course"),
-          "All Courses",
-          "course_name"
-        );
-
-        // When a state is selected, filter universities and courses based on the selected state
-        $("#location").change(function () {
-          var selectedState = $(this).val();
-          loadFilteredOptions(selectedState, "university");
-          loadFilteredOptions(selectedState, "course");
-        });
-
-        // When a university is selected, filter courses based on the selected university and state
-        $("#university").change(function () {
-          var selectedState = $("#location").val();
-          var selectedUniversity = $(this).val();
-          loadFilteredOptions(selectedState, "course");
-        });
       });
-    </script>
-  </body>
-</html>
+
+      // Clear existing options and add the default option
+      targetElement.empty().append(`<option value="">${defaultText}</option>`);
+
+      // Populate the dropdown with sorted and unique options
+      $.each(uniqueData, function (index, item) {
+        if (property && item[property]) {
+          targetElement.append(
+            $("<option></option>")
+              .attr("value", item[property])
+              .text(item[property])
+          );
+        } else if (!property && typeof item === "string") {
+          targetElement.append(
+            $("<option></option>").attr("value", item).text(item)
+          );
+        }
+      });
+    }).fail(function () {
+      console.error(`Failed to load options from ${url}`);
+    });
+  }
+
+  /**
+   * Function to load and sort unique options based on the selected state.
+   * @param {string} state - The selected state to filter options.
+   * @param {string} type - The type of options to load ('university' or 'course').
+   */
+  function loadFilteredOptions(state, type) {
+    const url = type === "university" ? "/api/universities" : "/api/courses";
+    const params = {};
+
+    if (type === "university") {
+      if (state) {
+        params.state = state;
+      }
+    } else if (type === "course") {
+      if (state) {
+        params.state = state;
+      }
+      const selectedUniversity = $("#university").val();
+      if (selectedUniversity) {
+        params.university = selectedUniversity;
+      }
+    }
+
+    const targetElement =
+      type === "university" ? $("#university") : $("#course");
+    const defaultText =
+      type === "university" ? "All Institutions" : "All Courses";
+    const property = type === "university" ? "university_name" : "course_name";
+
+    loadOptions(url, params, targetElement, defaultText, property);
+  }
+
+  $(document).ready(function () {
+    // Load States (array of strings)
+    loadOptions("/api/locations", {}, $("#location"), "All States");
+
+    // Load Universities with 'university_name' property
+    loadOptions(
+      "/api/universities",
+      {},
+      $("#university"),
+      "All Institutions",
+      "university_name"
+    );
+
+    // Load Courses with 'course_name' property
+    loadOptions("/api/courses", {}, $("#course"), "All Courses", "course_name");
+
+    // When a state is selected, filter universities and courses based on the selected state
+    $("#location").change(function () {
+      var selectedState = $(this).val();
+      loadFilteredOptions(selectedState, "university");
+      loadFilteredOptions(selectedState, "course");
+    });
+
+    // When a university is selected, filter courses based on the selected university and state
+    $("#university").change(function () {
+      var selectedState = $("#location").val();
+      var selectedUniversity = $(this).val();
+      loadFilteredOptions(selectedState, "course");
+    });
+  });
+</script>
+{% endblock %}

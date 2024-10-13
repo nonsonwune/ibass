@@ -1,3 +1,5 @@
+/* static/css/styles.css */
+
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f8f9fa;
@@ -5,6 +7,51 @@ body {
 
 .navbar {
   background-color: #2c3e50;
+}
+
+.hero {
+  background: linear-gradient(rgba(44, 62, 80, 0.7), rgba(44, 62, 80, 0.7)),
+    url("https://example.com/hero-image.jpg");
+  background-size: cover;
+  background-position: center;
+  color: white;
+  padding: 100px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.hero form {
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  max-width: 600px;
+  width: 100%;
+}
+
+.hero select {
+  height: calc(3.5rem + 2px);
+  border-radius: 5px;
+  border: 1px solid #ced4da;
+  font-size: 1.1rem;
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.hero button[type="submit"] {
+  background-color: #007bff;
+  border-color: #007bff;
+  font-size: 1.2rem;
+  padding: 0.75rem;
+  width: 100%;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.hero button[type="submit"]:hover {
+  background-color: #0056b3;
 }
 
 .recommendation-card {
@@ -124,4 +171,34 @@ body {
   .recommendation-card {
     margin-bottom: 1rem;
   }
+}
+
+.vote-btn.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.comment {
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+}
+
+.comment-score {
+  font-weight: bold;
+  margin-left: 10px;
+}
+
+.feature-card {
+  transition: transform 0.3s ease-in-out;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+}
+
+.highlight-course {
+  background-color: #f1c40f; /* Light yellow background */
+  border: 2px solid #e67e22; /* Orange border */
 }

@@ -1,3 +1,5 @@
+// static/js/scripts.js
+
 document.addEventListener("DOMContentLoaded", function () {
   const institutionModal = document.getElementById("institutionModal");
 
@@ -5,262 +7,208 @@ document.addEventListener("DOMContentLoaded", function () {
     institutionModal.addEventListener("show.bs.modal", function (event) {
       const button = event.relatedTarget;
       const uniId = button.getAttribute("data-uni-id");
-      const searchCriteria = document.querySelector(".search-criteria");
-      const selectedCourse = searchCriteria
-        ? searchCriteria
-            .querySelector(".badge:nth-child(2)")
-            ?.textContent.split(": ")[1]
-        : null;
-      fetchInstitutionDetails(uniId, selectedCourse);
+      const selectedCourse = button.getAttribute("data-selected-course") || "";
+
+      // Reset modal content
+      resetModal();
+
+      if (uniId) {
+        fetchInstitutionDetails(uniId, selectedCourse);
+      } else {
+        showErrorMessage("Unable to retrieve institution details.");
+      }
     });
+  } else {
+    console.error("Institution modal not found in the DOM");
   }
 
-  function fetchInstitutionDetails(uniId, selectedCourse) {
-    const searchType = selectedCourse ? "course" : "location";
+  /**
+   * Resets the modal content to its initial state.
+   */
+  function resetModal() {
+    // Hide content and show loading
+    document.getElementById("institutionDetails").style.display = "none";
+    document.getElementById("modalErrorMessage").style.display = "none";
+    document.getElementById("loadingIndicator").style.display = "block";
 
+    // Clear previous content
+    document.getElementById("institutionName").textContent = "";
+    document.getElementById("institutionState").textContent = "";
+    document.getElementById("institutionProgramType").textContent = "";
+    document.getElementById("searchCriteria").textContent = "";
+    // Removed image references
+    document.getElementById("selectedCourseContent").innerHTML = "";
+    document.getElementById("institutionCoursesList").innerHTML = "";
+  }
+
+  /**
+   * Fetches institution details from the API.
+   * @param {number} uniId - The ID of the university.
+   * @param {string} selectedCourse - The name of the selected course.
+   */
+  function fetchInstitutionDetails(uniId, selectedCourse) {
+    console.log(
+      `Fetching details for institution ID: ${uniId}, Selected Course: ${selectedCourse}`
+    );
     fetch(
-      `/api/institution/${uniId}?search_type=${searchType}&course=${
-        selectedCourse || ""
-      }`
+      `/api/institution/${uniId}?course=${encodeURIComponent(selectedCourse)}`
     )
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Network response was not ok");
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
         return response.json();
       })
       .then((uni) => {
+        console.log("Received university data:", uni);
         populateModal(uni);
       })
       .catch((error) => {
         console.error("Error fetching institution details:", error);
-        const modalBody = institutionModal.querySelector(".modal-body");
-        modalBody.innerHTML = `<p class="text-danger">Error loading institution details. Please try again.</p>`;
+        hideLoadingIndicator();
+        showErrorMessage(
+          `Error loading institution details. Please try again. Error: ${error.message}`
+        );
       });
   }
 
+  /**
+   * Populates the modal with university and course data.
+   * @param {object} uni - The university data received from the API.
+   */
   function populateModal(uni) {
-    const modalTitle = institutionModal.querySelector(".modal-title");
-    const institutionName = institutionModal.querySelector("#institutionName");
-    const institutionState =
-      institutionModal.querySelector("#institutionState");
-    const institutionProgramType = institutionModal.querySelector(
-      "#institutionProgramType"
-    );
-    const selectedCourseDetails = institutionModal.querySelector(
-      "#selectedCourseDetails"
-    );
-    const institutionCoursesList = institutionModal.querySelector(
-      "#institutionCoursesList"
-    );
-    const searchCriteriaElement =
-      institutionModal.querySelector("#searchCriteria");
+    console.log("Populating modal with data:", uni);
 
-    modalTitle.textContent = "Institution Details";
-    institutionName.textContent = uni.university_name;
-    institutionState.textContent = uni.state;
-    institutionProgramType.textContent = uni.program_type;
-    searchCriteriaElement.textContent =
+    const elements = {
+      institutionName: document.getElementById("institutionName"),
+      institutionState: document.getElementById("institutionState"),
+      institutionProgramType: document.getElementById("institutionProgramType"),
+      searchCriteria: document.getElementById("searchCriteria"),
+      selectedCourseDetails: document.getElementById("selectedCourseDetails"),
+      selectedCourseContent: document.getElementById("selectedCourseContent"),
+      institutionCoursesList: document.getElementById("institutionCoursesList"),
+    };
+
+    const missingElements = Object.entries(elements)
+      .filter(([key, value]) => !value)
+      .map(([key]) => key);
+
+    if (missingElements.length > 0) {
+      console.error("Missing elements:", missingElements);
+      showErrorMessage("Required modal elements are missing.");
+      return;
+    }
+
+    elements.institutionName.textContent = uni.university_name;
+    elements.institutionState.textContent = uni.state;
+    elements.institutionProgramType.textContent = uni.program_type;
+    elements.searchCriteria.textContent =
       uni.search_type === "course"
         ? `Course: ${uni.selected_course}`
         : `Location: ${uni.state}`;
 
-    // Clear previous content
-    selectedCourseDetails.innerHTML = "";
-    institutionCoursesList.innerHTML = "";
-
-    if (uni.search_type === "course" && uni.courses.length > 0) {
-      const selectedCourse = uni.courses[0];
-      selectedCourseDetails.innerHTML = generateCourseHTML(selectedCourse);
+    // Populate selected course details
+    if (uni.selected_course && uni.courses && uni.courses.length > 0) {
+      const selectedCourseData = uni.courses.find(
+        (course) =>
+          course.course_name.toLowerCase() === uni.selected_course.toLowerCase()
+      );
+      if (selectedCourseData) {
+        elements.selectedCourseContent.innerHTML =
+          createCourseHTML(selectedCourseData);
+        elements.selectedCourseDetails.style.display = "block";
+      } else {
+        elements.selectedCourseContent.innerHTML = `<p class="alert alert-warning">No details available for the selected course "${uni.selected_course}" in this institution.</p>`;
+        elements.selectedCourseDetails.style.display = "block";
+      }
     }
 
-    // Add all courses to the list
-    uni.courses.forEach((course) => {
-      const courseItem = document.createElement("div");
-      courseItem.className =
-        "d-flex justify-content-between align-items-center mb-2";
-      courseItem.innerHTML = `
-            <span>${course.course_name}</span>
-            <button class="btn btn-sm btn-primary view-course" data-course-id="${course.id}">View Details</button>
-        `;
-      institutionCoursesList.appendChild(courseItem);
-    });
-
-    // Add event listeners to "View Details" buttons
-    const viewCourseButtons = institutionModal.querySelectorAll(".view-course");
-    viewCourseButtons.forEach((button) => {
-      button.addEventListener("click", function () {
-        const courseId = this.getAttribute("data-course-id");
-        fetchCourseDetails(courseId);
+    // Populate all courses
+    if (uni.courses && uni.courses.length > 0) {
+      uni.courses.forEach((course, index) => {
+        const courseHTML = createAccordionItem(course, index);
+        elements.institutionCoursesList.innerHTML += courseHTML;
       });
-    });
+    } else {
+      elements.institutionCoursesList.innerHTML =
+        '<p class="alert alert-info">No courses available for this institution.</p>';
+    }
+
+    // Show the institution details and hide loading
+    document.getElementById("loadingIndicator").style.display = "none";
+    document.getElementById("institutionDetails").style.display = "block";
   }
 
-  function generateCourseHTML(course) {
+  /**
+   * Creates HTML for a course.
+   * @param {object} course - The course data.
+   * @returns {string} - HTML string representing the course.
+   */
+  function createCourseHTML(course) {
     return `
         <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">${course.course_name}</h5>
-                <p><strong>UTME Requirements:</strong> ${
-                  course.utme_requirements || "N/A"
-                }</p>
-                <p><strong>UTME Subjects:</strong> ${
-                  course.subjects || "N/A"
-                }</p>
-                <p><strong>Direct Entry Requirements:</strong> ${
-                  course.direct_entry_requirements || "N/A"
-                }</p>
-                <p><strong>Abbreviation:</strong> ${course.abbrv || "N/A"}</p>
-            </div>
+          <div class="card-body">
+            <h5 class="card-title">${course.course_name}</h5>
+            <p><strong>UTME Requirements:</strong> ${
+              course.utme_requirements || "N/A"
+            }</p>
+            <p><strong>Direct Entry Requirements:</strong> ${
+              course.direct_entry_requirements || "N/A"
+            }</p>
+            <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
+          </div>
         </div>
-    `;
+      `;
   }
 
-  function fetchCourseDetails(courseId) {
-    fetch(`/course/${courseId}`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then((course) => {
-        const selectedCourseDetails = institutionModal.querySelector(
-          "#selectedCourseDetails"
-        );
-        selectedCourseDetails.innerHTML = generateCourseHTML(course);
-      })
-      .catch((error) => {
-        console.error("Error fetching course details:", error);
-        const selectedCourseDetails = institutionModal.querySelector(
-          "#selectedCourseDetails"
-        );
-        selectedCourseDetails.innerHTML = `<p class="text-danger">Error loading course details. Please try again.</p>`;
-      });
+  /**
+   * Creates HTML for an accordion item representing a course.
+   * @param {object} course - The course data.
+   * @param {number} index - The index of the course in the list.
+   * @returns {string} - HTML string for the accordion item.
+   */
+  function createAccordionItem(course, index) {
+    const collapseId = `collapseCourse${index}`;
+    const headingId = `headingCourse${index}`;
+    return `
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="${headingId}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+              ${course.course_name}
+            </button>
+          </h2>
+          <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headingId}" data-bs-parent="#coursesAccordion">
+            <div class="accordion-body">
+              <p><strong>UTME Requirements:</strong> ${
+                course.utme_requirements || "N/A"
+              }</p>
+              <p><strong>Direct Entry Requirements:</strong> ${
+                course.direct_entry_requirements || "N/A"
+              }</p>
+              <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
+            </div>
+          </div>
+        </div>
+      `;
   }
 
-  function populateCourseModal(course) {
-    const modalTitle = courseModal.querySelector(".modal-title");
-    const courseName = courseModal.querySelector("#courseName");
-    const courseUniversity = courseModal.querySelector("#courseUniversity");
-    const courseUtmeRequirements = courseModal.querySelector(
-      "#courseUtmeRequirements"
-    );
-    const courseUtmeSubjects = courseModal.querySelector("#courseUtmeSubjects");
-    const courseDirectEntryRequirements = courseModal.querySelector(
-      "#courseDirectEntryRequirements"
-    );
-    const courseAbbreviation = courseModal.querySelector("#courseAbbreviation");
-
-    modalTitle.textContent = "Course Details";
-    courseName.textContent = course.course_name;
-    courseUniversity.textContent = course.university_name;
-    courseUtmeRequirements.textContent = course.utme_requirements || "N/A";
-    courseUtmeSubjects.textContent = course.subjects || "N/A";
-    courseDirectEntryRequirements.textContent =
-      course.direct_entry_requirements || "N/A";
-    courseAbbreviation.textContent = course.abbrv || "N/A";
+  /**
+   * Shows an error message within the modal.
+   * @param {string} message - The error message to display.
+   */
+  function showErrorMessage(message) {
+    const errorDiv = document.getElementById("modalErrorMessage");
+    errorDiv.textContent = message;
+    errorDiv.style.display = "block";
   }
 
-  function showCourseModal(courseId) {
-    fetch(`/course/${courseId}`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then((course) => {
-        const modalTitle = courseModal.querySelector(".modal-title");
-        const courseName = courseModal.querySelector("#courseName");
-        const courseUniversity = courseModal.querySelector("#courseUniversity");
-        const courseUtmeRequirements = courseModal.querySelector(
-          "#courseUtmeRequirements"
-        );
-        const courseUtmeSubjects = courseModal.querySelector(
-          "#courseUtmeSubjects"
-        );
-        const courseDirectEntryRequirements = courseModal.querySelector(
-          "#courseDirectEntryRequirements"
-        );
-        const courseAbbreviation = courseModal.querySelector(
-          "#courseAbbreviation"
-        );
-
-        modalTitle.textContent = "Course Details";
-        courseName.textContent = course.course_name;
-        courseUniversity.textContent = course.university_name;
-        courseUtmeRequirements.textContent = course.utme_requirements || "N/A";
-        courseUtmeSubjects.textContent = course.subjects || "N/A";
-        courseDirectEntryRequirements.textContent =
-          course.direct_entry_requirements || "N/A";
-        courseAbbreviation.textContent = course.abbrv || "N/A";
-
-        const institutionModalInstance =
-          bootstrap.Modal.getInstance(institutionModal);
-        if (institutionModalInstance) {
-          institutionModalInstance.hide();
-        }
-
-        const courseModalInstance = new bootstrap.Modal(courseModal);
-        courseModalInstance.show();
-      })
-      .catch((error) => {
-        console.error("Error fetching course details:", error);
-        const modalBody = courseModal.querySelector(".modal-body");
-        modalBody.innerHTML = `<p class="text-danger">Error loading course details. Please try again.</p>`;
-      });
-  }
-
-  // Handle voting
-  const voteButtons = document.querySelectorAll(".vote-btn");
-  voteButtons.forEach((button) => {
-    button.addEventListener("click", function () {
-      const commentId = this.getAttribute("data-comment-id");
-      const voteType = this.getAttribute("data-vote-type");
-
-      fetch("/vote", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: `comment_id=${commentId}&vote_type=${voteType}`,
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success) {
-            const scoreElement = document.querySelector(`#score-${commentId}`);
-            scoreElement.textContent = data.new_score;
-          }
-        })
-        .catch((error) => {
-          console.error("Error voting:", error);
-        });
-    });
-  });
-
-  // Handle comment deletion
-  const deleteButtons = document.querySelectorAll(".delete-comment");
-  deleteButtons.forEach((button) => {
-    button.addEventListener("click", function (e) {
-      e.preventDefault();
-      if (confirm("Are you sure you want to delete this comment?")) {
-        this.closest("form").submit();
-      }
-    });
-  });
-
-  // Handle password change form submission
-  const changePasswordForm = document.getElementById("change-password-form");
-  if (changePasswordForm) {
-    changePasswordForm.addEventListener("submit", function (e) {
-      const newPassword = document.getElementById("new_password").value;
-      const confirmPassword = document.getElementById("confirm_password").value;
-
-      if (newPassword !== confirmPassword) {
-        e.preventDefault();
-        alert("New passwords do not match");
-      }
-    });
+  /**
+   * Hides the loading indicator.
+   */
+  function hideLoadingIndicator() {
+    const loadingIndicator = document.getElementById("loadingIndicator");
+    if (loadingIndicator) {
+      loadingIndicator.style.display = "none";
+    }
   }
 });

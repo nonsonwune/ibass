@@ -1,253 +1,463 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Recommended Institutions - Institution Finder</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-    />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/styles.css') }}"
-    />
-  </head>
-  <body>
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-      <div class="container">
-        <a class="navbar-brand" href="/">Institution Finder</a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav me-auto">
-            <li class="nav-item">
-              <a class="nav-link" href="/">Home</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/about">About</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/contact">Contact</a>
-            </li>
-          </ul>
-          <form class="d-flex" action="/search" method="GET">
-            <input
-              class="form-control me-2"
-              type="search"
-              placeholder="Institutions/Courses"
-              name="q"
-              aria-label="Search"
-            />
-            <button class="btn btn-outline-light" type="submit">Search</button>
-          </form>
+<!-- templates/recommend.html -->
+{% extends "base.html" %} {% block title %}Recommended Institutions - Nigerian
+Institutions Finder{% endblock %} {% block content %}
+<div class="container my-5">
+  {% with messages = get_flashed_messages(with_categories=true) %} {% if
+  messages %} {% for category, message in messages %}
+  <div
+    class="alert alert-{{ category }} alert-dismissible fade show"
+    role="alert"
+  >
+    {{ message }}
+    <button
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="alert"
+      aria-label="Close"
+    ></button>
+  </div>
+  {% endfor %} {% endif %} {% endwith %}
+
+  <!-- Breadcrumb Navigation -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/">Home</a></li>
+      <li class="breadcrumb-item active" aria-current="page">
+        Recommended Institutions
+      </li>
+    </ol>
+  </nav>
+
+  <h1 class="mb-4">Recommended Institutions</h1>
+
+  <!-- Search Criteria Display -->
+  {% if location or university or course %}
+  <div class="search-criteria mb-4 p-3 bg-light rounded">
+    <h5>Search Criteria:</h5>
+    <div>
+      {% if location %}
+      <span class="badge bg-primary me-2">
+        <i class="fas fa-map-marker-alt me-1"></i> Location: {{ location }}
+      </span>
+      {% endif %} {% if university %}
+      <span class="badge bg-success me-2">
+        <i class="fas fa-university me-1"></i> University: {{ university }}
+      </span>
+      {% endif %} {% if course %}
+      <span class="badge bg-warning text-dark me-2">
+        <i class="fas fa-book me-1"></i> Course: {{ course }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Recommendations Display -->
+  {% if recommendations %}
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for uni in recommendations %}
+    <div class="col">
+      <div class="card h-100 shadow-sm recommendation-card">
+        <!-- Removed Institution Image -->
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">{{ uni.university_name }}</h5>
+          <p class="card-text mb-2">
+            <i class="fas fa-map-marker-alt me-1 text-muted"></i>{{ uni.state }}
+          </p>
+          <p class="card-text">
+            <strong>Program Type:</strong> {{ uni.program_type }}
+          </p>
+          <p class="card-text">
+            <strong>Number of Courses:</strong> {{ uni.courses|length }}
+          </p>
+          <div class="mt-auto">
+            <button
+              class="btn btn-primary w-100"
+              data-bs-toggle="modal"
+              data-bs-target="#institutionModal"
+              data-uni-id="{{ uni.id }}"
+              data-selected-course="{{ course if course else '' }}"
+            >
+              <i class="fas fa-info-circle me-2"></i> View Details
+            </button>
+          </div>
         </div>
       </div>
-    </nav>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert alert-info" role="alert">
+    No matching institutions found. Please try different search criteria.
+  </div>
+  {% endif %}
 
-    <div class="container mt-5">
-      {% with messages = get_flashed_messages(with_categories=true) %} {% if
-      messages %} {% for category, message in messages %}
-      <div
-        class="alert alert-{{ category }} alert-dismissible fade show"
-        role="alert"
-      >
-        {{ message }}
+  <!-- New Search Button -->
+  <div class="text-center mt-4">
+    <a href="/" class="btn btn-secondary btn-lg">
+      <i class="fas fa-search me-2"></i> New Search
+    </a>
+  </div>
+</div>
+
+<!-- Institution Modal -->
+<div
+  class="modal fade"
+  id="institutionModal"
+  tabindex="-1"
+  aria-labelledby="institutionModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header institution">
+        <!-- Removed Institution Logo/Image -->
+        <h5 class="modal-title" id="institutionModalLabel">
+          <i class="fas fa-university me-2"></i> Institution Details
+        </h5>
         <button
           type="button"
           class="btn-close"
-          data-bs-dismiss="alert"
+          data-bs-dismiss="modal"
           aria-label="Close"
         ></button>
       </div>
-      {% endfor %} {% endif %} {% endwith %}
+      <div class="modal-body">
+        <!-- Loading Indicator -->
+        <div
+          id="loadingIndicator"
+          class="text-center mb-3"
+          style="display: none"
+        >
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
 
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="/">Home</a></li>
-          <li class="breadcrumb-item active" aria-current="page">
-            Recommended Institutions
-          </li>
-        </ol>
-      </nav>
-
-      <h1 class="mb-4">Recommended Institutions</h1>
-
-      <div class="search-criteria mb-4">
-        {% if location or university or course %}
-        <p>
-          Search criteria: {% if location %}<span class="badge bg-primary"
-            >Location: {{ location }}</span
-          >{% endif %} {% if university %}<span class="badge bg-primary"
-            >University: {{ university }}</span
-          >{% endif %} {% if course %}<span class="badge bg-primary"
-            >Course: {{ course }}</span
-          >{% endif %}
-        </p>
-        {% endif %}
-      </div>
-
-      {% if recommendations %}
-      <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        {% for uni in recommendations %}
-        <div class="col">
-          <div class="card h-100 recommendation-card">
-            <div class="card-body">
-              <h3 class="card-title">{{ uni.university_name }}</h3>
-              <h6 class="card-subtitle mb-2 text-muted">{{ uni.state }}</h6>
-              <p class="card-text">
-                <strong>Program Type:</strong> {{ uni.program_type }}<br />
-                <strong>Number of Courses:</strong> {{ uni.courses|length }}
+        <!-- Institution Details -->
+        <div id="institutionDetails" style="display: none">
+          <div class="row">
+            <!-- Removed Institution Image Section -->
+            <!-- Institution Info -->
+            <div class="col-12">
+              <h3 id="institutionName"></h3>
+              <p><strong>State:</strong> <span id="institutionState"></span></p>
+              <p>
+                <strong>Program Type:</strong>
+                <span id="institutionProgramType"></span>
+              </p>
+              <p>
+                <strong>Search Criteria:</strong>
+                <span id="searchCriteria"></span>
               </p>
             </div>
-            <div class="card-footer">
+          </div>
+
+          <!-- Tabs for Overview and Courses -->
+          <ul class="nav nav-tabs mt-4" id="institutionTab" role="tablist">
+            <li class="nav-item" role="presentation">
               <button
-                class="btn btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#institutionModal"
-                data-uni-id="{{ uni.id }}"
+                class="nav-link active"
+                id="overview-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#overview"
+                type="button"
+                role="tab"
+                aria-controls="overview"
+                aria-selected="true"
               >
-                View Details
+                Overview
               </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link"
+                id="courses-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#courses"
+                type="button"
+                role="tab"
+                aria-controls="courses"
+                aria-selected="false"
+              >
+                Courses
+              </button>
+            </li>
+          </ul>
+          <div class="tab-content" id="institutionTabContent">
+            <!-- Overview Tab -->
+            <div
+              class="tab-pane fade show active p-3"
+              id="overview"
+              role="tabpanel"
+              aria-labelledby="overview-tab"
+            >
+              <!-- Selected Course Details -->
+              <div
+                id="selectedCourseDetails"
+                class="mt-3"
+                style="display: none"
+              >
+                <h4>Selected Course <i class="fas fa-book"></i></h4>
+                <div id="selectedCourseContent"></div>
+              </div>
+            </div>
+            <!-- Courses Tab -->
+            <div
+              class="tab-pane fade p-3"
+              id="courses"
+              role="tabpanel"
+              aria-labelledby="courses-tab"
+            >
+              <div
+                id="institutionCoursesList"
+                class="accordion"
+                id="coursesAccordion"
+              >
+                <!-- Courses will be dynamically inserted here -->
+              </div>
             </div>
           </div>
         </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="alert alert-info" role="alert">
-        No matching institutions found. Please try different search criteria.
-      </div>
-      {% endif %}
 
-      <a href="/" class="btn btn-primary mt-4">New Search</a>
-    </div>
-
-    <!-- Institution Modal -->
-    <div
-      class="modal fade"
-      id="institutionModal"
-      tabindex="-1"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header institution">
-            <h5 class="modal-title institution">Institution Details</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <h3 id="institutionName"></h3>
-            <p><strong>State:</strong> <span id="institutionState"></span></p>
-            <p>
-              <strong>Program Type:</strong>
-              <span id="institutionProgramType"></span>
-            </p>
-            <p>
-              <strong>Search Criteria:</strong>
-              <span id="searchCriteria"></span>
-            </p>
-            <h6 class="mt-4">Selected Course:</h6>
-            <div id="selectedCourseDetails"></div>
-            <h6 class="mt-4">All Courses:</h6>
-            <div id="institutionCoursesList" class="list-group"></div>
-          </div>
+        <!-- Error Message -->
+        <div
+          id="modalErrorMessage"
+          class="alert alert-danger"
+          role="alert"
+          style="display: none"
+        >
+          <!-- Error message will be inserted here -->
         </div>
       </div>
-    </div>
-
-    <!-- Course Modal -->
-    <div class="modal fade" id="courseModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header course">
-            <h5 class="modal-title course">Course Details</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <h3 id="courseName"></h3>
-            <p>
-              <strong>University:</strong> <span id="courseUniversity"></span>
-            </p>
-            <p>
-              <strong>UTME Requirements:</strong>
-              <span id="courseUtmeRequirements"></span>
-            </p>
-            <p>
-              <strong>UTME Subjects:</strong>
-              <span id="courseUtmeSubjects"></span>
-            </p>
-            <p>
-              <strong>Direct Entry Requirements:</strong>
-              <span id="courseDirectEntryRequirements"></span>
-            </p>
-            <p>
-              <strong>Abbreviation:</strong>
-              <span id="courseAbbreviation"></span>
-            </p>
-          </div>
-        </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i> Close
+        </button>
       </div>
     </div>
+  </div>
+</div>
+{% endblock %} {% block extra_scripts %}
+<!-- Recommend Page Specific Scripts -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const institutionModal = document.getElementById("institutionModal");
 
-    <footer class="footer py-4 mt-5">
-      <div class="container">
-        <div class="row">
-          <div class="col-md-6">
-            <h5>Institution Finder</h5>
-            <p>
-              Helping students find their perfect educational path in Nigeria.
-            </p>
-          </div>
-          <div class="col-md-3">
-            <h5>Quick Links</h5>
-            <ul class="list-unstyled">
-              <li><a href="/" class="text-white">Home</a></li>
-              <li><a href="/about" class="text-white">About</a></li>
-              <li><a href="/contact" class="text-white">Contact</a></li>
-            </ul>
-          </div>
-          <div class="col-md-3">
-            <h5>Follow Us</h5>
-            <a href="#" class="text-white me-2"
-              ><i class="fab fa-facebook-f"></i
-            ></a>
-            <a href="#" class="text-white me-2"
-              ><i class="fab fa-twitter"></i
-            ></a>
-            <a href="#" class="text-white me-2"
-              ><i class="fab fa-instagram"></i
-            ></a>
+    if (institutionModal) {
+      institutionModal.addEventListener("show.bs.modal", function (event) {
+        const button = event.relatedTarget;
+        const uniId = button.getAttribute("data-uni-id");
+        const selectedCourse =
+          button.getAttribute("data-selected-course") || "";
+
+        // Reset modal content
+        resetModal();
+
+        if (uniId) {
+          fetchInstitutionDetails(uniId, selectedCourse);
+        } else {
+          showErrorMessage("Unable to retrieve institution details.");
+        }
+      });
+    } else {
+      console.error("Institution modal not found in the DOM");
+    }
+
+    /**
+     * Resets the modal content to its initial state.
+     */
+    function resetModal() {
+      // Hide content and show loading
+      document.getElementById("institutionDetails").style.display = "none";
+      document.getElementById("modalErrorMessage").style.display = "none";
+      document.getElementById("loadingIndicator").style.display = "block";
+
+      // Clear previous content
+      document.getElementById("institutionName").textContent = "";
+      document.getElementById("institutionState").textContent = "";
+      document.getElementById("institutionProgramType").textContent = "";
+      document.getElementById("searchCriteria").textContent = "";
+      // Removed image references
+      document.getElementById("selectedCourseContent").innerHTML = "";
+      document.getElementById("institutionCoursesList").innerHTML = "";
+    }
+
+    /**
+     * Fetches institution details from the API.
+     * @param {number} uniId - The ID of the university.
+     * @param {string} selectedCourse - The name of the selected course.
+     */
+    function fetchInstitutionDetails(uniId, selectedCourse) {
+      console.log(
+        `Fetching details for institution ID: ${uniId}, Selected Course: ${selectedCourse}`
+      );
+      fetch(
+        `/api/institution/${uniId}?course=${encodeURIComponent(selectedCourse)}`
+      )
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then((uni) => {
+          console.log("Received university data:", uni);
+          populateModal(uni);
+        })
+        .catch((error) => {
+          console.error("Error fetching institution details:", error);
+          hideLoadingIndicator();
+          showErrorMessage(
+            `Error loading institution details. Please try again. Error: ${error.message}`
+          );
+        });
+    }
+
+    /**
+     * Populates the modal with university and course data.
+     * @param {object} uni - The university data received from the API.
+     */
+    function populateModal(uni) {
+      console.log("Populating modal with data:", uni);
+
+      const elements = {
+        institutionName: document.getElementById("institutionName"),
+        institutionState: document.getElementById("institutionState"),
+        institutionProgramType: document.getElementById(
+          "institutionProgramType"
+        ),
+        searchCriteria: document.getElementById("searchCriteria"),
+        selectedCourseDetails: document.getElementById("selectedCourseDetails"),
+        selectedCourseContent: document.getElementById("selectedCourseContent"),
+        institutionCoursesList: document.getElementById(
+          "institutionCoursesList"
+        ),
+      };
+
+      const missingElements = Object.entries(elements)
+        .filter(([key, value]) => !value)
+        .map(([key]) => key);
+
+      if (missingElements.length > 0) {
+        console.error("Missing elements:", missingElements);
+        showErrorMessage("Required modal elements are missing.");
+        return;
+      }
+
+      elements.institutionName.textContent = uni.university_name;
+      elements.institutionState.textContent = uni.state;
+      elements.institutionProgramType.textContent = uni.program_type;
+      elements.searchCriteria.textContent =
+        uni.search_type === "course"
+          ? `Course: ${uni.selected_course}`
+          : `Location: ${uni.state}`;
+
+      // Populate selected course details
+      if (uni.selected_course && uni.courses && uni.courses.length > 0) {
+        const selectedCourseData = uni.courses.find(
+          (course) =>
+            course.course_name.toLowerCase() ===
+            uni.selected_course.toLowerCase()
+        );
+        if (selectedCourseData) {
+          elements.selectedCourseContent.innerHTML =
+            createCourseHTML(selectedCourseData);
+          elements.selectedCourseDetails.style.display = "block";
+        } else {
+          elements.selectedCourseContent.innerHTML = `<p class="alert alert-warning">No details available for the selected course "${uni.selected_course}" in this institution.</p>`;
+          elements.selectedCourseDetails.style.display = "block";
+        }
+      }
+
+      // Populate all courses
+      if (uni.courses && uni.courses.length > 0) {
+        uni.courses.forEach((course, index) => {
+          const courseHTML = createAccordionItem(course, index);
+          elements.institutionCoursesList.innerHTML += courseHTML;
+        });
+      } else {
+        elements.institutionCoursesList.innerHTML =
+          '<p class="alert alert-info">No courses available for this institution.</p>';
+      }
+
+      // Show the institution details and hide loading
+      document.getElementById("loadingIndicator").style.display = "none";
+      document.getElementById("institutionDetails").style.display = "block";
+    }
+
+    /**
+     * Creates HTML for a course.
+     * @param {object} course - The course data.
+     * @returns {string} - HTML string representing the course.
+     */
+    function createCourseHTML(course) {
+      return `
+        <div class="card mb-3">
+          <div class="card-body">
+            <h5 class="card-title">${course.course_name}</h5>
+            <p><strong>UTME Requirements:</strong> ${
+              course.utme_requirements || "N/A"
+            }</p>
+            <p><strong>Direct Entry Requirements:</strong> ${
+              course.direct_entry_requirements || "N/A"
+            }</p>
+            <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
           </div>
         </div>
-        <hr class="mt-4 mb-3" />
-        <p class="text-center mb-0">
-          &copy; 2023 Institution Finder. All rights reserved.
-        </p>
-      </div>
-    </footer>
+      `;
+    }
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
-  </body>
-</html>
+    /**
+     * Creates HTML for an accordion item representing a course.
+     * @param {object} course - The course data.
+     * @param {number} index - The index of the course in the list.
+     * @returns {string} - HTML string for the accordion item.
+     */
+    function createAccordionItem(course, index) {
+      const collapseId = `collapseCourse${index}`;
+      const headingId = `headingCourse${index}`;
+      return `
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="${headingId}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+              ${course.course_name}
+            </button>
+          </h2>
+          <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headingId}" data-bs-parent="#coursesAccordion">
+            <div class="accordion-body">
+              <p><strong>UTME Requirements:</strong> ${
+                course.utme_requirements || "N/A"
+              }</p>
+              <p><strong>Direct Entry Requirements:</strong> ${
+                course.direct_entry_requirements || "N/A"
+              }</p>
+              <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    /**
+     * Shows an error message within the modal.
+     * @param {string} message - The error message to display.
+     */
+    function showErrorMessage(message) {
+      const errorDiv = document.getElementById("modalErrorMessage");
+      errorDiv.textContent = message;
+      errorDiv.style.display = "block";
+    }
+
+    /**
+     * Hides the loading indicator.
+     */
+    function hideLoadingIndicator() {
+      const loadingIndicator = document.getElementById("loadingIndicator");
+      if (loadingIndicator) {
+        loadingIndicator.style.display = "none";
+      }
+    }
+  });
+</script>
+{% endblock %}

@@ -1,258 +1,158 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Contact Us - Nigerian Institutions Finder</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-    />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/styles.css') }}"
-    />
-  </head>
-  <body>
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-      <div class="container">
-        <a class="navbar-brand" href="/">Nigerian Institutions Finder</a>
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav me-auto">
-            <li class="nav-item">
-              <a class="nav-link" href="/">Home</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="/about">About</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link active" href="/contact">Contact</a>
-            </li>
-          </ul>
-          <ul class="navbar-nav">
-            {% if current_user.is_authenticated %}
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
-            </li>
-            {% else %}
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('signup') }}">Sign Up</a>
-            </li>
-            {% endif %}
-          </ul>
-        </div>
+<!-- templates/contact.html -->
+{% extends "base.html" %} {% block title %}Contact Us - Nigerian Institutions
+Finder{% endblock %} {% block content %}
+<h1 class="mb-4">Contact Us</h1>
+<p>
+  We value your feedback and are here to assist you. Please feel free to reach
+  out to us using the contact form below or through our other contact channels.
+</p>
+
+<div class="row mt-4">
+  <!-- Contact Form Section -->
+  <div class="col-md-6">
+    <h2>Contact Form</h2>
+    <form action="{{ url_for('contact') }}" method="POST">
+      <div class="mb-3">
+        <label for="name" class="form-label">Name</label>
+        <input
+          type="text"
+          class="form-control"
+          id="name"
+          name="name"
+          required
+        />
       </div>
-    </nav>
-
-    <div class="container mt-5">
-      {% with messages = get_flashed_messages(with_categories=true) %} {% if
-      messages %} {% for category, message in messages %}
-      <div
-        class="alert alert-{{ category }} alert-dismissible fade show"
-        role="alert"
-      >
-        {{ message }}
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="alert"
-          aria-label="Close"
-        ></button>
+      <div class="mb-3">
+        <label for="email" class="form-label">Email address</label>
+        <input
+          type="email"
+          class="form-control"
+          id="email"
+          name="email"
+          required
+        />
       </div>
-      {% endfor %} {% endif %} {% endwith %}
+      <div class="mb-3">
+        <label for="subject" class="form-label">Subject</label>
+        <input
+          type="text"
+          class="form-control"
+          id="subject"
+          name="subject"
+          required
+        />
+      </div>
+      <div class="mb-3">
+        <label for="message" class="form-label">Message</label>
+        <textarea
+          class="form-control"
+          id="message"
+          name="message"
+          rows="5"
+          required
+        ></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Send Message</button>
+    </form>
+  </div>
 
-      <h1 class="mb-4">Contact Us</h1>
-      <p>
-        We value your feedback and are here to assist you. Please feel free to
-        reach out to us using the contact form below or through our other
-        contact channels.
-      </p>
-
-      <div class="row mt-4">
-        <!-- Contact Form Section -->
-        <div class="col-md-6">
-          <h2>Contact Form</h2>
-          <form action="{{ url_for('contact') }}" method="POST">
-            <div class="mb-3">
-              <label for="name" class="form-label">Name</label>
-              <input
-                type="text"
-                class="form-control"
-                id="name"
-                name="name"
-                required
-              />
-            </div>
-            <div class="mb-3">
-              <label for="email" class="form-label">Email address</label>
-              <input
-                type="email"
-                class="form-control"
-                id="email"
-                name="email"
-                required
-              />
-            </div>
-            <div class="mb-3">
-              <label for="subject" class="form-label">Subject</label>
-              <input
-                type="text"
-                class="form-control"
-                id="subject"
-                name="subject"
-                required
-              />
-            </div>
-            <div class="mb-3">
-              <label for="message" class="form-label">Message</label>
-              <textarea
-                class="form-control"
-                id="message"
-                name="message"
-                rows="5"
-                required
-              ></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">Send Message</button>
-          </form>
-        </div>
-
-        <!-- Comments Section -->
-        <div class="col-md-6">
-          <h2>Comments</h2>
-          <div class="comments-section">
-            <div class="comments-container">
-              <h3>Recent Comments</h3>
-              {% for comment in comments %}
-              <div class="comment">
-                <p>
-                  <strong>{{ comment.author.username }}</strong>: {{
-                  comment.content }}
-                </p>
-                <div class="comment-actions">
-                  <button
-                    class="btn btn-sm btn-outline-primary vote-btn"
-                    data-comment-id="{{ comment.id }}"
-                    data-vote-type="like"
-                  >
-                    <i class="fas fa-thumbs-up"></i> Like
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-danger vote-btn"
-                    data-comment-id="{{ comment.id }}"
-                    data-vote-type="dislike"
-                  >
-                    <i class="fas fa-thumbs-down"></i> Dislike
-                  </button>
-                  {% if current_user.is_authenticated and (current_user.id ==
-                  comment.user_id or current_user.is_admin) %}
-                  <form
-                    action="{{ url_for('delete_comment', comment_id=comment.id) }}"
-                    method="POST"
-                    class="d-inline"
-                  >
-                    <button type="submit" class="btn btn-sm btn-danger">
-                      Delete
-                    </button>
-                  </form>
-                  {% endif %}
-                </div>
-                <span class="comment-score">{{ comment.score }}</span>
-              </div>
-              {% else %}
-              <p>No comments yet. Be the first to comment!</p>
-              {% endfor %}
-            </div>
-
-            {% if current_user.is_authenticated %}
-            <form
-              action="{{ url_for('add_comment') }}"
-              method="POST"
-              class="mb-4"
+  <!-- Comments Section -->
+  <div class="col-md-6">
+    <h2>Comments</h2>
+    <div class="comments-section">
+      <div class="comments-container">
+        <h3>Recent Comments</h3>
+        {% for comment in comments %}
+        <div class="comment">
+          <p>
+            <strong>{{ comment.author.username }}</strong>: {{ comment.content
+            }}
+          </p>
+          <small class="text-muted"
+            >Posted on: {{ comment.date_posted.strftime('%Y-%m-%d %H:%M:%S')
+            }}</small
+          >
+          <div class="comment-actions">
+            <button
+              class="btn btn-sm btn-outline-primary vote-btn"
+              data-comment-id="{{ comment.id }}"
+              data-vote-type="like"
             >
-              <div class="mb-3">
-                <label for="comment" class="form-label">Add a comment</label>
-                <textarea
-                  class="form-control comment-input"
-                  id="comment"
-                  name="comment"
-                  rows="3"
-                  maxlength="200"
-                  required
-                ></textarea>
-                <small id="charCount" class="form-text text-muted">
-                  0/200 characters
-                </small>
-              </div>
-              <button type="submit" class="btn btn-primary">
-                Post Comment
+              <i class="fas fa-thumbs-up"></i> Like
+            </button>
+            <button
+              class="btn btn-sm btn-outline-danger vote-btn"
+              data-comment-id="{{ comment.id }}"
+              data-vote-type="dislike"
+            >
+              <i class="fas fa-thumbs-down"></i> Dislike
+            </button>
+            {% if current_user.is_authenticated and (current_user.id ==
+            comment.user_id or current_user.is_admin) %}
+            <form
+              action="{{ url_for('delete_comment', comment_id=comment.id) }}"
+              method="POST"
+              class="d-inline"
+            >
+              <button
+                type="submit"
+                class="btn btn-sm btn-danger delete-comment"
+              >
+                Delete
               </button>
             </form>
-            {% else %}
-            <p>
-              Please <a href="{{ url_for('login') }}">login</a> or
-              <a href="{{ url_for('signup') }}">sign up</a> to add a comment.
-            </p>
             {% endif %}
           </div>
+          <span class="comment-score">Score: {{ comment.score }}</span>
         </div>
+        {% else %}
+        <p>No comments yet. Be the first to comment!</p>
+        {% endfor %}
       </div>
+
+      {% if current_user.is_authenticated %}
+      <form action="{{ url_for('add_comment') }}" method="POST" class="mb-4">
+        <div class="mb-3">
+          <label for="comment" class="form-label">Add a comment</label>
+          <textarea
+            class="form-control comment-input"
+            id="comment"
+            name="comment"
+            rows="3"
+            maxlength="200"
+            required
+          ></textarea>
+          <small id="charCount" class="form-text text-muted">
+            200 characters remaining
+          </small>
+        </div>
+        <button type="submit" class="btn btn-primary">Post Comment</button>
+      </form>
+      {% else %}
+      <p>
+        Please <a href="{{ url_for('login') }}">login</a> or
+        <a href="{{ url_for('signup') }}">sign up</a> to add a comment.
+      </p>
+      {% endif %}
     </div>
-
-    <footer class="footer py-4 mt-5">
-      <div class="container">
-        <div class="row">
-          <div class="col-md-6">
-            <h5>Nigerian Institutions Finder</h5>
-            <p>
-              Helping students find their perfect educational path in Nigeria.
-            </p>
-          </div>
-          <div class="col-md-3">
-            <h5>Quick Links</h5>
-            <ul class="list-unstyled">
-              <li><a href="/" class="text-white">Home</a></li>
-              <li><a href="/about" class="text-white">About</a></li>
-              <li><a href="/contact" class="text-white">Contact</a></li>
-            </ul>
-          </div>
-          <div class="col-md-3">
-            <h5>Follow Us</h5>
-            <a href="#" class="text-white me-2"
-              ><i class="fab fa-facebook-f"></i
-            ></a>
-            <a href="#" class="text-white me-2"
-              ><i class="fab fa-twitter"></i
-            ></a>
-            <a href="#" class="text-white me-2"
-              ><i class="fab fa-instagram"></i
-            ></a>
-          </div>
-        </div>
-        <hr class="mt-4 mb-3" />
-        <p class="text-center mb-0">
-          &copy; 2023 Nigerian Institutions Finder. All rights reserved.
-        </p>
-      </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
-  </body>
-</html>
+  </div>
+</div>
+{% endblock %} {% block extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Fetch and apply user votes
+    fetch("/api/user_votes")
+      .then((response) => response.json())
+      .then((data) => {
+        document.querySelectorAll(".vote-btn").forEach((button) => {
+          const commentId = button.getAttribute("data-comment-id");
+          const voteType = button.getAttribute("data-vote-type");
+          if (data[commentId] === voteType) {
+            button.classList.add("active");
+          }
+        });
+      })
+      .catch((error) => console.error("Error fetching user votes:", error));
+  });
+</script>
+{% endblock %}

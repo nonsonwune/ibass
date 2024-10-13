@@ -10,6 +10,7 @@ from flask_login import (
     logout_user,
     current_user,
 )
+from flask_migrate import Migrate
 import logging
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -20,6 +21,7 @@ app.config["SECRET_KEY"] = "your_secret_key_here"  # Replace with a secure key
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///university_courses.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
@@ -35,6 +37,11 @@ class User(UserMixin, db.Model):
     password = db.Column(db.String(60), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     comments = db.relationship("Comment", backref="author", lazy=True)
+    votes = db.relationship("Vote", backref="voter", lazy=True)
+
+    @property
+    def score(self):
+        return sum(comment.score for comment in self.comments)
 
 
 class Comment(db.Model):
@@ -44,10 +51,23 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     likes = db.Column(db.Integer, default=0)
     dislikes = db.Column(db.Integer, default=0)
+    votes = db.relationship("Vote", backref="comment", lazy=True)
 
     @property
     def score(self):
         return self.likes - self.dislikes
+
+
+class Vote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey("comment.id"), nullable=False)
+    vote_type = db.Column(db.String(10), nullable=False)  # 'like' or 'dislike'
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "comment_id", name="user_comment_uc"),
+    )
 
 
 class Feedback(db.Model):
@@ -102,9 +122,7 @@ def init_db():
         admin = User(
             username="admin",
             email="admin@example.com",
-            password=generate_password_hash(
-                "adminpassword"
-            ),  # Replace with a secure password
+            password=generate_password_hash("adminpassword"),
             is_admin=True,
         )
         db.session.add(admin)
@@ -225,9 +243,10 @@ def recommend():
         recommendations.append(uni_data)
 
     logging.info(f"Number of recommendations: {len(recommendations)}")
-    logging.debug(
-        f"Sample recommendation: {recommendations[0] if recommendations else 'No recommendations'}"
-    )
+    if recommendations:
+        logging.debug(f"Sample recommendation: {recommendations[0]}")
+    else:
+        logging.debug("No recommendations found.")
 
     return render_template(
         "recommend.html",
@@ -442,15 +461,50 @@ def vote():
 
     comment = Comment.query.get_or_404(comment_id)
 
-    if vote_type == "like":
-        comment.likes += 1
-    elif vote_type == "dislike":
-        comment.dislikes += 1
+    existing_vote = Vote.query.filter_by(
+        user_id=current_user.id, comment_id=comment.id
+    ).first()
+
+    if existing_vote:
+        if existing_vote.vote_type == vote_type:
+            db.session.delete(existing_vote)
+            if vote_type == "like":
+                comment.likes -= 1
+            else:
+                comment.dislikes -= 1
+            message = "Vote removed"
+        else:
+            existing_vote.vote_type = vote_type
+            existing_vote.timestamp = datetime.utcnow()
+            if vote_type == "like":
+                comment.likes += 1
+                comment.dislikes -= 1
+            else:
+                comment.likes -= 1
+                comment.dislikes += 1
+            message = "Vote changed"
     else:
-        return jsonify({"success": False, "message": "Invalid vote type"})
+        new_vote = Vote(
+            user_id=current_user.id, comment_id=comment.id, vote_type=vote_type
+        )
+        db.session.add(new_vote)
+        if vote_type == "like":
+            comment.likes += 1
+        else:
+            comment.dislikes += 1
+        message = "Vote recorded"
 
     db.session.commit()
-    return jsonify({"success": True, "new_score": comment.score})
+
+    return jsonify({"success": True, "new_score": comment.score, "message": message})
+
+
+@app.route("/api/user_votes", methods=["GET"])
+@login_required
+def get_user_votes():
+    votes = Vote.query.filter_by(user_id=current_user.id).all()
+    user_votes = {vote.comment_id: vote.vote_type for vote in votes}
+    return jsonify(user_votes)
 
 
 @app.route("/admin")
@@ -488,19 +542,31 @@ def change_password():
 
 @app.route("/api/institution/<int:uni_id>")
 def get_institution_details(uni_id):
-    search_type = request.args.get("search_type", "location")
-    selected_course = request.args.get("course", "")
+    try:
+        search_type = request.args.get("search_type", "location")
+        selected_course = request.args.get("course", "")
 
-    university = University.query.get_or_404(uni_id)
-    courses = Course.query.filter_by(university_name=university.university_name).all()
+        logging.info(f"Fetching details for institution ID: {uni_id}")
+        logging.info(f"Search type: {search_type}, Selected course: {selected_course}")
 
-    if search_type == "course" and selected_course:
-        courses.sort(
-            key=lambda x: x.course_name.lower() == selected_course.lower(), reverse=True
-        )
+        university = University.query.get_or_404(uni_id)
+        courses = Course.query.filter_by(
+            university_name=university.university_name
+        ).all()
 
-    return jsonify(
-        {
+        logging.info(f"Found {len(courses)} courses for {university.university_name}")
+
+        if search_type == "course" and selected_course:
+            courses = [
+                course
+                for course in courses
+                if course.course_name.lower() == selected_course.lower()
+            ]
+            logging.info(
+                f"Filtered to {len(courses)} courses matching '{selected_course}'"
+            )
+
+        response_data = {
             "id": university.id,
             "university_name": university.university_name,
             "state": university.state,
@@ -519,7 +585,22 @@ def get_institution_details(uni_id):
                 for course in courses
             ],
         }
-    )
+
+        logging.info(f"Sending response: {response_data}")
+        return jsonify(response_data)
+    except Exception as e:
+        logging.error(f"Error in get_institution_details: {str(e)}", exc_info=True)
+        return (
+            jsonify({"error": "An error occurred while fetching institution details"}),
+            500,
+        )
+
+
+@app.route("/profile/<username>")
+@login_required
+def profile(username):
+    user = User.query.filter_by(username=username).first_or_404()
+    return render_template("profile.html", user=user)
 
 
 if __name__ == "__main__":
