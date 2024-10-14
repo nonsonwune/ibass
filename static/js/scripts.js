@@ -232,7 +232,7 @@ function vote(commentId, action, buttonElement) {
   })
     .then((response) => {
       if (response.status === 401) {
-        throw new Error("You must be logged in to vote.");
+        throw new Error("Please sign in to like or dislike comments.");
       }
       if (response.status === 403) {
         throw new Error("You do not have permission to perform this action.");
@@ -246,6 +246,15 @@ function vote(commentId, action, buttonElement) {
       if (data.error) {
         alert(data.error);
       } else {
+        // Validate response data
+        if (
+          typeof data.likes !== "number" ||
+          typeof data.dislikes !== "number" ||
+          typeof data.score !== "number" ||
+          typeof data.user_votes !== "object"
+        ) {
+          throw new Error("Invalid data format received from server.");
+        }
         updateVoteDisplay(commentId, data.likes, data.dislikes, data.score);
         applyUserVotes(data.user_votes);
       }
@@ -286,7 +295,7 @@ function fetchUserVotes() {
           console.log("User not authenticated");
           return null;
         }
-        throw new Error("Network response was not ok");
+        throw new Error("Network response was not ok.");
       }
       return response.json();
     })
