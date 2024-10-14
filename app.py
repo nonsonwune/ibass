@@ -392,27 +392,27 @@ def search():
     state = request.args.get("state")
     program_type = request.args.get("program_type")
 
-    universities_query = University.query.filter(
-        University.university_name.ilike(f"%{query_text}%")
-    )
-    if state:
-        universities_query = universities_query.filter(
-            University.state.ilike(f"%{state}%")
+    try:
+        universities_query = University.query.filter(
+            University.university_name.ilike(f"%{query_text}%")
         )
-    if program_type:
-        universities_query = universities_query.filter(
-            University.program_type.ilike(f"%{program_type}%")
+        if state:
+            universities_query = universities_query.filter(
+                University.state.ilike(f"%{state}%")
+            )
+        if program_type:
+            universities_query = universities_query.filter(
+                University.program_type.ilike(f"%{program_type}%")
+            )
+        universities = universities_query.all()
+
+        courses_query = Course.query.filter(
+            (Course.course_name.ilike(f"%{query_text}%"))
+            | (Course.abbrv.ilike(f"%{query_text}%"))
         )
-    universities = universities_query.all()
+        courses = courses_query.all()
 
-    courses_query = Course.query.filter(
-        (Course.course_name.ilike(f"%{query_text}%"))
-        | (Course.abbrv.ilike(f"%{query_text}%"))
-    )
-    courses = courses_query.all()
-
-    return jsonify(
-        {
+        return {
             "universities": [
                 {
                     "university_name": uni.university_name,
@@ -434,21 +434,33 @@ def search():
                 for course in courses
             ],
         }
-    )
+    except Exception as e:
+        app.logger.error(f"Error in search: {str(e)}")
+        return {
+            "error": "An error occurred while processing your search. Please try again."
+        }
 
 
 @app.route("/search", methods=["GET"])
 def search_results():
     query_text = request.args.get("q", "")
-    search_results = search()
-    if isinstance(search_results, tuple):
-        search_results = search_results[0].get_json()
-    return render_template(
-        "search_results.html",
-        query=query_text,
-        universities=search_results.get("universities", []),
-        courses=search_results.get("courses", []),
-    )
+    try:
+        search_results = search()
+        return render_template(
+            "search_results.html",
+            query=query_text,
+            universities=search_results.get("universities", []),
+            courses=search_results.get("courses", []),
+        )
+    except Exception as e:
+        app.logger.error(f"Error in search_results: {str(e)}")
+        return render_template(
+            "search_results.html",
+            query=query_text,
+            universities=[],
+            courses=[],
+            error="An error occurred while processing your search. Please try again.",
+        )
 
 
 @app.route("/about")

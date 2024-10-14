@@ -4,7 +4,6 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Retained CSRF Meta Tag for AJAX Requests -->
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <title>{% block title %}Nigerian Institutions Finder{% endblock %}</title>
     <link
@@ -60,6 +59,20 @@
               >
             </li>
           </ul>
+          <form
+            class="d-flex me-2"
+            action="{{ url_for('search_results') }}"
+            method="GET"
+          >
+            <input
+              class="form-control me-2"
+              type="search"
+              placeholder="Institutions/Courses"
+              name="q"
+              aria-label="Search"
+            />
+            <button class="btn btn-outline-light" type="submit">Search</button>
+          </form>
           <ul class="navbar-nav">
             {% if current_user.is_authenticated %}
             <li class="nav-item">
@@ -143,9 +156,6 @@
           &copy; 2023 Nigerian Institutions Finder. All rights reserved.
         </p>
       </div>
-      <script>
-        // Any footer-specific JavaScript can go here
-      </script>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
