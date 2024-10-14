@@ -1,74 +1,99 @@
 <!-- templates/about.html -->
 {% extends "base.html" %} {% block title %}About - Nigerian Institutions
 Finder{% endblock %} {% block content %}
-<div class="container mt-5">
-  <div class="row">
-    <div class="col-lg-8 mx-auto">
-      <h1 class="display-4 mb-4 text-center">
-        About Nigerian Institutions Finder
-      </h1>
-      <hr class="my-4" />
-      <p class="lead text-muted">
-        Nigerian Institutions Finder is a comprehensive platform designed to
-        help students, parents, and educators discover and explore higher
-        education institutions across Nigeria. Our mission is to provide
-        accurate, up-to-date information about universities, polytechnics, and
-        colleges of education, making the process of choosing the right
-        institution easier and more informed.
-      </p>
+<style>
+  .about-background {
+    background: url("{{ url_for('static', filename='images/bg.png') }}")
+      no-repeat center center fixed;
+    background-size: cover;
+    height: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+  }
+  .content-container {
+    background: rgba(255, 255, 255, 0.9);
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  }
+  .shadow-hover:hover {
+    box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2) !important;
+  }
+</style>
 
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <h2 class="card-title">Our Features</h2>
-          <ul class="list-group list-group-flush">
-            <li class="list-group-item">
-              <i class="fas fa-check text-success me-2"></i>Extensive database
-              of Nigerian Degree Awarding Institutions
-            </li>
-            <li class="list-group-item">
-              <i class="fas fa-check text-success me-2"></i>Detailed information
-              about courses, admission requirements, and program types
-            </li>
-            <li class="list-group-item">
-              <i class="fas fa-check text-success me-2"></i>Advanced search and
-              filtering options
-            </li>
-            <li class="list-group-item">
-              <i class="fas fa-check text-success me-2"></i>User-friendly
-              interface for easy navigation
-            </li>
-            <li class="list-group-item">
-              <i class="fas fa-check text-success me-2"></i>Regular updates to
-              ensure data accuracy
-            </li>
-          </ul>
+<div class="about-background">
+  <div class="container mt-5">
+    <div class="row">
+      <div class="col-lg-8 mx-auto content-container">
+        <h1 class="display-4 mb-4 text-center">
+          About Nigerian Institutions Finder
+        </h1>
+        <hr class="my-4" />
+        <p class="lead text-muted">
+          Nigerian Institutions Finder is a comprehensive platform designed to
+          help students, parents, and educators discover and explore higher
+          education institutions across Nigeria. Our mission is to provide
+          accurate, up-to-date information about universities, polytechnics, and
+          colleges of education, making the process of choosing the right
+          institution easier and more informed.
+        </p>
+
+        <div class="card shadow-sm mb-4 shadow-hover">
+          <div class="card-body">
+            <h2 class="card-title">Our Features</h2>
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item">
+                <i class="fas fa-check text-success me-2"></i>Extensive database
+                of Nigerian Degree Awarding Institutions
+              </li>
+              <li class="list-group-item">
+                <i class="fas fa-check text-success me-2"></i>Detailed
+                information about courses, admission requirements, and program
+                types
+              </li>
+              <li class="list-group-item">
+                <i class="fas fa-check text-success me-2"></i>Advanced search
+                and filtering options
+              </li>
+              <li class="list-group-item">
+                <i class="fas fa-check text-success me-2"></i>User-friendly
+                interface for easy navigation
+              </li>
+              <li class="list-group-item">
+                <i class="fas fa-check text-success me-2"></i>Regular updates to
+                ensure data accuracy
+              </li>
+            </ul>
+          </div>
         </div>
-      </div>
 
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <h2 class="card-title">Our Goal</h2>
-          <p class="card-text">
-            We aim to bridge the information gap in the Nigerian education
-            sector by providing a centralized, reliable source of information
-            about higher education institutions. By doing so, we hope to empower
-            students to make informed decisions about their academic futures and
-            contribute to the overall improvement of education in Nigeria.
-          </p>
+        <div class="card shadow-sm mb-4 shadow-hover">
+          <div class="card-body">
+            <h2 class="card-title">Our Goal</h2>
+            <p class="card-text">
+              We aim to bridge the information gap in the Nigerian education
+              sector by providing a centralized, reliable source of information
+              about higher education institutions. By doing so, we hope to
+              empower students to make informed decisions about their academic
+              futures and contribute to the overall improvement of education in
+              Nigeria.
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <h2 class="card-title">Contact Us</h2>
-          <p class="card-text">
-            If you have any questions, suggestions, or would like to contribute
-            to our platform, please don't hesitate to
-            <a href="{{ url_for('contact') }}" class="text-primary"
-              >contact us</a
-            >. We value your feedback and are constantly working to improve our
-            service.
-          </p>
+        <div class="card shadow-sm mb-4 shadow-hover">
+          <div class="card-body">
+            <h2 class="card-title">Contact Us</h2>
+            <p class="card-text">
+              If you have any questions, suggestions, or would like to
+              contribute to our platform, please don't hesitate to
+              <a href="{{ url_for('contact') }}" class="text-primary"
+                >contact us</a
+              >. We value your feedback and are constantly working to improve
+              our service.
+            </p>
+          </div>
         </div>
       </div>
     </div>
