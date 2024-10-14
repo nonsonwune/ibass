@@ -209,7 +209,6 @@ def get_user_votes(user):
 # Custom Unauthorized Handler
 @login_manager.unauthorized_handler
 def unauthorized_callback():
-    # Check if the request expects JSON (i.e., is an AJAX request)
     if request.headers.get("Accept") and "application/json" in request.headers.get(
         "Accept"
     ):
@@ -222,14 +221,12 @@ def unauthorized_callback():
 def init_db():
     db.create_all()
 
-    # Assign unique emails to existing users if needed
     users = User.query.all()
     for user in users:
         if not user.email or user.email.endswith("@example.com"):
             user.email = f"{user.username}@example.com"
     db.session.commit()
 
-    # Insert admin user if not exists
     admin_user = User.query.filter_by(username="admin").first()
     if not admin_user:
         admin = User(
@@ -320,10 +317,6 @@ def recommend():
         preferred_university = request.args.get("university")
         preferred_course = request.args.get("course")
 
-    logging.info(
-        f"Recommendation request - Location: {location}, University: {preferred_university}, Course: {preferred_course}"
-    )
-
     query = db.session.query(University).outerjoin(Course)
     if location:
         query = query.filter(University.state == location)
@@ -354,12 +347,6 @@ def recommend():
             ],
         }
         recommendations.append(uni_data)
-
-    logging.info(f"Number of recommendations: {len(recommendations)}")
-    if recommendations:
-        logging.debug(f"Sample recommendation: {recommendations[0]}")
-    else:
-        logging.debug("No recommendations found.")
 
     return render_template(
         "recommend.html",
@@ -637,10 +624,6 @@ def delete_user(user_id):
     form = DeleteUserForm()
     if form.validate_on_submit():
         try:
-            # Log the CSRF token for debugging (remove in production)
-            csrf_token = form.csrf_token.data
-            app.logger.info(f"CSRF Token Received: {csrf_token}")
-
             # Delete related comments, votes, and feedback
             Comment.query.filter_by(user_id=user.id).delete()
             Vote.query.filter_by(user_id=user.id).delete()
@@ -649,7 +632,6 @@ def delete_user(user_id):
             db.session.delete(user)
             db.session.commit()
             flash("User deleted successfully.", "success")
-            app.logger.info(f"User with ID {user_id} deleted successfully.")
         except SQLAlchemyError as e:
             db.session.rollback()
             app.logger.error(f"Error deleting user: {str(e)}")
@@ -670,14 +652,9 @@ def delete_comment(comment_id):
         form = DeleteCommentForm()
         if form.validate_on_submit():
             try:
-                # Log the CSRF token for debugging (remove in production)
-                csrf_token = form.csrf_token.data
-                app.logger.info(f"CSRF Token Received: {csrf_token}")
-
                 db.session.delete(comment)
                 db.session.commit()
                 flash("Comment deleted successfully.", "success")
-                app.logger.info(f"Comment with ID {comment_id} deleted successfully.")
             except SQLAlchemyError as e:
                 db.session.rollback()
                 app.logger.error(f"Error deleting comment: {str(e)}")
@@ -776,15 +753,10 @@ def get_institution_details(uni_id):
         search_type = request.args.get("search_type", "location")
         selected_course = request.args.get("course", "")
 
-        logging.info(f"Fetching details for institution ID: {uni_id}")
-        logging.info(f"Search type: {search_type}, Selected course: {selected_course}")
-
         university = University.query.get_or_404(uni_id)
         courses = Course.query.filter_by(
             university_name=university.university_name
         ).all()
-
-        logging.info(f"Found {len(courses)} courses for {university.university_name}")
 
         if search_type == "course" and selected_course:
             courses = [
@@ -792,9 +764,6 @@ def get_institution_details(uni_id):
                 for course in courses
                 if course.course_name.lower() == selected_course.lower()
             ]
-            logging.info(
-                f"Filtered to {len(courses)} courses matching '{selected_course}'"
-            )
 
         response_data = {
             "id": university.id,
@@ -816,10 +785,9 @@ def get_institution_details(uni_id):
             ],
         }
 
-        logging.info(f"Sending response: {response_data}")
         return jsonify(response_data), 200
     except Exception as e:
-        logging.error(f"Error in get_institution_details: {str(e)}", exc_info=True)
+        app.logger.error(f"Error in get_institution_details: {str(e)}", exc_info=True)
         return (
             jsonify({"error": "An error occurred while fetching institution details."}),
             500,
@@ -833,12 +801,10 @@ def admin():
         flash("You do not have permission to access the admin page.", "danger")
         return redirect(url_for("home"))
 
-    # Admin functionalities: list all users, comments, and feedback
     users = User.query.all()
     comments = Comment.query.order_by(Comment.date_posted.desc()).all()
     feedback_messages = Feedback.query.order_by(Feedback.date_submitted.desc()).all()
 
-    # Create DeleteUserForm and DeleteCommentForm for each user and comment
     delete_user_forms = {}
     for user in users:
         if not user.is_admin:

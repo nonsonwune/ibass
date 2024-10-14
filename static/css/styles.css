@@ -244,3 +244,9 @@ body {
   background-color: #f1c40f; /* Light yellow background */
   border: 2px solid #e67e22; /* Orange border */
 }
+
+/* New Styles for Scrollable Comments Section */
+.comments-section {
+  max-height: 400px; /* Adjust the height as needed */
+  overflow-y: auto;
+}
