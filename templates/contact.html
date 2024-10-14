@@ -1,4 +1,3 @@
-<!-- templates/contact.html -->
 {% extends "base.html" %} {% block title %}Contact Us - Nigerian Institutions
 Finder{% endblock %} {% block content %}
 <div class="container my-5">
@@ -20,67 +19,34 @@ Finder{% endblock %} {% block content %}
         </div>
         <div class="card-body">
           <form action="{{ url_for('contact') }}" method="POST" novalidate>
+            {{ form.hidden_tag() }}
             <div class="mb-3">
-              <label for="name" class="form-label"
-                >Name <span class="text-danger">*</span></label
-              >
-              <input
-                type="text"
-                class="form-control"
-                id="name"
-                name="name"
-                placeholder="Enter your full name"
-                required
-              />
+              {{ form.name.label(class="form-label") }} {{
+              form.name(class="form-control", placeholder="Enter your full
+              name", required=true) }}
               <div class="invalid-feedback">Please enter your name.</div>
             </div>
             <div class="mb-3">
-              <label for="email" class="form-label"
-                >Email Address <span class="text-danger">*</span></label
-              >
-              <input
-                type="email"
-                class="form-control"
-                id="email"
-                name="email"
-                placeholder="Enter your email"
-                required
-              />
+              {{ form.email.label(class="form-label") }} {{
+              form.email(class="form-control", placeholder="Enter your email",
+              required=true) }}
               <div class="invalid-feedback">
                 Please enter a valid email address.
               </div>
             </div>
             <div class="mb-3">
-              <label for="subject" class="form-label"
-                >Subject <span class="text-danger">*</span></label
-              >
-              <input
-                type="text"
-                class="form-control"
-                id="subject"
-                name="subject"
-                placeholder="Subject of your message"
-                required
-              />
+              {{ form.subject.label(class="form-label") }} {{
+              form.subject(class="form-control", placeholder="Subject of your
+              message", required=true) }}
               <div class="invalid-feedback">Please enter a subject.</div>
             </div>
             <div class="mb-3">
-              <label for="message" class="form-label"
-                >Message <span class="text-danger">*</span></label
-              >
-              <textarea
-                class="form-control"
-                id="message"
-                name="message"
-                rows="5"
-                placeholder="Write your message here..."
-                required
-              ></textarea>
+              {{ form.message.label(class="form-label") }} {{
+              form.message(class="form-control", rows="5", placeholder="Write
+              your message here...", required=true) }}
               <div class="invalid-feedback">Please enter your message.</div>
             </div>
-            <button type="submit" class="btn btn-primary w-100">
-              <i class="fas fa-paper-plane me-2"></i> Send Message
-            </button>
+            {{ form.submit(class="btn btn-primary w-100") }}
           </form>
         </div>
       </div>
@@ -123,14 +89,16 @@ Finder{% endblock %} {% block content %}
                       data-comment-id="{{ comment.id }}"
                       data-vote-type="like"
                     >
-                      <i class="fas fa-thumbs-up"></i> Like
+                      <i class="fas fa-thumbs-up"></i> Like ({{ comment.likes
+                      }})
                     </button>
                     <button
                       class="btn btn-sm btn-outline-danger me-2 vote-btn"
                       data-comment-id="{{ comment.id }}"
                       data-vote-type="dislike"
                     >
-                      <i class="fas fa-thumbs-down"></i> Dislike
+                      <i class="fas fa-thumbs-down"></i> Dislike ({{
+                      comment.dislikes }})
                     </button>
                     <span class="badge bg-secondary"
                       >Score: {{ comment.score }}</span
@@ -143,6 +111,7 @@ Finder{% endblock %} {% block content %}
                     method="POST"
                     class="d-inline"
                   >
+                    {{ form.hidden_tag() }}
                     <button type="submit" class="btn btn-sm btn-danger">
                       <i class="fas fa-trash-alt"></i> Delete
                     </button>
@@ -173,6 +142,7 @@ Finder{% endblock %} {% block content %}
   <div class="modal-dialog">
     <div class="modal-content">
       <form action="{{ url_for('add_comment') }}" method="POST" novalidate>
+        {{ form.hidden_tag() }}
         <div class="modal-header">
           <h5 class="modal-title" id="addCommentModalLabel">
             <i class="fas fa-comment-dots me-2"></i>Add a Comment
@@ -221,18 +191,7 @@ Finder{% endblock %} {% block content %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     // Fetch and apply user votes
-    fetch("/api/user_votes")
-      .then((response) => response.json())
-      .then((data) => {
-        document.querySelectorAll(".vote-btn").forEach((button) => {
-          const commentId = button.getAttribute("data-comment-id");
-          const voteType = button.getAttribute("data-vote-type");
-          if (data[commentId] === voteType) {
-            button.classList.add("active");
-          }
-        });
-      })
-      .catch((error) => console.error("Error fetching user votes:", error));
+    fetchUserVotes();
 
     // Character count for comment textarea
     const commentTextarea = document.getElementById("comment");

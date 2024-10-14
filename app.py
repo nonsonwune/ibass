@@ -11,9 +11,14 @@ from flask_login import (
     current_user,
 )
 from flask_migrate import Migrate
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, BooleanField, TextAreaField, SubmitField
+from wtforms.validators import DataRequired, Email, EqualTo
+from flask_wtf.csrf import CSRFProtect
 import logging
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.exc import SQLAlchemyError
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -24,6 +29,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
+csrf = CSRFProtect(app)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s:%(message)s")
@@ -51,7 +57,9 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     likes = db.Column(db.Integer, default=0)
     dislikes = db.Column(db.Integer, default=0)
-    votes = db.relationship("Vote", backref="comment", lazy=True)
+    votes = db.relationship(
+        "Vote", backref="comment", lazy=True, cascade="all, delete-orphan"
+    )
 
     @property
     def score(self):
@@ -61,7 +69,9 @@ class Comment(db.Model):
 class Vote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    comment_id = db.Column(db.Integer, db.ForeignKey("comment.id"), nullable=False)
+    comment_id = db.Column(
+        db.Integer, db.ForeignKey("comment.id", ondelete="CASCADE"), nullable=False
+    )
     vote_type = db.Column(db.String(10), nullable=False)  # 'like' or 'dislike'
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -99,10 +109,36 @@ class Course(db.Model):
     subjects = db.Column(db.String(200))
 
 
+# Form Classes
+class ContactForm(FlaskForm):
+    name = StringField("Name", validators=[DataRequired()])
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    subject = StringField("Subject", validators=[DataRequired()])
+    message = TextAreaField("Message", validators=[DataRequired()])
+    submit = SubmitField("Send Message")
+
+
+class LoginForm(FlaskForm):
+    username = StringField("Username", validators=[DataRequired()])
+    password = PasswordField("Password", validators=[DataRequired()])
+    remember_me = BooleanField("Remember Me")
+    submit = SubmitField("Sign In")
+
+
+class SignupForm(FlaskForm):
+    username = StringField("Username", validators=[DataRequired()])
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    password = PasswordField("Password", validators=[DataRequired()])
+    confirm_password = PasswordField(
+        "Confirm Password", validators=[DataRequired(), EqualTo("password")]
+    )
+    submit = SubmitField("Sign Up")
+
+
 # User loader for Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 
 # Database initialization function using SQLAlchemy
@@ -343,79 +379,66 @@ def about():
     return render_template("about.html")
 
 
-@app.route("/contact", methods=["GET", "POST"])
-def contact():
-    if request.method == "POST":
-        name = request.form["name"]
-        email = request.form["email"]
-        subject = request.form["subject"]
-        message = request.form["message"]
-
-        new_feedback = Feedback(
-            name=name, email=email, subject=subject, message=message
-        )
-        db.session.add(new_feedback)
-        db.session.commit()
-
-        flash("Thank you for your feedback!", "success")
-        return redirect(url_for("contact"))
-
-    comments = Comment.query.order_by(Comment.date_posted.desc()).all()
-    return render_template("contact.html", comments=comments)
-
-
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
-    if request.method == "POST":
-        username = request.form["username"]
-        email = request.form["email"]
-        password = request.form["password"]
-        confirm_password = request.form["confirm_password"]
+    form = SignupForm()
+    if form.validate_on_submit():
+        if request.method == "POST":
+            username = form.username.data
+            email = form.email.data
+            password = form.password.data
+            confirm_password = form.confirm_password.data
 
-        if password != confirm_password:
-            flash("Passwords do not match", "danger")
-            return redirect(url_for("signup"))
+            if password != confirm_password:
+                flash("Passwords do not match", "danger")
+                return redirect(url_for("signup"))
 
-        existing_user = User.query.filter_by(username=username).first()
-        if existing_user:
-            flash("Username already exists", "danger")
-            return redirect(url_for("signup"))
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user:
+                flash("Username already exists", "danger")
+                return redirect(url_for("signup"))
 
-        existing_email = User.query.filter_by(email=email).first()
-        if existing_email:
-            flash("Email already registered", "danger")
-            return redirect(url_for("signup"))
+            existing_email = User.query.filter_by(email=email).first()
+            if existing_email:
+                flash("Email already registered", "danger")
+                return redirect(url_for("signup"))
 
-        hashed_password = generate_password_hash(password)
-        new_user = User(username=username, email=email, password=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
+            hashed_password = generate_password_hash(password)
+            new_user = User(username=username, email=email, password=hashed_password)
+            db.session.add(new_user)
+            db.session.commit()
 
-        flash("Account created successfully", "success")
-        return redirect(url_for("login"))
+            flash("Account created successfully", "success")
+            return redirect(url_for("login"))
 
-    return render_template("signup.html")
+    return render_template("signup.html", form=form)
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        remember = "remember_me" in request.form
+    form = LoginForm()
+    if form.validate_on_submit():
+        if request.method == "POST":
+            username = form.username.data
+            password = form.password.data
+            remember = form.remember_me.data
 
-        user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password, password):
-            login_user(user, remember=remember)
-            flash("Logged in successfully", "success")
-            if user.is_admin:
-                return redirect(url_for("admin"))
+            user = User.query.filter_by(username=username).first()
+            if user and check_password_hash(user.password, password):
+                login_user(user, remember=remember)
+                flash("Logged in successfully", "success")
+                if user.is_admin:
+                    return redirect(url_for("admin"))
+                else:
+                    next_page = request.args.get("next")
+                    return (
+                        redirect(next_page) if next_page else redirect(url_for("home"))
+                    )
             else:
-                next_page = request.args.get("next")
-                return redirect(next_page) if next_page else redirect(url_for("home"))
-        else:
-            flash("Login unsuccessful. Please check username and password", "danger")
-    return render_template("login.html")
+                flash(
+                    "Login unsuccessful. Please check username and password", "danger"
+                )
+    return render_template("login.html", form=form)
 
 
 @app.route("/logout")
@@ -426,6 +449,129 @@ def logout():
     return redirect(url_for("home"))
 
 
+@app.route("/profile/<username>")
+@login_required
+def profile(username):
+    user = User.query.filter_by(username=username).first_or_404()
+    return render_template("profile.html", user=user)
+
+
+@app.route("/vote/<int:comment_id>/<action>", methods=["POST"])
+@login_required
+def vote(comment_id, action):
+    if action not in ["like", "dislike"]:
+        return jsonify({"error": "Invalid action"}), 400
+
+    try:
+        comment = Comment.query.get_or_404(comment_id)
+        vote = Vote.query.filter_by(
+            user_id=current_user.id, comment_id=comment_id
+        ).first()
+
+        if vote:
+            if vote.vote_type == action:
+                db.session.delete(vote)
+                if action == "like":
+                    comment.likes -= 1
+                else:
+                    comment.dislikes -= 1
+            else:
+                old_vote_type = vote.vote_type
+                vote.vote_type = action
+                if action == "like":
+                    comment.likes += 1
+                    comment.dislikes -= 1
+                else:
+                    comment.likes -= 1
+                    comment.dislikes += 1
+        else:
+            new_vote = Vote(
+                user_id=current_user.id, comment_id=comment_id, vote_type=action
+            )
+            db.session.add(new_vote)
+            if action == "like":
+                comment.likes += 1
+            else:
+                comment.dislikes += 1
+
+        db.session.commit()
+        return jsonify(
+            {
+                "success": True,
+                "likes": comment.likes,
+                "dislikes": comment.dislikes,
+                "score": comment.score,
+            }
+        )
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        app.logger.error(f"Error processing vote: {str(e)}")
+        return jsonify({"error": "An error occurred while processing your vote"}), 500
+
+
+@app.route("/api/user_votes", methods=["GET"])
+@login_required
+def get_user_votes():
+    try:
+        votes = Vote.query.filter_by(user_id=current_user.id).all()
+        user_votes = {vote.comment_id: vote.vote_type for vote in votes}
+        return jsonify(user_votes)
+    except SQLAlchemyError as e:
+        app.logger.error(f"Error fetching user votes: {str(e)}")
+        return jsonify({"error": "An error occurred while fetching user votes"}), 500
+
+
+@app.errorhandler(404)
+def not_found_error(error):
+    if (
+        request.accept_mimetypes.accept_json
+        and not request.accept_mimetypes.accept_html
+    ):
+        return jsonify({"error": "Not found"}), 404
+    return render_template("404.html"), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    if (
+        request.accept_mimetypes.accept_json
+        and not request.accept_mimetypes.accept_html
+    ):
+        return jsonify({"error": "Internal server error"}), 500
+    return render_template("500.html"), 500
+
+
+@app.route("/contact", methods=["GET", "POST"])
+def contact():
+    form = ContactForm()
+    if form.validate_on_submit():
+        name = form.name.data
+        email = form.email.data
+        subject = form.subject.data
+        message = form.message.data
+
+        new_feedback = Feedback(
+            name=name, email=email, subject=subject, message=message
+        )
+        try:
+            db.session.add(new_feedback)
+            db.session.commit()
+            flash("Thank you for your feedback!", "success")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            app.logger.error(f"Error saving feedback: {str(e)}")
+            flash(
+                "An error occurred while saving your feedback. Please try again.",
+                "danger",
+            )
+
+        return redirect(url_for("contact"))
+
+    comments = Comment.query.order_by(Comment.date_posted.desc()).all()
+    return render_template("contact.html", form=form, comments=comments)
+
+
 @app.route("/add_comment", methods=["POST"])
 @login_required
 def add_comment():
@@ -433,10 +579,19 @@ def add_comment():
     if not content.strip():
         flash("Comment cannot be empty.", "danger")
         return redirect(url_for("contact"))
+
     new_comment = Comment(content=content, author=current_user)
-    db.session.add(new_comment)
-    db.session.commit()
-    flash("Your comment has been added", "success")
+    try:
+        db.session.add(new_comment)
+        db.session.commit()
+        flash("Your comment has been added", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        app.logger.error(f"Error adding comment: {str(e)}")
+        flash(
+            "An error occurred while adding your comment. Please try again.", "danger"
+        )
+
     return redirect(url_for("contact"))
 
 
@@ -444,100 +599,21 @@ def add_comment():
 @login_required
 def delete_comment(comment_id):
     comment = Comment.query.get_or_404(comment_id)
-    if comment.author != current_user and not current_user.is_admin:
-        flash("You do not have permission to delete this comment", "danger")
-        return redirect(url_for("contact"))
-    db.session.delete(comment)
-    db.session.commit()
-    flash("Comment has been deleted", "success")
-    return redirect(url_for("contact"))
-
-
-@app.route("/vote", methods=["POST"])
-@login_required
-def vote():
-    comment_id = request.form.get("comment_id")
-    vote_type = request.form.get("vote_type")
-
-    comment = Comment.query.get_or_404(comment_id)
-
-    existing_vote = Vote.query.filter_by(
-        user_id=current_user.id, comment_id=comment.id
-    ).first()
-
-    if existing_vote:
-        if existing_vote.vote_type == vote_type:
-            db.session.delete(existing_vote)
-            if vote_type == "like":
-                comment.likes -= 1
-            else:
-                comment.dislikes -= 1
-            message = "Vote removed"
-        else:
-            existing_vote.vote_type = vote_type
-            existing_vote.timestamp = datetime.utcnow()
-            if vote_type == "like":
-                comment.likes += 1
-                comment.dislikes -= 1
-            else:
-                comment.likes -= 1
-                comment.dislikes += 1
-            message = "Vote changed"
+    if current_user.id == comment.user_id or current_user.is_admin:
+        try:
+            db.session.delete(comment)
+            db.session.commit()
+            flash("Comment deleted successfully.", "success")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            app.logger.error(f"Error deleting comment: {str(e)}")
+            flash(
+                "An error occurred while deleting the comment. Please try again.",
+                "danger",
+            )
     else:
-        new_vote = Vote(
-            user_id=current_user.id, comment_id=comment.id, vote_type=vote_type
-        )
-        db.session.add(new_vote)
-        if vote_type == "like":
-            comment.likes += 1
-        else:
-            comment.dislikes += 1
-        message = "Vote recorded"
-
-    db.session.commit()
-
-    return jsonify({"success": True, "new_score": comment.score, "message": message})
-
-
-@app.route("/api/user_votes", methods=["GET"])
-@login_required
-def get_user_votes():
-    votes = Vote.query.filter_by(user_id=current_user.id).all()
-    user_votes = {vote.comment_id: vote.vote_type for vote in votes}
-    return jsonify(user_votes)
-
-
-@app.route("/admin")
-@login_required
-def admin():
-    if not current_user.is_admin:
-        flash("You do not have permission to access this page", "danger")
-        return redirect(url_for("home"))
-
-    feedback = Feedback.query.order_by(Feedback.date_submitted.desc()).all()
-    comments = Comment.query.order_by(Comment.date_posted.desc()).all()
-    return render_template("admin.html", feedback=feedback, comments=comments)
-
-
-@app.route("/change_password", methods=["POST"])
-@login_required
-def change_password():
-    old_password = request.form["old_password"]
-    new_password = request.form["new_password"]
-    confirm_password = request.form["confirm_password"]
-
-    if not check_password_hash(current_user.password, old_password):
-        flash("Old password is incorrect", "danger")
-        return redirect(url_for("admin"))
-
-    if new_password != confirm_password:
-        flash("New passwords do not match", "danger")
-        return redirect(url_for("admin"))
-
-    current_user.password = generate_password_hash(new_password)
-    db.session.commit()
-    flash("Password changed successfully", "success")
-    return redirect(url_for("admin"))
+        flash("You do not have permission to delete this comment.", "danger")
+    return redirect(url_for("contact"))
 
 
 @app.route("/api/institution/<int:uni_id>")
@@ -594,13 +670,6 @@ def get_institution_details(uni_id):
             jsonify({"error": "An error occurred while fetching institution details"}),
             500,
         )
-
-
-@app.route("/profile/<username>")
-@login_required
-def profile(username):
-    user = User.query.filter_by(username=username).first_or_404()
-    return render_template("profile.html", user=user)
 
 
 if __name__ == "__main__":
