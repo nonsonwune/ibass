@@ -1,5 +1,4 @@
 // static/js/scripts.js
-
 document.addEventListener("DOMContentLoaded", function () {
   initializeInstitutionModal();
   initializeVoting();
@@ -137,7 +136,7 @@ function populateModal(uni) {
       .join("");
   } else {
     elements.institutionCoursesList.innerHTML =
-      '<p class="alert alert-info">No courses available for this institution.</p>';
+      '<p class="text-muted">No courses available for this institution.</p>';
   }
 
   // Show the institution details and hide loading
@@ -285,7 +284,7 @@ function updateVoteDisplay(commentId, likes, dislikes, score) {
     likeButton.innerHTML = `<i class="fas fa-thumbs-up"></i> Like (${likes})`;
   if (dislikeButton)
     dislikeButton.innerHTML = `<i class="fas fa-thumbs-down"></i> Dislike (${dislikes})`;
-  if (scoreElement) scoreElement.textContent = `Score: ${score}`;
+  if (scoreElement) scoreElement.textContent = `${score}`;
 }
 
 function fetchUserVotes() {

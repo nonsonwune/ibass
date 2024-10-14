@@ -250,3 +250,10 @@ body {
   max-height: 400px; /* Adjust the height as needed */
   overflow-y: auto;
 }
+
+.user-score {
+  font-size: 0.6em;
+  vertical-align: super;
+  color: #ffffff;
+  margin-left: 2px;
+}

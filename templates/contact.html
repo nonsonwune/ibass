@@ -96,7 +96,12 @@ Finder{% endblock %} {% block content %}
               <div class="list-group mb-3">
                 <div class="list-group-item">
                   <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">{{ comment.author.username }}</h5>
+                    <h5 class="mb-1">
+                      {{ comment.author.username }}
+                      <span class="badge user-score bg-secondary"
+                        >{{ comment.author.score }}</span
+                      >
+                    </h5>
                     <small class="text-muted"
                       >{{ comment.date_posted.strftime('%Y-%m-%d %H:%M')
                       }}</small
@@ -123,9 +128,6 @@ Finder{% endblock %} {% block content %}
                         <i class="fas fa-thumbs-down"></i> Dislike ({{
                         comment.dislikes }})
                       </button>
-                      <span class="badge bg-secondary"
-                        >Score: {{ comment.score }}</span
-                      >
                     </div>
                     {% if current_user.is_authenticated and (current_user.id ==
                     comment.user_id or current_user.is_admin) %}

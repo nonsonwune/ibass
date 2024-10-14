@@ -1,4 +1,7 @@
 # app.py
+import os
+import logging
+from datetime import datetime
 
 from flask import (
     Flask,
@@ -19,7 +22,7 @@ from flask_login import (
     current_user,
 )
 from flask_migrate import Migrate
-from flask_wtf import FlaskForm
+from flask_wtf import FlaskForm, CSRFProtect
 from wtforms import (
     StringField,
     PasswordField,
@@ -28,19 +31,27 @@ from wtforms import (
     SubmitField,
 )
 from wtforms.validators import DataRequired, Email, EqualTo
-from flask_wtf.csrf import CSRFProtect
-import logging
-from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import event, func, select
+from sqlalchemy.orm import Session
 
-# Initialize Flask app
-app = Flask(__name__)
+
+# Initialize Flask app with instance folder
+app = Flask(__name__, instance_relative_config=True)
 app.config["SECRET_KEY"] = (
     "your_secure_secret_key"  # Replace with a secure key in production
 )
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///university_courses.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(
+    app.instance_path, "university_courses.db"
+)
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Ensure instance folder exists
+try:
+    os.makedirs(app.instance_path)
+except OSError:
+    pass
 
 # Initialize Extensions
 db = SQLAlchemy(app)
@@ -64,6 +75,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    score = db.Column(db.Integer, default=0, nullable=False, index=True)
     comments = db.relationship(
         "Comment", backref="author", lazy=True, cascade="all, delete-orphan"
     )
@@ -91,7 +103,7 @@ class Comment(db.Model):
 
     @property
     def score(self):
-        return self.likes - self.dislikes
+        return self.likes - self.dislikes  # Simplified score calculation
 
 
 class Vote(db.Model):
@@ -192,6 +204,10 @@ class DeleteCommentForm(FlaskForm):
     submit = SubmitField("Delete")
 
 
+class DeleteFeedbackForm(FlaskForm):
+    submit = SubmitField("Delete")
+
+
 # User loader for Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
@@ -217,34 +233,28 @@ def unauthorized_callback():
         return redirect(url_for("login", next=request.url))
 
 
-# Database initialization function using SQLAlchemy
-def init_db():
-    db.create_all()
+# Event Listeners to Update User Score
+def update_user_score(mapper, connection, target):
 
-    users = User.query.all()
-    for user in users:
-        if not user.email or user.email.endswith("@example.com"):
-            user.email = f"{user.username}@example.com"
-    db.session.commit()
-
-    admin_user = User.query.filter_by(username="admin").first()
-    if not admin_user:
-        admin = User(
-            username="admin",
-            email="admin@example.com",
-            password=generate_password_hash("adminpassword"),
-            is_admin=True,
+    with Session(connection) as session:
+        user_id = target.author.id
+        score = (
+            session.execute(
+                select(func.sum(Comment.likes - Comment.dislikes)).where(
+                    Comment.user_id == user_id
+                )
+            ).scalar()
+            or 0
         )
-        db.session.add(admin)
-        db.session.commit()
-        logging.info("Admin user created.")
-    else:
-        logging.info("Admin user already exists.")
+
+        session.execute(
+            User.__table__.update().where(User.id == user_id).values(score=score)
+        )
 
 
-# Initialize the database
-with app.app_context():
-    init_db()
+event.listen(Comment, "after_insert", update_user_score)
+event.listen(Comment, "after_update", update_user_score)
+event.listen(Comment, "after_delete", update_user_score)
 
 
 # Routes
@@ -535,7 +545,7 @@ def profile(username):
 
 @app.route("/vote/<int:comment_id>/<action>", methods=["POST"])
 @login_required
-def vote(comment_id, action):
+def vote_route(comment_id, action):
     if action not in ["like", "dislike"]:
         return jsonify({"error": "Invalid action."}), 400
 
@@ -669,6 +679,32 @@ def delete_comment(comment_id):
     return redirect(url_for("admin"))
 
 
+@app.route("/delete_feedback/<int:feedback_id>", methods=["POST"])
+@login_required
+def delete_feedback(feedback_id):
+    if not current_user.is_admin:
+        flash("You do not have permission to perform this action.", "danger")
+        return redirect(url_for("home"))
+
+    feedback = Feedback.query.get_or_404(feedback_id)
+    form = DeleteFeedbackForm()
+    if form.validate_on_submit():
+        try:
+            db.session.delete(feedback)
+            db.session.commit()
+            flash("Feedback deleted successfully.", "success")
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            app.logger.error(f"Error deleting feedback: {str(e)}")
+            flash(
+                "An error occurred while deleting the feedback. Please try again.",
+                "danger",
+            )
+    else:
+        flash("Invalid CSRF token.", "danger")
+    return redirect(url_for("admin"))
+
+
 @app.errorhandler(404)
 def not_found_error(error):
     if (
@@ -740,9 +776,10 @@ def add_comment():
         db.session.rollback()
         app.logger.error(f"Error adding comment: {str(e)}")
         flash(
-            "An error occurred while adding your comment. Please try again.",
-            "danger",
+            "An error occurred while adding your comment. Please try again.", "danger"
         )
+    finally:
+        db.session.close()
 
     return redirect(url_for("contact"))
 
@@ -805,6 +842,7 @@ def admin():
     comments = Comment.query.order_by(Comment.date_posted.desc()).all()
     feedback_messages = Feedback.query.order_by(Feedback.date_submitted.desc()).all()
 
+    # Instantiate forms for deleting users and comments
     delete_user_forms = {}
     for user in users:
         if not user.is_admin:
@@ -816,6 +854,12 @@ def admin():
         form = DeleteCommentForm()
         delete_comment_forms[comment.id] = form
 
+    # Instantiate forms for deleting feedback
+    delete_feedback_forms = {}
+    for feedback in feedback_messages:
+        form = DeleteFeedbackForm()
+        delete_feedback_forms[feedback.id] = form
+
     return render_template(
         "admin.html",
         users=users,
@@ -823,39 +867,49 @@ def admin():
         feedback_messages=feedback_messages,
         delete_user_forms=delete_user_forms,
         delete_comment_forms=delete_comment_forms,
+        delete_feedback_forms=delete_feedback_forms,  # Pass the new forms
     )
 
 
-@app.route("/delete_feedback/<int:feedback_id>", methods=["POST"])
-@login_required
-def delete_feedback(feedback_id):
-    if not current_user.is_admin:
-        flash("You do not have permission to perform this action.", "danger")
-        return redirect(url_for("home"))
-
-    feedback = Feedback.query.get_or_404(feedback_id)
+# Database initialization function using SQLAlchemy
+def init_db():
     try:
-        db.session.delete(feedback)
+        # Create all tables
+        db.create_all()
+
+        # Update user emails if necessary
+        users = User.query.all()
+        for user in users:
+            if not user.email or user.email.endswith("@example.com"):
+                user.email = f"{user.username}@example.com"
+
         db.session.commit()
-        flash("Feedback deleted successfully.", "success")
-    except SQLAlchemyError as e:
+
+        # Create admin user if not exists
+        admin_user = User.query.filter_by(username="admin").first()
+        if not admin_user:
+            admin = User(
+                username="admin",
+                email="admin@example.com",
+                password=generate_password_hash("adminpassword"),
+                is_admin=True,
+            )
+            db.session.add(admin)
+            db.session.commit()
+            logging.info("Admin user created.")
+        else:
+            logging.info("Admin user already exists.")
+
+        logging.info("Database initialized successfully.")
+    except Exception as e:
         db.session.rollback()
-        app.logger.error(f"Error deleting feedback: {str(e)}")
-        flash(
-            "An error occurred while deleting the feedback. Please try again.",
-            "danger",
-        )
-    return redirect(url_for("admin"))
-
-
-@app.route("/test_csrf", methods=["GET", "POST"])
-def test_csrf():
-    form = FlaskForm()
-    if form.validate_on_submit():
-        flash("CSRF token validated successfully.", "success")
-        return redirect(url_for("home"))
-    return render_template("test_csrf.html", form=form)
+        logging.error(f"Error initializing database: {str(e)}")
+        raise
+    finally:
+        db.session.close()
 
 
 if __name__ == "__main__":
+    with app.app_context():
+        init_db()
     app.run(debug=True, host="0.0.0.0", port=5001)
