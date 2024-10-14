@@ -1,0 +1,11 @@
+<!-- templates/test_csrf.html -->
+{% extends "base.html" %} {% block title %}CSRF Test{% endblock %} {% block
+content %}
+<div class="container my-5">
+  <h1 class="mb-4 text-center">CSRF Token Test</h1>
+  <form method="POST">
+    {{ form.hidden_tag() }}
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>
+</div>
+{% endblock %}

@@ -147,33 +147,9 @@ function populateModal(uni) {
 
 function createCourseHTML(course) {
   return `
-      <div class="card mb-3">
-        <div class="card-body">
-          <h5 class="card-title">${course.course_name}</h5>
-          <p><strong>UTME Requirements:</strong> ${
-            course.utme_requirements || "N/A"
-          }</p>
-          <p><strong>Direct Entry Requirements:</strong> ${
-            course.direct_entry_requirements || "N/A"
-          }</p>
-          <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
-        </div>
-      </div>
-    `;
-}
-
-function createAccordionItem(course, index) {
-  const collapseId = `collapseCourse${index}`;
-  const headingId = `headingCourse${index}`;
-  return `
-      <div class="accordion-item">
-        <h2 class="accordion-header" id="${headingId}">
-          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
-            ${course.course_name}
-          </button>
-        </h2>
-        <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headingId}" data-bs-parent="#coursesAccordion">
-          <div class="accordion-body">
+        <div class="card mb-3">
+          <div class="card-body">
+            <h5 class="card-title">${course.course_name}</h5>
             <p><strong>UTME Requirements:</strong> ${
               course.utme_requirements || "N/A"
             }</p>
@@ -183,8 +159,32 @@ function createAccordionItem(course, index) {
             <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
           </div>
         </div>
-      </div>
-    `;
+      `;
+}
+
+function createAccordionItem(course, index) {
+  const collapseId = `collapseCourse${index}`;
+  const headingId = `headingCourse${index}`;
+  return `
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="${headingId}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+              ${course.course_name}
+            </button>
+          </h2>
+          <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headingId}" data-bs-parent="#coursesAccordion">
+            <div class="accordion-body">
+              <p><strong>UTME Requirements:</strong> ${
+                course.utme_requirements || "N/A"
+              }</p>
+              <p><strong>Direct Entry Requirements:</strong> ${
+                course.direct_entry_requirements || "N/A"
+              }</p>
+              <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
+            </div>
+          </div>
+        </div>
+      `;
 }
 
 function showErrorMessage(message) {
@@ -227,6 +227,7 @@ function vote(commentId, action, buttonElement) {
     headers: {
       "Content-Type": "application/json",
       "X-CSRFToken": getCsrfToken(),
+      Accept: "application/json", // Added Accept header
     },
     credentials: "same-origin",
   })
