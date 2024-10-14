@@ -1,3 +1,4 @@
+<!-- templates/contact.html -->
 {% extends "base.html" %} {% block title %}Contact Us - Nigerian Institutions
 Finder{% endblock %} {% block content %}
 <div class="container my-5">
@@ -67,10 +68,26 @@ Finder{% endblock %} {% block content %}
           >
             <i class="fas fa-plus-circle me-1"></i> Add Comment
           </button>
+          {% else %}
+          <button
+            class="btn btn-sm btn-light"
+            data-bs-toggle="tooltip"
+            data-bs-placement="top"
+            title="Sign in to add a comment"
+            onclick="window.location.href='{{ url_for('login') }}'"
+          >
+            <i class="fas fa-plus-circle me-1"></i> Add Comment
+          </button>
           {% endif %}
         </div>
         <div class="card-body">
           <div class="comments-section">
+            {% if not current_user.is_authenticated %}
+            <div class="alert alert-info mb-3" role="alert">
+              <i class="fas fa-info-circle me-2"></i>
+              Sign in to comment, like, and interact with others.
+            </div>
+            {% endif %}
             <h3 class="h6 mb-3">Recent Comments</h3>
             {% for comment in comments %}
             <div class="list-group mb-3">
@@ -192,6 +209,14 @@ Finder{% endblock %} {% block content %}
   document.addEventListener("DOMContentLoaded", function () {
     // Fetch and apply user votes
     fetchUserVotes();
+
+    // Initialize Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(
+      document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    );
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 
     // Character count for comment textarea
     const commentTextarea = document.getElementById("comment");

@@ -211,18 +211,17 @@ function initializeVoting() {
       e.preventDefault();
       const commentId = this.getAttribute("data-comment-id");
       const action = this.getAttribute("data-vote-type");
-      vote(commentId, action);
+      vote(commentId, action, this);
     });
   });
 }
 
 function getCsrfToken() {
-  return document
-    .querySelector('meta[name="csrf-token"]')
-    .getAttribute("content");
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute("content") : "";
 }
 
-function vote(commentId, action) {
+function vote(commentId, action, buttonElement) {
   fetch(`/vote/${commentId}/${action}`, {
     method: "POST",
     headers: {
@@ -231,17 +230,32 @@ function vote(commentId, action) {
     },
     credentials: "same-origin",
   })
-    .then((response) => response.json())
+    .then((response) => {
+      if (response.status === 401) {
+        throw new Error("You must be logged in to vote.");
+      }
+      if (response.status === 403) {
+        throw new Error("You do not have permission to perform this action.");
+      }
+      if (!response.ok) {
+        throw new Error("An unexpected error occurred.");
+      }
+      return response.json();
+    })
     .then((data) => {
       if (data.error) {
         alert(data.error);
       } else {
         updateVoteDisplay(commentId, data.likes, data.dislikes, data.score);
+        applyUserVotes(data.user_votes);
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      alert("An error occurred while processing your vote. Please try again.");
+      alert(
+        error.message ||
+          "An error occurred while processing your vote. Please try again."
+      );
     });
 }
 
@@ -287,6 +301,7 @@ function fetchUserVotes() {
 }
 
 function applyUserVotes(votes) {
+  if (!votes) return;
   document.querySelectorAll(".vote-btn").forEach((button) => {
     const commentId = button.getAttribute("data-comment-id");
     const voteType = button.getAttribute("data-vote-type");
