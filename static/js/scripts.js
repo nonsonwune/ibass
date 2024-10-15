@@ -2,7 +2,9 @@
 document.addEventListener("DOMContentLoaded", function () {
   initializeInstitutionModal();
   initializeVoting();
-  fetchUserVotes();
+  if (window.isAuthenticated) {
+    fetchUserVotes();
+  }
 });
 
 function initializeInstitutionModal() {
@@ -61,7 +63,14 @@ function fetchInstitutionDetails(uniId, selectedCourse) {
     `Fetching details for institution ID: ${uniId}, Selected Course: ${selectedCourse}`
   );
   fetch(
-    `/api/institution/${uniId}?course=${encodeURIComponent(selectedCourse)}`
+    `/api/institution/${uniId}?course=${encodeURIComponent(selectedCourse)}`,
+    {
+      headers: {
+        "X-CSRFToken": window.csrfToken,
+        Accept: "application/json",
+      },
+      credentials: "same-origin",
+    }
   )
     .then((response) => {
       if (!response.ok) {
@@ -225,10 +234,10 @@ function vote(commentId, action, buttonElement) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-CSRFToken": getCsrfToken(),
-      Accept: "application/json", // Added Accept header
+      "X-CSRFToken": window.csrfToken,
+      Accept: "application/json", // Ensure server returns JSON
     },
-    credentials: "same-origin",
+    credentials: "same-origin", // Include cookies in the request
   })
     .then((response) => {
       if (response.status === 401) {
@@ -288,8 +297,20 @@ function updateVoteDisplay(commentId, likes, dislikes, score) {
 }
 
 function fetchUserVotes() {
-  fetch("/api/user_votes")
+  fetch("/api/user_votes", {
+    credentials: "same-origin",
+    headers: {
+      "X-CSRFToken": window.csrfToken,
+      Accept: "application/json",
+    },
+  })
     .then((response) => {
+      if (response.redirected) {
+        // Handle redirect (e.g., user is not authenticated)
+        console.log("Redirected to login page.");
+        return null;
+      }
+
       if (!response.ok) {
         if (response.status === 401) {
           console.log("User not authenticated");

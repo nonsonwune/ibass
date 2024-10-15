@@ -36,7 +36,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import event, func, select
 from sqlalchemy.orm import Session
 
-
 # Initialize Flask app with instance folder
 app = Flask(__name__, instance_relative_config=True)
 app.config["SECRET_KEY"] = (
@@ -46,6 +45,9 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(
     app.instance_path, "university_courses.db"
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Configure CSRF protection to accept tokens from headers
+app.config["WTF_CSRF_HEADERS"] = ["X-CSRFToken"]
 
 # Ensure instance folder exists
 try:
@@ -86,6 +88,9 @@ class User(UserMixin, db.Model):
         "Feedback", backref="user", lazy=True, cascade="all, delete-orphan"
     )
 
+    def calculate_score(self):
+        return sum(comment.score for comment in self.comments)
+
 
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -103,7 +108,7 @@ class Comment(db.Model):
 
     @property
     def score(self):
-        return self.likes - self.dislikes  # Simplified score calculation
+        return self.likes - self.dislikes
 
 
 class Vote(db.Model):
@@ -211,7 +216,7 @@ class DeleteFeedbackForm(FlaskForm):
 # User loader for Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    return User.query.get(int(user_id))
 
 
 # Helper Function to Get User Votes
@@ -565,7 +570,6 @@ def vote_route(comment_id, action):
                     comment.dislikes -= 1
             else:
                 # User is switching vote
-                old_vote_type = vote.vote_type
                 vote.vote_type = action
                 if action == "like":
                     comment.likes += 1
@@ -576,9 +580,7 @@ def vote_route(comment_id, action):
         else:
             # User is voting for the first time
             new_vote = Vote(
-                user_id=current_user.id,
-                comment_id=comment_id,
-                vote_type=action,
+                user_id=current_user.id, comment_id=comment_id, vote_type=action
             )
             db.session.add(new_vote)
             if action == "like":
@@ -586,6 +588,10 @@ def vote_route(comment_id, action):
             else:
                 comment.dislikes += 1
 
+        db.session.commit()
+
+        # Update user score
+        comment.author.score = comment.author.calculate_score()
         db.session.commit()
 
         # Get updated user votes
@@ -609,9 +615,15 @@ def vote_route(comment_id, action):
 @app.route("/api/user_votes", methods=["GET"])
 @login_required
 def get_user_votes_route():
+    app.logger.info(f"Accessing /api/user_votes")
+    app.logger.info(f"User authenticated: {current_user.is_authenticated}")
+    app.logger.info(
+        f"User ID: {current_user.id if current_user.is_authenticated else 'N/A'}"
+    )
     try:
         votes = Vote.query.filter_by(user_id=current_user.id).all()
         user_votes = {vote.comment_id: vote.vote_type for vote in votes}
+        app.logger.info(f"User votes fetched: {user_votes}")
         return jsonify(user_votes), 200
     except SQLAlchemyError as e:
         app.logger.error(f"Error fetching user votes: {str(e)}")
