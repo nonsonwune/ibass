@@ -52,12 +52,12 @@
                 >About</a
               >
             </li>
-            <li class="nav-item">
+            <li class="nav-item position-relative">
               <a
                 class="nav-link {% if request.path == '/contact' %}active{% endif %}"
                 href="/contact"
-                >Contact</a
-              >
+                >Contact <span class="notification-badge"></span
+              ></a>
             </li>
           </ul>
           <form
