@@ -35,7 +35,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import event, func, select
 from sqlalchemy.orm import Session
-from dotenv import load_dotenv  # Import dotenv
+from dotenv import load_dotenv
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 # Load environment variables from .env file
 load_dotenv()
@@ -88,7 +90,8 @@ else:
         format="%(asctime)s %(levelname)s:%(message)s",
         handlers=[
             logging.StreamHandler(),
-            # You can add more handlers like FileHandler for production
+            # Example: FileHandler for production logs
+            # logging.FileHandler("logs/production.log"),
         ],
     )
 
