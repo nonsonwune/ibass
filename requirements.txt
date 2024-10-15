@@ -21,7 +21,10 @@ MarkupSafe==3.0.1
 numpy==2.1.2
 packaging==24.1
 pandas==2.2.3
+psycopg2==2.9.9
+psycopg2-binary==2.9.9
 python-dateutil==2.9.0.post0
+python-dotenv==1.0.1
 pytz==2024.2
 six==1.16.0
 SQLAlchemy==2.0.35

@@ -35,19 +35,32 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import event, func, select
 from sqlalchemy.orm import Session
+from dotenv import load_dotenv  # Import dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize Flask app with instance folder
 app = Flask(__name__, instance_relative_config=True)
-app.config["SECRET_KEY"] = (
-    "your_secure_secret_key"  # Replace with a secure key in production
-)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(
-    app.instance_path, "university_courses.db"
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "default_secret_key")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+    "SQLALCHEMY_DATABASE_URI",
+    "sqlite:///" + os.path.join(app.instance_path, "university_courses.db"),
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 # Configure CSRF protection to accept tokens from headers
 app.config["WTF_CSRF_HEADERS"] = ["X-CSRFToken"]
+
+# Determine the environment
+environment = os.getenv("FLASK_ENV", "production")
+
+if environment == "development":
+    app.debug = True
+    app.config["DEBUG"] = True
+else:
+    app.debug = False
+    app.config["DEBUG"] = False
 
 # Ensure instance folder exists
 try:
@@ -63,11 +76,21 @@ login_manager.login_view = "login"
 csrf = CSRFProtect(app)
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s:%(message)s",
-    handlers=[logging.StreamHandler()],
-)
+if environment == "development":
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s %(levelname)s:%(message)s",
+        handlers=[logging.StreamHandler()],
+    )
+else:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s:%(message)s",
+        handlers=[
+            logging.StreamHandler(),
+            # You can add more handlers like FileHandler for production
+        ],
+    )
 
 
 # Database Models
@@ -924,4 +947,8 @@ def init_db():
 if __name__ == "__main__":
     with app.app_context():
         init_db()
-    app.run(debug=True, host="0.0.0.0", port=5001)
+    app.run(host="0.0.0.0", port=5001)
+else:
+    # Ensure init_db is called when using Gunicorn
+    with app.app_context():
+        init_db()
