@@ -177,5 +177,188 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
     {% block extra_scripts %}{% endblock %}
+    <!-- Add this just before the closing </body> tag in your base.html -->
+    <div
+      id="consent-banner"
+      style="
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background-color: #f1f1f1;
+        padding: 20px;
+        text-align: center;
+        z-index: 1000;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+      "
+    >
+      <p>
+        We use cookies and similar technologies to improve your browsing
+        experience, personalize content and ads, and analyze our traffic. By
+        clicking "Accept All", you consent to our use of cookies. Click "Manage
+        Preferences" to set your preferences.
+      </p>
+      <button onclick="acceptAllConsent()" class="btn btn-primary">
+        Accept All
+      </button>
+      <button onclick="rejectAllConsent()" class="btn btn-secondary">
+        Reject All
+      </button>
+      <button onclick="managePreferences()" class="btn btn-link">
+        Manage Preferences
+      </button>
+    </div>
+
+    <div
+      id="preferences-modal"
+      class="modal fade"
+      tabindex="-1"
+      aria-labelledby="preferencesModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="preferencesModalLabel">
+              Cookie Preferences
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="form-check form-switch">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="personalizedAdsConsent"
+                checked
+              />
+              <label class="form-check-label" for="personalizedAdsConsent"
+                >Personalized Ads</label
+              >
+            </div>
+            <small class="form-text text-muted">
+              When enabled, we use cookies to personalize ads based on your
+              interests and browsing activity.
+            </small>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              onclick="savePreferences()"
+            >
+              Save changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        // Initialize Google's tag for ad personalization control
+        window.googletag = window.googletag || { cmd: [] };
+
+        function showConsentBanner() {
+          if (!localStorage.getItem("cookieConsent")) {
+            document.getElementById("consent-banner").style.display = "block";
+          } else {
+            applyStoredPreferences();
+          }
+        }
+
+        function acceptAllConsent() {
+          localStorage.setItem("cookieConsent", "accepted");
+          localStorage.setItem("personalizedAdsConsent", "true");
+          document.getElementById("consent-banner").style.display = "none";
+          enablePersonalizedAds();
+        }
+
+        function rejectAllConsent() {
+          localStorage.setItem("cookieConsent", "rejected");
+          localStorage.setItem("personalizedAdsConsent", "false");
+          document.getElementById("consent-banner").style.display = "none";
+          disablePersonalizedAds();
+        }
+
+        function managePreferences() {
+          var myModal = new bootstrap.Modal(
+            document.getElementById("preferences-modal")
+          );
+          var personalizedAdsConsent =
+            localStorage.getItem("personalizedAdsConsent") !== "false";
+          document.getElementById("personalizedAdsConsent").checked =
+            personalizedAdsConsent;
+          myModal.show();
+        }
+
+        function savePreferences() {
+          var personalizedAdsConsent = document.getElementById(
+            "personalizedAdsConsent"
+          ).checked;
+          localStorage.setItem("cookieConsent", "custom");
+          localStorage.setItem(
+            "personalizedAdsConsent",
+            personalizedAdsConsent
+          );
+          document.getElementById("consent-banner").style.display = "none";
+          if (personalizedAdsConsent) {
+            enablePersonalizedAds();
+          } else {
+            disablePersonalizedAds();
+          }
+          var myModal = bootstrap.Modal.getInstance(
+            document.getElementById("preferences-modal")
+          );
+          myModal.hide();
+        }
+
+        function enablePersonalizedAds() {
+          googletag.cmd.push(function () {
+            googletag.pubads().setRequestNonPersonalizedAds(0);
+          });
+          console.log("Personalized ads enabled");
+        }
+
+        function disablePersonalizedAds() {
+          googletag.cmd.push(function () {
+            googletag.pubads().setRequestNonPersonalizedAds(1);
+          });
+          console.log("Personalized ads disabled");
+        }
+
+        function applyStoredPreferences() {
+          var personalizedAdsConsent =
+            localStorage.getItem("personalizedAdsConsent") !== "false";
+          if (personalizedAdsConsent) {
+            enablePersonalizedAds();
+          } else {
+            disablePersonalizedAds();
+          }
+        }
+
+        // Run on page load
+        window.addEventListener("load", showConsentBanner);
+
+        // Expose necessary functions to global scope
+        window.acceptAllConsent = acceptAllConsent;
+        window.rejectAllConsent = rejectAllConsent;
+        window.managePreferences = managePreferences;
+        window.savePreferences = savePreferences;
+      })();
+    </script>
   </body>
 </html>

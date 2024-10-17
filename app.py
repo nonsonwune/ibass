@@ -301,7 +301,7 @@ class DeleteFeedbackForm(FlaskForm):
 # User loader for Flask-Login
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 
 # Helper Function to Get User Votes
@@ -732,7 +732,7 @@ def delete_user(user_id):
         flash("You do not have permission to perform this action.", "danger")
         return redirect(url_for("home"))
 
-    user = User.query.get_or_404(user_id)
+    user = db.session.get(User, user_id)
 
     if user.is_admin:
         flash("Cannot delete an admin user.", "danger")
@@ -764,7 +764,7 @@ def delete_user(user_id):
 @app.route("/delete_comment/<int:comment_id>", methods=["POST"])
 @login_required
 def delete_comment(comment_id):
-    comment = Comment.query.get_or_404(comment_id)
+    comment = db.session.get(Comment, comment_id)
     if current_user.id == comment.user_id or current_user.is_admin:
         form = DeleteCommentForm()
         if form.validate_on_submit():
@@ -793,7 +793,7 @@ def delete_feedback(feedback_id):
         flash("You do not have permission to perform this action.", "danger")
         return redirect(url_for("home"))
 
-    feedback = Feedback.query.get_or_404(feedback_id)
+    feedback = db.session.get(Feedback, feedback_id)
     form = DeleteFeedbackForm()
     if form.validate_on_submit():
         try:
@@ -897,7 +897,7 @@ def get_institution_details(uni_id):
         search_type = request.args.get("search_type", "location")
         selected_course = request.args.get("course", "")
 
-        university = University.query.get_or_404(uni_id)
+        university = db.session.get(University, uni_id)
         courses = Course.query.filter_by(
             university_name=university.university_name
         ).all()
@@ -987,7 +987,7 @@ def verify_email(token):
         flash("The confirmation link is invalid or has expired.", "danger")
         return redirect(url_for("login"))
 
-    user = User.query.filter_by(email=email).first_or_404()
+    user = db.session.get(User, email=email)
     if user.is_verified:
         flash("Account already verified. Please log in.", "success")
     else:
@@ -1089,7 +1089,7 @@ def add_bookmark():
 @app.route("/remove_bookmark/<int:bookmark_id>", methods=["POST"])
 @login_required
 def remove_bookmark(bookmark_id):
-    bookmark = Bookmark.query.get_or_404(bookmark_id)
+    bookmark = db.session.get(Bookmark, bookmark_id)
     if bookmark.user_id != current_user.id:
         return jsonify({"success": False, "message": "Unauthorized action"}), 403
     try:
