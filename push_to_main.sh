@@ -5,7 +5,7 @@ git checkout dev
 
 # Commit any pending changes
 git add .
-git commit -m "Update search delete bookmark and fix issues"
+git commit -m "Update bookmark for persistent bookmark icon activate"
 
 # Switch to the main branch
 git checkout main

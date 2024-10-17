@@ -464,7 +464,7 @@ def recommend():
         location=location,
         university=preferred_university,
         course=preferred_course,
-        user_bookmarks=user_bookmarks,  # Add this line
+        user_bookmarks=user_bookmarks,
     )
 
 
@@ -1117,6 +1117,13 @@ def remove_bookmark(bookmark_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+@app.route("/api/user_bookmarks", methods=["GET"])
+@login_required
+def get_user_bookmarks():
+    bookmarks = [bookmark.university_id for bookmark in current_user.bookmarks]
+    return jsonify(bookmarks)
 
 
 # Database initialization function using SQLAlchemy

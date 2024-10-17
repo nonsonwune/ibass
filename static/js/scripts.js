@@ -355,53 +355,85 @@ function initializeBookmarkButtons() {
 
 function handleBookmarkClick(event) {
   event.preventDefault();
-  console.log("Bookmark button clicked");
-  const uniId = this.getAttribute("data-uni-id");
-  console.log("University ID:", uniId);
-  const bookmarkText = this.querySelector(".bookmark-text");
-  const icon = this.querySelector("i");
+  const button = this;
+  const uniId = button.getAttribute("data-uni-id");
+  const isBookmarked = button.classList.contains("btn-secondary");
 
-  // Immediately update UI
-  this.classList.add("btn-secondary");
-  this.classList.remove("btn-outline-secondary");
-  bookmarkText.textContent = "Bookmarked";
-  icon.classList.remove("fa-bookmark");
-  icon.classList.add("fa-check");
+  const url = isBookmarked ? `/remove_bookmark/${uniId}` : "/bookmark";
+  const method = "POST";
+  const body = isBookmarked ? null : JSON.stringify({ university_id: uniId });
 
-  // Send AJAX request
-  fetch("/bookmark", {
-    method: "POST",
+  fetch(url, {
+    method: method,
     headers: {
       "Content-Type": "application/json",
       "X-CSRFToken": window.csrfToken,
     },
-    body: JSON.stringify({ university_id: uniId }),
+    body: body,
   })
-    .then((response) => {
-      console.log("Response status:", response.status);
-      return response.json();
-    })
+    .then((response) => response.json())
     .then((data) => {
-      console.log("Response data:", data);
-      if (!data.success) {
-        // If bookmarking failed, revert the UI
-        this.classList.remove("btn-secondary");
-        this.classList.add("btn-outline-secondary");
-        bookmarkText.textContent = "Bookmark";
-        icon.classList.add("fa-bookmark");
-        icon.classList.remove("fa-check");
-        // Show error message
+      if (data.success) {
+        updateBookmarkButtonUI(button, !isBookmarked);
+      } else {
         alert(data.message || "Bookmarking failed. Please try again.");
       }
     })
     .catch((error) => {
       console.error("Error:", error);
-      // Revert UI and show error message
-      this.classList.remove("btn-secondary");
-      this.classList.add("btn-outline-secondary");
-      bookmarkText.textContent = "Bookmark";
-      icon.classList.add("fa-bookmark");
-      icon.classList.remove("fa-check");
       alert("An error occurred while bookmarking. Please try again.");
     });
 }
+function fetchUserBookmarks() {
+  if (window.isAuthenticated) {
+    fetch("/api/user_bookmarks", {
+      credentials: "same-origin",
+      headers: {
+        "X-CSRFToken": window.csrfToken,
+        Accept: "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        applyUserBookmarks(data);
+      })
+      .catch((error) => {
+        console.error("Error fetching user bookmarks:", error);
+      });
+  }
+}
+
+function applyUserBookmarks(bookmarks) {
+  document.querySelectorAll(".bookmark-btn").forEach((button) => {
+    const uniId = button.getAttribute("data-uni-id");
+    if (bookmarks.includes(parseInt(uniId))) {
+      updateBookmarkButtonUI(button, true);
+    } else {
+      updateBookmarkButtonUI(button, false);
+    }
+  });
+}
+
+function updateBookmarkButtonUI(button, isBookmarked) {
+  const bookmarkText = button.querySelector(".bookmark-text");
+  const icon = button.querySelector("i");
+
+  if (isBookmarked) {
+    button.classList.add("btn-secondary");
+    button.classList.remove("btn-outline-secondary");
+    bookmarkText.textContent = "Bookmarked";
+    icon.classList.remove("fa-bookmark");
+    icon.classList.add("fa-check");
+  } else {
+    button.classList.remove("btn-secondary");
+    button.classList.add("btn-outline-secondary");
+    bookmarkText.textContent = "Bookmark";
+    icon.classList.add("fa-bookmark");
+    icon.classList.remove("fa-check");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  fetchUserBookmarks();
+  // ... (other existing code)
+});
