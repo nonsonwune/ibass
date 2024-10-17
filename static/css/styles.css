@@ -274,3 +274,8 @@ body {
 .bookmark-list-item.removing {
   opacity: 0;
 }
+
+.admin-username {
+  color: green;
+  font-weight: bold;
+}

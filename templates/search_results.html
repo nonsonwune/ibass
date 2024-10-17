@@ -1,4 +1,3 @@
-<!-- templates/search_results.html -->
 {% extends "base.html" %} {% block title %}Search Results - Nigerian
 Institutions Finder{% endblock %} {% block extra_head %}
 <style>
@@ -105,21 +104,23 @@ Institutions Finder{% endblock %} {% block extra_head %}
 </div>
 {% endblock %} {% block extra_scripts %}
 <script>
-  $(document).ready(function () {
-    const searchInput = $("#search-input");
-    const searchQuery = $("#search-query");
-    const universitiesResults = $("#universities-results");
-    const coursesResults = $("#courses-results");
-    const noResults = $("#no-results");
-    const stateFilter = $("#state-filter");
-    const programTypeFilter = $("#program-type-filter");
+  document.addEventListener("DOMContentLoaded", function () {
+    const searchQuery = document.getElementById("search-query");
+    const universitiesResults = document.getElementById("universities-results");
+    const coursesResults = document.getElementById("courses-results");
+    const noResults = document.getElementById("no-results");
+    const stateFilter = document.getElementById("state-filter");
+    const programTypeFilter = document.getElementById("program-type-filter");
+    const filterForm = document.getElementById("filter-form");
 
     function performSearch(query, state = "", programType = "") {
-      $.ajax({
-        url: "/api/search",
-        method: "GET",
-        data: { q: query, state: state, program_type: programType },
-        success: function (data) {
+      fetch(
+        `/api/search?q=${encodeURIComponent(query)}&state=${encodeURIComponent(
+          state
+        )}&program_type=${encodeURIComponent(programType)}`
+      )
+        .then((response) => response.json())
+        .then((data) => {
           if (data.error) {
             showError(data.error);
           } else {
@@ -128,33 +129,31 @@ Institutions Finder{% endblock %} {% block extra_head %}
               updateFilters(data);
             }
           }
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
+        })
+        .catch((error) => {
           showError("An error occurred while searching. Please try again.");
-          console.error("Search error:", textStatus, errorThrown);
-        },
-      });
+          console.error("Search error:", error);
+        });
     }
 
     function showError(message) {
-      $("#no-results")
-        .html(`<div class="alert alert-danger" role="alert">${message}</div>`)
-        .show();
-      $("#universities-results").empty();
-      $("#courses-results").empty();
+      noResults.innerHTML = `<div class="alert alert-danger" role="alert">${message}</div>`;
+      noResults.style.display = "block";
+      universitiesResults.innerHTML = "";
+      coursesResults.innerHTML = "";
     }
 
     function updateResults(data) {
-      universitiesResults.empty();
-      coursesResults.empty();
-      noResults.hide();
+      universitiesResults.innerHTML = "";
+      coursesResults.innerHTML = "";
+      noResults.style.display = "none";
 
       if (data.universities.length === 0 && data.courses.length === 0) {
-        noResults.show();
+        noResults.style.display = "block";
       } else {
         // Populate Universities
         data.universities.forEach(function (uni) {
-          universitiesResults.append(`
+          universitiesResults.innerHTML += `
             <div class="col">
               <div class="card h-100 result-card">
                 <div class="card-body">
@@ -169,13 +168,13 @@ Institutions Finder{% endblock %} {% block extra_head %}
                 </div>
               </div>
             </div>
-          `);
+          `;
         });
 
         // Populate Courses
         data.courses.forEach(function (course, index) {
           const modalId = `courseModal${index}`;
-          coursesResults.append(`
+          coursesResults.innerHTML += `
             <div class="col">
               <div class="card h-100 result-card">
                 <div class="card-body">
@@ -188,10 +187,12 @@ Institutions Finder{% endblock %} {% block extra_head %}
                 </div>
               </div>
             </div>
-          `);
+          `;
 
           // Append Modal
-          $("body").append(`
+          document.body.insertAdjacentHTML(
+            "beforeend",
+            `
             <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
               <div class="modal-dialog modal-lg">
                 <div class="modal-content">
@@ -209,7 +210,8 @@ Institutions Finder{% endblock %} {% block extra_head %}
                 </div>
               </div>
             </div>
-          `);
+          `
+          );
         });
       }
     }
@@ -220,43 +222,33 @@ Institutions Finder{% endblock %} {% block extra_head %}
         ...new Set(data.universities.map((uni) => uni.program_type)),
       ];
 
-      stateFilter.empty().append('<option value="">All States</option>');
-      programTypeFilter.empty().append('<option value="">All Types</option>');
+      stateFilter.innerHTML =
+        '<option value="">All States</option>' +
+        states
+          .map((state) => `<option value="${state}">${state}</option>`)
+          .join("");
 
-      states.forEach((state) => {
-        stateFilter.append(`<option value="${state}">${state}</option>`);
-      });
-
-      programTypes.forEach((type) => {
-        programTypeFilter.append(`<option value="${type}">${type}</option>`);
-      });
+      programTypeFilter.innerHTML =
+        '<option value="">All Types</option>' +
+        programTypes
+          .map((type) => `<option value="${type}">${type}</option>`)
+          .join("");
     }
 
-    $("#search-form").on("submit", function (e) {
+    filterForm.addEventListener("submit", function (e) {
       e.preventDefault();
-      const query = searchInput.val().trim();
-      if (query) {
-        searchQuery.text(query);
-        performSearch(query);
-      }
-    });
-
-    $("#filter-form").on("submit", function (e) {
-      e.preventDefault();
-      const query = searchInput.val().trim();
-      const state = stateFilter.val();
-      const programType = programTypeFilter.val();
+      const query = searchQuery.textContent.trim();
+      const state = stateFilter.value;
+      const programType = programTypeFilter.value;
 
       if (query) {
-        searchQuery.text(query);
         performSearch(query, state, programType);
       }
     });
 
     // Initial search on page load
-    const initialQuery = searchInput.val().trim();
+    const initialQuery = searchQuery.textContent.trim();
     if (initialQuery) {
-      searchQuery.text(initialQuery);
       performSearch(initialQuery);
     }
   });

@@ -11,76 +11,31 @@ Finder{% endblock %} {% block content %}
   </p>
 
   <div class="row mt-5">
-    <!-- Contact Form Section -->
-    <div class="col-md-6 mb-4">
-      <div class="card shadow-sm">
-        <div class="card-header bg-secondary text-white">
-          <h2 class="h5 mb-0">
-            <i class="fas fa-envelope me-2"></i>Contact Form
-          </h2>
-        </div>
-        <div class="card-body">
-          <form action="{{ url_for('contact') }}" method="POST" novalidate>
-            {{ form.hidden_tag() }}
-            <div class="mb-3">
-              {{ form.name.label(class="form-label") }} {{
-              form.name(class="form-control", placeholder="Enter your full
-              name", required=true) }}
-              <div class="invalid-feedback">Please enter your name.</div>
-            </div>
-            <div class="mb-3">
-              {{ form.email.label(class="form-label") }} {{
-              form.email(class="form-control", placeholder="Enter your email",
-              required=true) }}
-              <div class="invalid-feedback">
-                Please enter a valid email address.
-              </div>
-            </div>
-            <div class="mb-3">
-              {{ form.subject.label(class="form-label") }} {{
-              form.subject(class="form-control", placeholder="Subject of your
-              message", required=true) }}
-              <div class="invalid-feedback">Please enter a subject.</div>
-            </div>
-            <div class="mb-3">
-              {{ form.message.label(class="form-label") }} {{
-              form.message(class="form-control", rows="5", placeholder="Write
-              your message here...", required=true) }}
-              <div class="invalid-feedback">Please enter your message.</div>
-            </div>
-            {{ form.submit(class="btn btn-primary w-100") }}
-          </form>
-        </div>
-      </div>
-    </div>
-
     <!-- Comments Section -->
-    <div class="col-md-6">
-      <div class="card shadow-sm">
-        <div
-          class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
+    <div class="col-12 col-md-6 mb-4 order-1">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h5 mb-0"><i class="fas fa-comments me-2"></i>Comments</h2>
+        {% if current_user.is_authenticated %}
+        <button
+          class="btn btn-primary"
+          data-bs-toggle="modal"
+          data-bs-target="#addCommentModal"
         >
-          <h2 class="h5 mb-0"><i class="fas fa-comments me-2"></i>Comments</h2>
-          {% if current_user.is_authenticated %}
-          <button
-            class="btn btn-sm btn-light"
-            data-bs-toggle="modal"
-            data-bs-target="#addCommentModal"
-          >
-            <i class="fas fa-plus-circle me-1"></i> Add Comment
-          </button>
-          {% else %}
-          <button
-            class="btn btn-sm btn-light"
-            data-bs-toggle="tooltip"
-            data-bs-placement="top"
-            title="Sign in to add a comment"
-            onclick="window.location.href='{{ url_for('login') }}'"
-          >
-            <i class="fas fa-plus-circle me-1"></i> Add Comment
-          </button>
-          {% endif %}
-        </div>
+          <i class="fas fa-plus-circle me-1"></i> Add Comment
+        </button>
+        {% else %}
+        <button
+          class="btn btn-primary"
+          data-bs-toggle="tooltip"
+          data-bs-placement="top"
+          title="Sign in to add a comment"
+          onclick="window.location.href='{{ url_for('login') }}'"
+        >
+          <i class="fas fa-plus-circle me-1"></i> Add Comment
+        </button>
+        {% endif %}
+      </div>
+      <div class="card shadow-sm">
         <div class="card-body">
           <div class="comments-section">
             {% if not current_user.is_authenticated %}
@@ -97,7 +52,11 @@ Finder{% endblock %} {% block content %}
                 <div class="list-group-item">
                   <div class="d-flex w-100 justify-content-between">
                     <h5 class="mb-1">
-                      {{ comment.author.username }}
+                      <span
+                        class="{% if comment.author.is_admin %}admin-username{% endif %}"
+                      >
+                        {{ comment.author.username }}
+                      </span>
                       <span class="badge user-score bg-secondary"
                         >{{ comment.author.score }}</span
                       >
@@ -151,6 +110,49 @@ Finder{% endblock %} {% block content %}
             <p class="text-muted">No comments yet. Be the first to comment!</p>
             {% endif %}
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Form Section -->
+    <div class="col-12 col-md-6 mb-4 order-2">
+      <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white">
+          <h2 class="h5 mb-0">
+            <i class="fas fa-envelope me-2"></i>Contact Form
+          </h2>
+        </div>
+        <div class="card-body">
+          <form action="{{ url_for('contact') }}" method="POST" novalidate>
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+              {{ form.name.label(class="form-label") }} {{
+              form.name(class="form-control", placeholder="Enter your full
+              name", required=true) }}
+              <div class="invalid-feedback">Please enter your name.</div>
+            </div>
+            <div class="mb-3">
+              {{ form.email.label(class="form-label") }} {{
+              form.email(class="form-control", placeholder="Enter your email",
+              required=true) }}
+              <div class="invalid-feedback">
+                Please enter a valid email address.
+              </div>
+            </div>
+            <div class="mb-3">
+              {{ form.subject.label(class="form-label") }} {{
+              form.subject(class="form-control", placeholder="Subject of your
+              message", required=true) }}
+              <div class="invalid-feedback">Please enter a subject.</div>
+            </div>
+            <div class="mb-3">
+              {{ form.message.label(class="form-label") }} {{
+              form.message(class="form-control", rows="5", placeholder="Write
+              your message here...", required=true) }}
+              <div class="invalid-feedback">Please enter your message.</div>
+            </div>
+            {{ form.submit(class="btn btn-primary w-100") }}
+          </form>
         </div>
       </div>
     </div>
