@@ -101,7 +101,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(60), nullable=False)
+    password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     score = db.Column(db.Integer, default=0, nullable=False, index=True)
     comments = db.relationship(
@@ -175,7 +175,7 @@ class Feedback(db.Model):
 
 class University(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    university_name = db.Column(db.String(100), unique=True, nullable=False)
+    university_name = db.Column(db.String(256), unique=True, nullable=False)
     state = db.Column(db.String(50), nullable=False)
     program_type = db.Column(db.String(50), nullable=False)
     courses = db.relationship(
@@ -185,16 +185,16 @@ class University(db.Model):
 
 class Course(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    course_name = db.Column(db.String(100), nullable=False)
+    course_name = db.Column(db.String(256), nullable=False)
     university_name = db.Column(
-        db.String(100),
+        db.String(256),
         db.ForeignKey("university.university_name"),
         nullable=False,
     )
-    abbrv = db.Column(db.String(20))
-    direct_entry_requirements = db.Column(db.String(200))
-    utme_requirements = db.Column(db.String(200))
-    subjects = db.Column(db.String(200))
+    abbrv = db.Column(db.Text)
+    direct_entry_requirements = db.Column(db.Text)
+    utme_requirements = db.Column(db.Text)
+    subjects = db.Column(db.Text)
 
 
 # Form Classes
@@ -266,23 +266,26 @@ def unauthorized_callback():
 
 # Event Listeners to Update User Score
 def update_user_score(mapper, connection, target):
-
-    with Session(connection) as session:
+    if target.author:
         user_id = target.author.id
-        score = (
+        with Session(connection) as session:
+            score = (
+                session.execute(
+                    select(func.sum(Comment.likes - Comment.dislikes)).where(
+                        Comment.user_id == user_id
+                    )
+                ).scalar()
+                or 0
+            )
+
             session.execute(
-                select(func.sum(Comment.likes - Comment.dislikes)).where(
-                    Comment.user_id == user_id
-                )
-            ).scalar()
-            or 0
-        )
-
-        session.execute(
-            User.__table__.update().where(User.id == user_id).values(score=score)
-        )
+                User.__table__.update().where(User.id == user_id).values(score=score)
+            )
+    else:
+        logging.warning(f"Comment ID {target.id} has no associated user.")
 
 
+# Attach the event listener
 event.listen(Comment, "after_insert", update_user_score)
 event.listen(Comment, "after_update", update_user_score)
 event.listen(Comment, "after_delete", update_user_score)

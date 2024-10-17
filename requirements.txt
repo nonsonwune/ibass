@@ -33,3 +33,4 @@ tzdata==2024.2
 urllib3==2.2.3
 Werkzeug==3.0.4
 WTForms==3.1.2
+psycopg2-binary==2.9.9
