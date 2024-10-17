@@ -54,6 +54,7 @@ def transfer_users():
                     password=user.password,  # Assuming already hashed
                     is_admin=user.is_admin,
                     score=user.score,
+                    is_verified=user.is_verified,  # Add this line
                 )
                 postgres_session.add(new_user)
                 postgres_session.flush()  # Assign ID
@@ -71,8 +72,8 @@ def transfer_users():
         print("Users transferred successfully.")
     except SQLAlchemyError as e:
         postgres_session.rollback()
-        logging.error(f"Error transferring users: {e}")
-        print(f"Error transferring users: {e}")
+        logging.error(f"Error transferring users: {str(e)}")
+        print(f"Error transferring users: {str(e)}")
 
 
 def transfer_universities():

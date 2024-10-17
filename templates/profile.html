@@ -1,10 +1,15 @@
-<!-- templates/profile.html -->
 {% extends "base.html" %} {% block title %}{{ user.username }}'s Profile -
 Nigerian Institutions Finder{% endblock %} {% block content %}
 <div class="container mt-5">
   <h1>{{ user.username }}'s Profile</h1>
   <p>Email: {{ user.email }}</p>
   <p>User Score: {{ user.score }}</p>
+
+  {% if current_user.id == user.id %}
+  <a href="{{ url_for('change_password') }}" class="btn btn-primary mb-3"
+    >Change Password</a
+  >
+  {% endif %}
 
   <h2>Comments</h2>
   {% for comment in user.comments %}

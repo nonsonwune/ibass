@@ -1,4 +1,3 @@
-<!-- templates/admin.html -->
 {% extends "base.html" %} {% block title %}Admin Dashboard - Nigerian
 Institutions Finder{% endblock %} {% block content %}
 <div class="container my-5">
@@ -18,6 +17,7 @@ Institutions Finder{% endblock %} {% block content %}
             <th>Username</th>
             <th>Email</th>
             <th>Admin</th>
+            <th>Verified</th>
             <th>Score</th>
             <th>Actions</th>
           </tr>
@@ -29,6 +29,7 @@ Institutions Finder{% endblock %} {% block content %}
             <td>{{ user.username }}</td>
             <td>{{ user.email }}</td>
             <td>{{ "Yes" if user.is_admin else "No" }}</td>
+            <td>{{ "Yes" if user.is_verified else "No" }}</td>
             <td>{{ user.score }}</td>
             <td>
               {% if not user.is_admin %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %} {% block title %}Resend Verification Email - Nigerian
+Institutions Finder{% endblock %} {% block content %}
+<div class="container mt-5">
+  <h1>Resend Verification Email</h1>
+  <p>
+    If you haven't received your verification email, you can request a new one
+    here.
+  </p>
+  <form method="POST" action="{{ url_for('resend_verification') }}">
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+      <label for="email" class="form-label">Email address</label>
+      <input
+        type="email"
+        class="form-control"
+        id="email"
+        name="email"
+        required
+      />
+    </div>
+    <button type="submit" class="btn btn-primary">
+      Resend Verification Email
+    </button>
+  </form>
+</div>
+{% endblock %}

@@ -1,4 +1,5 @@
 # app.py
+import sys
 import os
 import logging
 from datetime import datetime
@@ -30,6 +31,13 @@ from wtforms import (
     TextAreaField,
     SubmitField,
 )
+from flask_mail import Mail
+from email_verification import (
+    generate_verification_token,
+    confirm_verification_token,
+    send_verification_email,
+)
+
 from wtforms.validators import DataRequired, Email, EqualTo
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.exc import SQLAlchemyError
@@ -95,6 +103,18 @@ else:
         ],
     )
 
+# Configure Mail Server
+app.config["MAIL_SERVER"] = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+app.config["MAIL_PORT"] = int(os.getenv("MAIL_PORT", 465))
+app.config["MAIL_USE_TLS"] = os.getenv("MAIL_USE_TLS", "False") == "True"
+app.config["MAIL_USE_SSL"] = os.getenv("MAIL_USE_SSL", "True") == "True"
+app.config["MAIL_USERNAME"] = os.getenv("MAIL_USERNAME")
+app.config["MAIL_PASSWORD"] = os.getenv("MAIL_PASSWORD")
+app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER")
+
+# Initialize Flask-Mail
+mail = Mail(app)
+
 
 # Database Models
 class User(UserMixin, db.Model):
@@ -103,6 +123,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    is_verified = db.Column(db.Boolean, default=False)
     score = db.Column(db.Integer, default=0, nullable=False, index=True)
     comments = db.relationship(
         "Comment", backref="author", lazy=True, cascade="all, delete-orphan"
@@ -225,6 +246,20 @@ class SignupForm(FlaskForm):
         ],
     )
     submit = SubmitField("Sign Up")
+
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField("Current Password", validators=[DataRequired()])
+    new_password = PasswordField("New Password", validators=[DataRequired()])
+    confirm_password = PasswordField(
+        "Confirm New Password", validators=[DataRequired(), EqualTo("new_password")]
+    )
+    submit = SubmitField("Change Password")
+
+
+class ResendVerificationForm(FlaskForm):
+    email = StringField("Email", validators=[DataRequired(), Email()])
+    submit = SubmitField("Resend Verification Email")
 
 
 class DeleteUserForm(FlaskForm):
@@ -503,33 +538,39 @@ def about():
 def signup():
     form = SignupForm()
     if form.validate_on_submit():
-        if request.method == "POST":
-            username = form.username.data
-            email = form.email.data
-            password = form.password.data
-            confirm_password = form.confirm_password.data
+        username = form.username.data
+        email = form.email.data
+        password = form.password.data
+        confirm_password = form.confirm_password.data
 
-            if password != confirm_password:
-                flash("Passwords do not match.", "danger")
-                return redirect(url_for("signup"))
+        if password != confirm_password:
+            flash("Passwords do not match.", "danger")
+            return redirect(url_for("signup"))
 
-            existing_user = User.query.filter_by(username=username).first()
-            if existing_user:
-                flash("Username already exists.", "danger")
-                return redirect(url_for("signup"))
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            flash("Username already exists.", "danger")
+            return redirect(url_for("signup"))
 
-            existing_email = User.query.filter_by(email=email).first()
-            if existing_email:
-                flash("Email already registered.", "danger")
-                return redirect(url_for("signup"))
+        existing_email = User.query.filter_by(email=email).first()
+        if existing_email:
+            flash("Email already registered.", "danger")
+            return redirect(url_for("signup"))
 
-            hashed_password = generate_password_hash(password)
-            new_user = User(username=username, email=email, password=hashed_password)
-            db.session.add(new_user)
-            db.session.commit()
+        hashed_password = generate_password_hash(password)
+        new_user = User(username=username, email=email, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
 
-            flash("Account created successfully.", "success")
-            return redirect(url_for("login"))
+        # Generate token and send verification email
+        token = generate_verification_token(new_user.email)
+        send_verification_email(new_user.email, token)
+
+        flash(
+            "Account created successfully. A verification email has been sent to your email address.",
+            "success",
+        )
+        return redirect(url_for("login"))
 
     return render_template("signup.html", form=form)
 
@@ -538,27 +579,27 @@ def signup():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        if request.method == "POST":
-            username = form.username.data
-            password = form.password.data
-            remember = form.remember_me.data
+        username = form.username.data
+        password = form.password.data
+        remember = form.remember_me.data
 
-            user = User.query.filter_by(username=username).first()
-            if user and check_password_hash(user.password, password):
-                login_user(user, remember=remember)
-                flash("Logged in successfully.", "success")
-                if user.is_admin:
-                    return redirect(url_for("admin"))
-                else:
-                    next_page = request.args.get("next")
-                    return (
-                        redirect(next_page) if next_page else redirect(url_for("home"))
-                    )
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password, password):
+            if not user.is_verified:
+                flash("Please verify your email address before logging in.", "warning")
+                return redirect(url_for("login"))
+            login_user(user, remember=remember)
+            flash("Logged in successfully.", "success")
+            if user.is_admin:
+                return redirect(url_for("admin"))
             else:
-                flash(
-                    "Login unsuccessful. Please check username and password.",
-                    "danger",
-                )
+                next_page = request.args.get("next")
+                return redirect(next_page) if next_page else redirect(url_for("home"))
+        else:
+            flash(
+                "Login unsuccessful. Please check username and password.",
+                "danger",
+            )
     return render_template("login.html", form=form)
 
 
@@ -912,11 +953,77 @@ def admin():
     )
 
 
+@app.route("/verify_email/<token>")
+def verify_email(token):
+    try:
+        email = confirm_verification_token(token)
+    except Exception:
+        flash("The confirmation link is invalid or has expired.", "danger")
+        return redirect(url_for("login"))
+
+    user = User.query.filter_by(email=email).first_or_404()
+    if user.is_verified:
+        flash("Account already verified. Please log in.", "success")
+    else:
+        user.is_verified = True
+        db.session.commit()
+        flash("Your account has been verified. You can now log in.", "success")
+    return redirect(url_for("login"))
+
+
+@app.route("/resend_verification", methods=["GET", "POST"])
+def resend_verification():
+    form = ResendVerificationForm()
+    if form.validate_on_submit():
+        email = form.email.data
+        user = User.query.filter_by(email=email).first()
+        if user and not user.is_verified:
+            token = generate_verification_token(user.email)
+            send_verification_email(user.email, token)
+            flash(
+                "A new verification email has been sent to your email address.",
+                "success",
+            )
+        else:
+            flash(
+                "Email address is not associated with any account or already verified.",
+                "danger",
+            )
+        return redirect(url_for("login"))
+    return render_template("resend_verification.html", form=form)
+
+
+@app.route("/change_password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    form = ChangePasswordForm()
+    if form.validate_on_submit():
+        if check_password_hash(current_user.password, form.current_password.data):
+            current_user.password = generate_password_hash(form.new_password.data)
+            db.session.commit()
+            flash("Your password has been updated!", "success")
+            return redirect(url_for("profile", username=current_user.username))
+        else:
+            flash("Invalid current password.", "danger")
+    return render_template("change_password.html", form=form)
+
+
 # Database initialization function using SQLAlchemy
 def init_db():
     try:
         # Create all tables
         db.create_all()
+
+        # Add missing columns
+        with app.app_context():
+            # Reflect the database
+            db.reflect()
+            # Check if 'is_verified' column exists
+            if not hasattr(User, "is_verified"):
+                with db.engine.connect() as conn:
+                    conn.execute(
+                        "ALTER TABLE user ADD COLUMN is_verified BOOLEAN DEFAULT FALSE"
+                    )
 
         # Update user emails if necessary
         users = User.query.all()
@@ -934,10 +1041,11 @@ def init_db():
                 email="admin@example.com",
                 password=generate_password_hash("adminpassword"),
                 is_admin=True,
+                is_verified=True,  # Set is_verified to True
             )
             db.session.add(admin)
             db.session.commit()
-            logging.info("Admin user created.")
+            logging.info("Admin user created and verified.")
         else:
             logging.info("Admin user already exists.")
 
@@ -954,7 +1062,10 @@ if __name__ == "__main__":
     with app.app_context():
         init_db()
     app.run(host="0.0.0.0", port=5001)
-else:
-    # Ensure init_db is called when using Gunicorn
+elif "gunicorn" in sys.modules:
+    # If using Gunicorn, you can choose to initialize the DB or assume it's already initialized
     with app.app_context():
         init_db()
+else:
+    # Do not initialize the DB when running Flask CLI commands
+    pass
