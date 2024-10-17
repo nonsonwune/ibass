@@ -60,7 +60,8 @@ Nigerian Institutions Finder{% endblock %} {% block content %}
           <div class="list-group">
             {% for bookmark in user.bookmarks %}
             <div
-              class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+              class="list-group-item list-group-item-action d-flex justify-content-between align-items-center bookmark-list-item"
+              data-bookmark-id="{{ bookmark.id }}"
             >
               <a
                 href="#"
@@ -176,7 +177,7 @@ Nigerian Institutions Finder{% endblock %} {% block content %}
   </div>
 </div>
 
-{% endblock %} {% block scripts %} {{ super() }}
+{% endblock %} {% block extra_scripts %} {{ super() }}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const institutionModal = document.getElementById("institutionModal");
@@ -233,30 +234,101 @@ Nigerian Institutions Finder{% endblock %} {% block content %}
     }
 
     function populateInstitutionDetails(institution) {
-      const detailsContainer = document.getElementById("institutionDetails");
-      detailsContainer.innerHTML = `
-      <h2>${institution.university_name}</h2>
-      <p><strong>State:</strong> ${institution.state}</p>
-      <p><strong>Program Type:</strong> ${institution.program_type}</p>
-      <h3>Courses</h3>
-      <ul class="list-group">
-        ${institution.courses
-          .map(
-            (course) => `
-          <li class="list-group-item">
-            <h5>${course.course_name}</h5>
+      document.getElementById("institutionName").textContent =
+        institution.university_name;
+      document.getElementById("institutionState").textContent =
+        institution.state;
+      document.getElementById("institutionProgramType").textContent =
+        institution.program_type;
+      document.getElementById("searchCriteria").textContent =
+        institution.search_type === "course"
+          ? `Course: ${institution.selected_course}`
+          : `Location: ${institution.state}`;
+
+      const selectedCourseDetails = document.getElementById(
+        "selectedCourseDetails"
+      );
+      const selectedCourseContent = document.getElementById(
+        "selectedCourseContent"
+      );
+      const institutionCoursesList = document.getElementById(
+        "institutionCoursesList"
+      );
+
+      // Populate selected course details
+      if (
+        institution.selected_course &&
+        institution.courses &&
+        institution.courses.length > 0
+      ) {
+        const selectedCourseData = institution.courses.find(
+          (course) =>
+            course.course_name.toLowerCase() ===
+            institution.selected_course.toLowerCase()
+        );
+        if (selectedCourseData) {
+          selectedCourseContent.innerHTML =
+            createCourseHTML(selectedCourseData);
+          selectedCourseDetails.style.display = "block";
+        } else {
+          selectedCourseContent.innerHTML = `<p class="alert alert-warning">No details available for the selected course "${institution.selected_course}" in this institution.</p>`;
+          selectedCourseDetails.style.display = "block";
+        }
+      } else {
+        selectedCourseDetails.style.display = "none";
+      }
+
+      // Populate all courses
+      if (institution.courses && institution.courses.length > 0) {
+        institutionCoursesList.innerHTML = institution.courses
+          .map((course, index) => createAccordionItem(course, index))
+          .join("");
+      } else {
+        institutionCoursesList.innerHTML =
+          '<p class="text-muted">No courses available for this institution.</p>';
+      }
+    }
+
+    function createCourseHTML(course) {
+      return `
+        <div class="card mb-3">
+          <div class="card-body">
+            <h5 class="card-title">${course.course_name}</h5>
             <p><strong>UTME Requirements:</strong> ${
               course.utme_requirements || "N/A"
             }</p>
             <p><strong>Direct Entry Requirements:</strong> ${
               course.direct_entry_requirements || "N/A"
             }</p>
-          </li>
-        `
-          )
-          .join("")}
-      </ul>
-    `;
+            <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function createAccordionItem(course, index) {
+      const collapseId = `collapseCourse${index}`;
+      const headingId = `headingCourse${index}`;
+      return `
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="${headingId}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
+              ${course.course_name}
+            </button>
+          </h2>
+          <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headingId}" data-bs-parent="#coursesAccordion">
+            <div class="accordion-body">
+              <p><strong>UTME Requirements:</strong> ${
+                course.utme_requirements || "N/A"
+              }</p>
+              <p><strong>Direct Entry Requirements:</strong> ${
+                course.direct_entry_requirements || "N/A"
+              }</p>
+              <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     function removeBookmark(bookmarkId, buttonElement) {
@@ -272,12 +344,12 @@ Nigerian Institutions Finder{% endblock %} {% block content %}
           .then((response) => response.json())
           .then((data) => {
             if (data.success) {
-              const listItem = buttonElement.closest(".list-group-item");
+              const listItem = buttonElement.closest(".bookmark-list-item");
               listItem.style.animation = "fadeOut 0.5s";
               setTimeout(() => {
                 listItem.remove();
                 if (
-                  document.querySelectorAll(".list-group-item").length === 0
+                  document.querySelectorAll(".bookmark-list-item").length === 0
                 ) {
                   document.getElementById("bookmarks").innerHTML =
                     '<p class="text-muted">No bookmarked institutions.</p>';
@@ -303,6 +375,12 @@ Nigerian Institutions Finder{% endblock %} {% block content %}
     to {
       opacity: 0;
     }
+  }
+  .bookmark-list-item {
+    transition: opacity 0.3s ease-out;
+  }
+  .bookmark-list-item.removing {
+    opacity: 0;
   }
 </style>
 {% endblock %}
