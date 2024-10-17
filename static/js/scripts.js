@@ -1,7 +1,9 @@
 // static/js/scripts.js
 document.addEventListener("DOMContentLoaded", function () {
+  console.log("DOM fully loaded in scripts.js");
   initializeInstitutionModal();
   initializeVoting();
+  initializeBookmarkButtons();
   if (window.isAuthenticated) {
     fetchUserVotes();
   }
@@ -341,4 +343,65 @@ function applyUserVotes(votes) {
       button.classList.remove("active");
     }
   });
+}
+function initializeBookmarkButtons() {
+  const bookmarkButtons = document.querySelectorAll(".bookmark-btn");
+  console.log("Found bookmark buttons:", bookmarkButtons.length);
+
+  bookmarkButtons.forEach((button) => {
+    button.addEventListener("click", handleBookmarkClick);
+  });
+}
+
+function handleBookmarkClick(event) {
+  event.preventDefault();
+  console.log("Bookmark button clicked");
+  const uniId = this.getAttribute("data-uni-id");
+  console.log("University ID:", uniId);
+  const bookmarkText = this.querySelector(".bookmark-text");
+  const icon = this.querySelector("i");
+
+  // Immediately update UI
+  this.classList.add("btn-secondary");
+  this.classList.remove("btn-outline-secondary");
+  bookmarkText.textContent = "Bookmarked";
+  icon.classList.remove("fa-bookmark");
+  icon.classList.add("fa-check");
+
+  // Send AJAX request
+  fetch("/bookmark", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": window.csrfToken,
+    },
+    body: JSON.stringify({ university_id: uniId }),
+  })
+    .then((response) => {
+      console.log("Response status:", response.status);
+      return response.json();
+    })
+    .then((data) => {
+      console.log("Response data:", data);
+      if (!data.success) {
+        // If bookmarking failed, revert the UI
+        this.classList.remove("btn-secondary");
+        this.classList.add("btn-outline-secondary");
+        bookmarkText.textContent = "Bookmark";
+        icon.classList.add("fa-bookmark");
+        icon.classList.remove("fa-check");
+        // Show error message
+        alert(data.message || "Bookmarking failed. Please try again.");
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      // Revert UI and show error message
+      this.classList.remove("btn-secondary");
+      this.classList.add("btn-outline-secondary");
+      bookmarkText.textContent = "Bookmark";
+      icon.classList.add("fa-bookmark");
+      icon.classList.remove("fa-check");
+      alert("An error occurred while bookmarking. Please try again.");
+    });
 }

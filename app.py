@@ -1037,28 +1037,53 @@ def change_password():
 @app.route("/bookmark", methods=["POST"])
 @login_required
 def add_bookmark():
-    university_id = request.form.get("university_id")
+    app.logger.info("Bookmark route accessed")
+    data = request.json
+    app.logger.info(f"Received data: {data}")
+    university_id = data.get("university_id")
 
     # Validate university_id
     university = University.query.get(university_id)
     if not university:
-        flash("Invalid university.", "danger")
-        return redirect(url_for("recommend"))
+        app.logger.warning(f"Invalid university ID: {university_id}")
+        return jsonify({"success": False, "message": "Invalid university."}), 400
 
     # Check if the bookmark already exists
     existing_bookmark = Bookmark.query.filter_by(
         user_id=current_user.id, university_id=university_id
     ).first()
     if existing_bookmark:
-        flash("You have already bookmarked this institution.", "info")
-        return redirect(url_for("recommend"))
+        app.logger.info(
+            f"Bookmark already exists for user {current_user.id} and university {university_id}"
+        )
+        return jsonify({"success": True, "message": "Already bookmarked"}), 200
 
     # Add the bookmark
-    bookmark = Bookmark(user_id=current_user.id, university_id=university_id)
-    db.session.add(bookmark)
-    db.session.commit()
-    flash("Institution bookmarked successfully.", "success")
-    return redirect(url_for("recommend"))
+    try:
+        bookmark = Bookmark(user_id=current_user.id, university_id=university_id)
+        db.session.add(bookmark)
+        db.session.commit()
+        app.logger.info(
+            f"Bookmark added for user {current_user.id} and university {university_id}"
+        )
+        return (
+            jsonify(
+                {"success": True, "message": "Institution bookmarked successfully."}
+            ),
+            200,
+        )
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error adding bookmark: {str(e)}")
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "An error occurred while bookmarking. Please try again.",
+                }
+            ),
+            500,
+        )
 
 
 @app.route("/remove_bookmark/<int:bookmark_id>", methods=["POST"])
