@@ -1,26 +1,519 @@
 <!-- templates/profile.html -->
-{% extends "base.html" %} {% block title %}{{ user.username }}'s Profile -
-Nigerian Institutions Finder{% endblock %} {% block content %}
-<div class="container mt-5">
-  <h1>{{ user.username }}'s Profile</h1>
-  <p>Email: {{ user.email }}</p>
-  <p>User Score: {{ user.score }}</p>
+{% extends "base.html" %} {% block title %} {{ user.username }}'s Profile -
+Nigerian Institutions Finder {% endblock %} {% block content %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const institutionModal = document.getElementById("institutionModal");
 
-  {% if current_user.id == user.id %}
-  <a href="{{ url_for('change_password') }}" class="btn btn-primary mb-3"
-    >Change Password</a
+    institutionModal.addEventListener("show.bs.modal", function (event) {
+      const button = event.relatedTarget;
+      const uniId = button.getAttribute("data-uni-id");
+
+      fetchInstitutionDetails(uniId);
+    });
+
+    function fetchInstitutionDetails(uniId) {
+      const loadingIndicator = document.getElementById("loadingIndicator");
+      const institutionDetails = document.getElementById("institutionDetails");
+      const modalErrorMessage = document.getElementById("modalErrorMessage");
+
+      loadingIndicator.style.display = "block";
+      institutionDetails.style.display = "none";
+      modalErrorMessage.style.display = "none";
+
+      fetch(`/api/institution/${uniId}`, {
+        headers: {
+          "X-CSRFToken": "{{ csrf_token() }}",
+          Accept: "application/json",
+        },
+        credentials: "same-origin",
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          loadingIndicator.style.display = "none";
+          institutionDetails.style.display = "block";
+          populateInstitutionDetails(data);
+        })
+        .catch((error) => {
+          loadingIndicator.style.display = "none";
+          modalErrorMessage.style.display = "block";
+          modalErrorMessage.textContent =
+            "Error loading institution details. Please try again.";
+          console.error("Error:", error);
+        });
+    }
+
+    function populateInstitutionDetails(institution) {
+      const detailsContainer = document.getElementById("institutionDetails");
+      detailsContainer.innerHTML = `
+      <h2>${institution.university_name}</h2>
+      <p><strong>State:</strong> ${institution.state}</p>
+      <p><strong>Program Type:</strong> ${institution.program_type}</p>
+      <h3>Courses</h3>
+      <ul>
+        ${institution.courses
+          .map(
+            (course) => `
+          <li>
+            <strong>${course.course_name}</strong><br>
+            UTME Requirements: ${course.utme_requirements || "N/A"}<br>
+            Direct Entry Requirements: ${
+              course.direct_entry_requirements || "N/A"
+            }
+          </li>
+        `
+          )
+          .join("")}
+      </ul>
+    `;
+    }
+  });
+</script>
+<div class="container mt-5">
+  <h1 class="mb-4">{{ user.username }}'s Profile</h1>
+
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <p><strong>Email:</strong> {{ user.email }}</p>
+      <p><strong>User Score:</strong> {{ user.score }}</p>
+    </div>
+    <div class="col-md-6 text-end">
+      {% if current_user.id == user.id %}
+      <a href="{{ url_for('change_password') }}" class="btn btn-primary"
+        >Change Password</a
+      >
+      {% endif %}
+    </div>
+  </div>
+  <!-- Institution Modal -->
+  <div
+    class="modal fade"
+    id="institutionModal"
+    tabindex="-1"
+    aria-labelledby="institutionModalLabel"
+    aria-hidden="true"
   >
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="institutionModalLabel">
+            Institution Details
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <!-- Loading Indicator -->
+          <div
+            id="loadingIndicator"
+            class="text-center mb-3"
+            style="display: none"
+          >
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+          <!-- Institution Details -->
+          <div id="institutionDetails" style="display: none">
+            <!-- Content will be dynamically inserted here -->
+          </div>
+          <!-- Error Message -->
+          <div
+            id="modalErrorMessage"
+            class="alert alert-danger"
+            role="alert"
+            style="display: none"
+          >
+            <!-- Error message will be inserted here -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Institution Modal -->
+  <div
+    class="modal fade"
+    id="institutionModal"
+    tabindex="-1"
+    aria-labelledby="institutionModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header institution">
+          <!-- Removed Institution Logo/Image -->
+          <h5 class="modal-title" id="institutionModalLabel">
+            <i class="fas fa-university me-2"></i> Institution Details
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <!-- Loading Indicator -->
+          <div
+            id="loadingIndicator"
+            class="text-center mb-3"
+            style="display: none"
+          >
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+          </div>
+
+          <!-- Institution Details -->
+          <div id="institutionDetails" style="display: none">
+            <div class="row">
+              <!-- Removed Institution Image Section -->
+              <!-- Institution Info -->
+              <div class="col-12">
+                <h3 id="institutionName"></h3>
+                <p>
+                  <strong>State:</strong> <span id="institutionState"></span>
+                </p>
+                <p>
+                  <strong>Program Type:</strong>
+                  <span id="institutionProgramType"></span>
+                </p>
+                <p>
+                  <strong>Search Criteria:</strong>
+                  <span id="searchCriteria"></span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Tabs for Overview and Courses -->
+            <ul class="nav nav-tabs mt-4" id="institutionTab" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link active"
+                  id="overview-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#overview"
+                  type="button"
+                  role="tab"
+                  aria-controls="overview"
+                  aria-selected="true"
+                >
+                  Overview
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link"
+                  id="courses-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#courses"
+                  type="button"
+                  role="tab"
+                  aria-controls="courses"
+                  aria-selected="false"
+                >
+                  Courses
+                </button>
+              </li>
+            </ul>
+            <div class="tab-content" id="institutionTabContent">
+              <!-- Overview Tab -->
+              <div
+                class="tab-pane fade show active p-3"
+                id="overview"
+                role="tabpanel"
+                aria-labelledby="overview-tab"
+              >
+                <!-- Selected Course Details -->
+                <div
+                  id="selectedCourseDetails"
+                  class="mt-3"
+                  style="display: none"
+                >
+                  <h4>Selected Course <i class="fas fa-book"></i></h4>
+                  <div id="selectedCourseContent"></div>
+                </div>
+              </div>
+              <!-- Courses Tab -->
+              <div
+                class="tab-pane fade p-3"
+                id="courses"
+                role="tabpanel"
+                aria-labelledby="courses-tab"
+              >
+                <div
+                  id="institutionCoursesList"
+                  class="accordion"
+                  id="coursesAccordion"
+                >
+                  <!-- Courses will be dynamically inserted here -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error Message -->
+          <div
+            id="modalErrorMessage"
+            class="alert alert-danger"
+            role="alert"
+            style="display: none"
+          >
+            <!-- Error message will be inserted here -->
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            <i class="fas fa-times me-2"></i> Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Comments Section -->
+  <h2 class="mb-3">Comments</h2>
+  {% if user.comments %} {% for comment in user.comments %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <p class="card-text">{{ comment.content }}</p>
+      <p class="card-text">
+        <small class="text-muted">
+          Posted on: {{ comment.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}
+        </small>
+      </p>
+      <p class="card-text">Comment Score: {{ comment.score }}</p>
+    </div>
+  </div>
+  {% endfor %} {% else %}
+  <p>You have no comments.</p>
   {% endif %}
 
-  <h2>Comments</h2>
-  {% for comment in user.comments %}
-  <div class="comment">
-    <p>{{ comment.content }}</p>
-    <small class="text-muted"
-      >Posted on: {{ comment.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}</small
+  <!-- Bookmarked Institutions Section -->
+  <h2 class="mb-3">Bookmarked Institutions</h2>
+  {% if user.bookmarks %}
+  <ul class="list-group mb-3">
+    {% for bookmark in user.bookmarks %}
+    <li
+      class="list-group-item d-flex justify-content-between align-items-center"
     >
-    <p>Comment Score: {{ comment.score }}</p>
+      <a
+        href="#"
+        class="institution-details-link"
+        data-bs-toggle="modal"
+        data-bs-target="#institutionModal"
+        data-uni-id="{{ bookmark.university_id }}"
+      >
+        {{ bookmark.university.university_name }}
+      </a>
+      <!-- Remove Bookmark Button -->
+      <form
+        class="remove-bookmark-form"
+        action="{{ url_for('remove_bookmark', bookmark_id=bookmark.id) }}"
+        method="POST"
+      >
+        {{ csrf_token() }}
+        <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+      </form>
+
+      <script>
+        document.querySelectorAll(".remove-bookmark-form").forEach((form) => {
+          form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            if (confirm("Are you sure you want to remove this bookmark?")) {
+              fetch(this.action, {
+                method: "POST",
+                headers: {
+                  "X-CSRFToken": "{{ csrf_token() }}",
+                  "Content-Type": "application/json",
+                },
+                credentials: "same-origin",
+              })
+                .then((response) => response.json())
+                .then((data) => {
+                  if (data.success) {
+                    const listItem = this.closest("li");
+                    listItem.classList.add("removing");
+                    setTimeout(() => {
+                      listItem.remove();
+                    }, 300);
+                  } else {
+                    alert("Failed to remove bookmark: " + data.message);
+                  }
+                })
+                .catch((error) => {
+                  console.error("Error:", error);
+                  alert("An error occurred while removing the bookmark");
+                });
+            }
+          });
+        });
+      </script>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>You have no bookmarked institutions.</p>
+  {% endif %}
+</div>
+<!-- Institution Modal -->
+<div
+  class="modal fade"
+  id="institutionModal"
+  tabindex="-1"
+  aria-labelledby="institutionModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header institution">
+        <!-- Removed Institution Logo/Image -->
+        <h5 class="modal-title" id="institutionModalLabel">
+          <i class="fas fa-university me-2"></i> Institution Details
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <!-- Loading Indicator -->
+        <div
+          id="loadingIndicator"
+          class="text-center mb-3"
+          style="display: none"
+        >
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+
+        <!-- Institution Details -->
+        <div id="institutionDetails" style="display: none">
+          <div class="row">
+            <!-- Removed Institution Image Section -->
+            <!-- Institution Info -->
+            <div class="col-12">
+              <h3 id="institutionName"></h3>
+              <p><strong>State:</strong> <span id="institutionState"></span></p>
+              <p>
+                <strong>Program Type:</strong>
+                <span id="institutionProgramType"></span>
+              </p>
+              <p>
+                <strong>Search Criteria:</strong>
+                <span id="searchCriteria"></span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Tabs for Overview and Courses -->
+          <ul class="nav nav-tabs mt-4" id="institutionTab" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link active"
+                id="overview-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#overview"
+                type="button"
+                role="tab"
+                aria-controls="overview"
+                aria-selected="true"
+              >
+                Overview
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button
+                class="nav-link"
+                id="courses-tab"
+                data-bs-toggle="tab"
+                data-bs-target="#courses"
+                type="button"
+                role="tab"
+                aria-controls="courses"
+                aria-selected="false"
+              >
+                Courses
+              </button>
+            </li>
+          </ul>
+          <div class="tab-content" id="institutionTabContent">
+            <!-- Overview Tab -->
+            <div
+              class="tab-pane fade show active p-3"
+              id="overview"
+              role="tabpanel"
+              aria-labelledby="overview-tab"
+            >
+              <!-- Selected Course Details -->
+              <div
+                id="selectedCourseDetails"
+                class="mt-3"
+                style="display: none"
+              >
+                <h4>Selected Course <i class="fas fa-book"></i></h4>
+                <div id="selectedCourseContent"></div>
+              </div>
+            </div>
+            <!-- Courses Tab -->
+            <div
+              class="tab-pane fade p-3"
+              id="courses"
+              role="tabpanel"
+              aria-labelledby="courses-tab"
+            >
+              <div
+                id="institutionCoursesList"
+                class="accordion"
+                id="coursesAccordion"
+              >
+                <!-- Courses will be dynamically inserted here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error Message -->
+        <div
+          id="modalErrorMessage"
+          class="alert alert-danger"
+          role="alert"
+          style="display: none"
+        >
+          <!-- Error message will be inserted here -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i> Close
+        </button>
+      </div>
+    </div>
   </div>
-  {% endfor %}
 </div>
 {% endblock %}

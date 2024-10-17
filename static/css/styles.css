@@ -267,3 +267,10 @@ body {
   color: white;
   font-size: 0.7em;
 }
+
+.bookmark-list-item {
+  transition: opacity 0.3s ease-out;
+}
+.bookmark-list-item.removing {
+  opacity: 0;
+}

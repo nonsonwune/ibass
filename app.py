@@ -134,6 +134,9 @@ class User(UserMixin, db.Model):
     feedback = db.relationship(
         "Feedback", backref="user", lazy=True, cascade="all, delete-orphan"
     )
+    bookmarks = db.relationship(
+        "Bookmark", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
 
     def calculate_score(self):
         return sum(comment.score for comment in self.comments)
@@ -202,6 +205,9 @@ class University(db.Model):
     courses = db.relationship(
         "Course", backref="university", lazy=True, cascade="all, delete-orphan"
     )
+    bookmarks = db.relationship(
+        "Bookmark", backref="university", lazy=True, cascade="all, delete-orphan"
+    )
 
 
 class Course(db.Model):
@@ -216,6 +222,24 @@ class Course(db.Model):
     direct_entry_requirements = db.Column(db.Text)
     utme_requirements = db.Column(db.Text)
     subjects = db.Column(db.Text)
+    bookmarks = db.relationship(
+        "Bookmark", backref="course", lazy=True, cascade="all, delete-orphan"
+    )
+
+
+# Database Models
+class Bookmark(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False
+    )
+    university_id = db.Column(
+        db.Integer, db.ForeignKey("university.id", ondelete="CASCADE"), nullable=False
+    )
+    course_id = db.Column(
+        db.Integer, db.ForeignKey("course.id", ondelete="CASCADE"), nullable=True
+    )
+    date_added = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
 
 # Form Classes
@@ -615,7 +639,8 @@ def logout():
 @login_required
 def profile(username):
     user = User.query.filter_by(username=username).first_or_404()
-    return render_template("profile.html", user=user)
+    bookmarks = Bookmark.query.filter_by(user_id=user.id).all()
+    return render_template("profile.html", user=user, bookmarks=bookmarks)
 
 
 @app.route("/vote/<int:comment_id>/<action>", methods=["POST"])
@@ -895,10 +920,11 @@ def get_institution_details(uni_id):
                 {
                     "id": course.id,
                     "course_name": course.course_name,
-                    "utme_requirements": course.utme_requirements,
-                    "subjects": course.subjects,
-                    "direct_entry_requirements": course.direct_entry_requirements,
-                    "abbrv": course.abbrv,
+                    "utme_requirements": course.utme_requirements or "N/A",
+                    "subjects": course.subjects or "N/A",
+                    "direct_entry_requirements": course.direct_entry_requirements
+                    or "N/A",
+                    "abbrv": course.abbrv or "N/A",
                 }
                 for course in courses
             ],
@@ -1008,11 +1034,51 @@ def change_password():
     return render_template("change_password.html", form=form)
 
 
+@app.route("/bookmark", methods=["POST"])
+@login_required
+def add_bookmark():
+    university_id = request.form.get("university_id")
+
+    # Validate university_id
+    university = University.query.get(university_id)
+    if not university:
+        flash("Invalid university.", "danger")
+        return redirect(url_for("recommend"))
+
+    # Check if the bookmark already exists
+    existing_bookmark = Bookmark.query.filter_by(
+        user_id=current_user.id, university_id=university_id
+    ).first()
+    if existing_bookmark:
+        flash("You have already bookmarked this institution.", "info")
+        return redirect(url_for("recommend"))
+
+    # Add the bookmark
+    bookmark = Bookmark(user_id=current_user.id, university_id=university_id)
+    db.session.add(bookmark)
+    db.session.commit()
+    flash("Institution bookmarked successfully.", "success")
+    return redirect(url_for("recommend"))
+
+
+@app.route("/remove_bookmark/<int:bookmark_id>", methods=["POST"])
+@login_required
+def remove_bookmark(bookmark_id):
+    bookmark = Bookmark.query.get_or_404(bookmark_id)
+    if bookmark.user_id != current_user.id:
+        return jsonify({"success": False, "message": "Unauthorized action"}), 403
+    try:
+        db.session.delete(bookmark)
+        db.session.commit()
+        return jsonify({"success": True, "message": "Bookmark removed successfully"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
 # Database initialization function using SQLAlchemy
 def init_db():
     try:
-        # Create all tables
-        db.create_all()
 
         # Add missing columns
         with app.app_context():
