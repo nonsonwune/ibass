@@ -5,7 +5,7 @@ git checkout dev
 
 # Commit any pending changes
 git add .
-git commit -m "Update search functionality and fix issues"
+git commit -m "Update search delete bookmark and fix issues"
 
 # Switch to the main branch
 git checkout main

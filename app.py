@@ -451,12 +451,20 @@ def recommend():
         }
         recommendations.append(uni_data)
 
+    # Get user's bookmarks if authenticated
+    user_bookmarks = set()
+    if current_user.is_authenticated:
+        user_bookmarks = set(
+            bookmark.university_id for bookmark in current_user.bookmarks
+        )
+
     return render_template(
         "recommend.html",
         recommendations=recommendations,
         location=location,
         university=preferred_university,
         course=preferred_course,
+        user_bookmarks=user_bookmarks,  # Add this line
     )
 
 
@@ -766,24 +774,34 @@ def delete_user(user_id):
 def delete_comment(comment_id):
     comment = db.session.get(Comment, comment_id)
     if current_user.id == comment.user_id or current_user.is_admin:
-        form = DeleteCommentForm()
-        if form.validate_on_submit():
-            try:
-                db.session.delete(comment)
-                db.session.commit()
-                flash("Comment deleted successfully.", "success")
-            except SQLAlchemyError as e:
-                db.session.rollback()
-                app.logger.error(f"Error deleting comment: {str(e)}")
-                flash(
-                    "An error occurred while deleting the comment. Please try again.",
-                    "danger",
-                )
-        else:
-            flash("Invalid CSRF token.", "danger")
+        try:
+            db.session.delete(comment)
+            db.session.commit()
+            return jsonify(
+                {"success": True, "message": "Comment deleted successfully."}
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            app.logger.error(f"Error deleting comment: {str(e)}")
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "An error occurred while deleting the comment.",
+                    }
+                ),
+                500,
+            )
     else:
-        flash("You do not have permission to delete this comment.", "danger")
-    return redirect(url_for("admin"))
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "You do not have permission to delete this comment.",
+                }
+            ),
+            403,
+        )
 
 
 @app.route("/delete_feedback/<int:feedback_id>", methods=["POST"])
