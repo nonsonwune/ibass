@@ -8,34 +8,52 @@ endblock %} {% block content %}
       Discover top Nigerian universities and courses tailored to your
       preferences.
     </p>
-    <form
-      action="/recommend"
-      method="POST"
-      class="mx-auto"
-      id="recommendation-form"
-    >
-      <!-- Include CSRF Token as a Hidden Input -->
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-      <div class="input-group input-group-lg mb-3">
-        <select id="location" name="location" class="form-select">
-          <option value="">All States</option>
+    <div id="wizard-container" class="mx-auto" style="max-width: 500px">
+      <div class="wizard-step active" id="step1">
+        <h3 class="text-white mb-4">Step 1: Select Your Preferred State</h3>
+        <select
+          id="location"
+          name="location"
+          class="form-select form-select-lg mb-3"
+        >
+          <option value="">Select a State</option>
         </select>
+        <button id="nextStep" class="btn btn-primary btn-lg w-100">Next</button>
       </div>
-      <div class="input-group input-group-lg mb-3">
-        <select id="course" name="course" class="form-select">
-          <option value="">All Courses</option>
+
+      <div class="wizard-step" id="step2">
+        <h3 class="text-white mb-4">Step 2: Select Your Preferred Course</h3>
+        <div
+          id="loading-spinner"
+          class="text-center text-white mb-3"
+          style="display: none"
+        >
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2">Loading courses...</p>
+        </div>
+        <select
+          id="course"
+          name="course"
+          class="form-select form-select-lg mb-3"
+          style="display: none"
+        >
+          <option value="">Select a Course</option>
         </select>
+        <button
+          id="findInstitution"
+          class="btn btn-primary btn-lg w-100"
+          style="display: none"
+        >
+          Find Institution
+        </button>
+        <button id="prevStep" class="btn btn-secondary btn-lg w-100 mt-2">
+          Back
+        </button>
       </div>
-      <!--<div class="input-group input-group-lg mb-3">
-        <select id="university" name="university" class="form-select">
-          <option value="">All Institutions</option>
-        </select>
-      </div>-->
-      <button type="submit" class="btn btn-primary btn-lg w-100">
-        Find Institution
-      </button>
-    </form>
+    </div>
   </div>
 </section>
 
@@ -81,151 +99,115 @@ endblock %} {% block content %}
     </div>
   </div>
 </section>
+{% endblock %} {% block extra_head %}
+<style>
+  .wizard-step {
+    display: none;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 30px;
+    border-radius: 10px;
+  }
+  .wizard-step.active {
+    display: block;
+  }
+  .hero h3 {
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  .spinner-border {
+    width: 3rem;
+    height: 3rem;
+  }
+</style>
 {% endblock %} {% block extra_scripts %}
-<!-- Home Page Specific Scripts -->
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const heroSection = document.getElementById("hero-section");
+  $(document).ready(function () {
+    // Load background image
+    const heroSection = $("#hero-section");
     const img = new Image();
     img.src = "/static/images/hero.png";
     img.onload = function () {
-      heroSection.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('${img.src}')`;
-      heroSection.classList.add("loaded");
+      heroSection.css(
+        "background-image",
+        `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('${img.src}')`
+      );
+      heroSection.addClass("loaded");
     };
-  });
 
-  /**
-   * Function to load and sort unique options into a select element.
-   * @param {string} url - The API endpoint to fetch data from.
-   * @param {object} params - Query parameters for the API request.
-   * @param {jQuery} targetElement - The jQuery selector for the target <select> element.
-   * @param {string} defaultText - The default option text.
-   * @param {string} [property] - The property to extract from each object (if applicable).
-   */
-  function loadOptions(url, params, targetElement, defaultText, property) {
-    $.getJSON(url, params, function (data) {
-      // Sort the data alphabetically
-      if (property) {
-        data.sort(function (a, b) {
-          const nameA = a[property].toUpperCase(); // Ignore case
-          const nameB = b[property].toUpperCase(); // Ignore case
-          if (nameA < nameB) {
-            return -1;
-          }
-          if (nameA > nameB) {
-            return 1;
-          }
-          return 0; // Names must be equal
+    // Load locations (states)
+    $.getJSON("/api/locations", function (data) {
+      var locationSelect = $("#location");
+      $.each(data, function (index, value) {
+        locationSelect.append(
+          $("<option></option>").attr("value", value).text(value)
+        );
+      });
+    });
+
+    // Next step button click
+    $("#nextStep").click(function () {
+      var selectedState = $("#location").val();
+      if (selectedState) {
+        $("#step1").removeClass("active");
+        $("#step2").addClass("active");
+
+        // Show loading spinner and hide course selection
+        $("#loading-spinner").show();
+        $("#course").hide();
+        $("#findInstitution").hide();
+
+        // Load courses based on selected state
+        $.getJSON("/api/courses", { state: selectedState }, function (data) {
+          var courseSelect = $("#course");
+          courseSelect
+            .empty()
+            .append(
+              $("<option></option>").attr("value", "").text("Select a Course")
+            );
+
+          // Use a Set to keep track of unique course names
+          var uniqueCourses = new Set();
+
+          $.each(data, function (index, course) {
+            if (!uniqueCourses.has(course.course_name)) {
+              uniqueCourses.add(course.course_name);
+              courseSelect.append(
+                $("<option></option>")
+                  .attr("value", course.course_name)
+                  .text(course.course_name)
+              );
+            }
+          });
+
+          // Hide loading spinner and show course selection
+          $("#loading-spinner").hide();
+          $("#course").show();
+          $("#findInstitution").show();
         });
       } else {
-        data.sort(function (a, b) {
-          const nameA = a.toUpperCase(); // Ignore case
-          const nameB = b.toUpperCase(); // Ignore case
-          if (nameA < nameB) {
-            return -1;
-          }
-          if (nameA > nameB) {
-            return 1;
-          }
-          return 0; // Names must be equal
-        });
+        alert("Please select a state.");
       }
-
-      // Initialize a Set to track unique values
-      const uniqueSet = new Set();
-      const uniqueData = [];
-
-      // Filter out duplicates
-      $.each(data, function (index, item) {
-        const value = property ? item[property] : item;
-        if (!uniqueSet.has(value)) {
-          uniqueSet.add(value);
-          uniqueData.push(item);
-        }
-      });
-
-      // Clear existing options and add the default option
-      targetElement.empty().append(`<option value="">${defaultText}</option>`);
-
-      // Populate the dropdown with sorted and unique options
-      $.each(uniqueData, function (index, item) {
-        if (property && item[property]) {
-          targetElement.append(
-            $("<option></option>")
-              .attr("value", item[property])
-              .text(item[property])
-          );
-        } else if (!property && typeof item === "string") {
-          targetElement.append(
-            $("<option></option>").attr("value", item).text(item)
-          );
-        }
-      });
-    }).fail(function () {
-      console.error(`Failed to load options from ${url}`);
-    });
-  }
-
-  /**
-   * Function to load and sort unique options based on the selected state.
-   * @param {string} state - The selected state to filter options.
-   * @param {string} type - The type of options to load ('university' or 'course').
-   */
-  function loadFilteredOptions(state, type) {
-    const url = type === "university" ? "/api/universities" : "/api/courses";
-    const params = {};
-
-    if (type === "university") {
-      if (state) {
-        params.state = state;
-      }
-    } else if (type === "course") {
-      if (state) {
-        params.state = state;
-      }
-      const selectedUniversity = $("#university").val();
-      if (selectedUniversity) {
-        params.university = selectedUniversity;
-      }
-    }
-
-    const targetElement =
-      type === "university" ? $("#university") : $("#course");
-    const defaultText =
-      type === "university" ? "All Institutions" : "All Courses";
-    const property = type === "university" ? "university_name" : "course_name";
-
-    loadOptions(url, params, targetElement, defaultText, property);
-  }
-
-  $(document).ready(function () {
-    // Load States (array of strings)
-    loadOptions("/api/locations", {}, $("#location"), "All States");
-
-    // Load Universities with 'university_name' property
-    loadOptions(
-      "/api/universities",
-      {},
-      $("#university"),
-      "All Institutions",
-      "university_name"
-    );
-
-    // Load Courses with 'course_name' property
-    loadOptions("/api/courses", {}, $("#course"), "All Courses", "course_name");
-
-    // When a state is selected, filter universities and courses based on the selected state
-    $("#location").change(function () {
-      var selectedState = $(this).val();
-      loadFilteredOptions(selectedState, "university");
-      loadFilteredOptions(selectedState, "course");
     });
 
-    // When a university is selected, filter courses based on the selected university and state
-    $("#university").change(function () {
+    // Previous step button click
+    $("#prevStep").click(function () {
+      $("#step2").removeClass("active");
+      $("#step1").addClass("active");
+    });
+
+    // Find Institution button click
+    $("#findInstitution").click(function () {
       var selectedState = $("#location").val();
-      var selectedUniversity = $(this).val();
-      loadFilteredOptions(selectedState, "course");
+      var selectedCourse = $("#course").val();
+      if (selectedCourse) {
+        window.location.href =
+          "/recommend?location=" +
+          encodeURIComponent(selectedState) +
+          "&course=" +
+          encodeURIComponent(selectedCourse);
+      } else {
+        alert("Please select a course.");
+      }
     });
   });
 </script>
