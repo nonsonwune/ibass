@@ -1005,7 +1005,11 @@ def verify_email(token):
         flash("The confirmation link is invalid or has expired.", "danger")
         return redirect(url_for("login"))
 
-    user = db.session.get(User, email=email)
+    user = User.query.filter_by(email=email).first()
+    if user is None:
+        flash("User not found.", "danger")
+        return redirect(url_for("login"))
+
     if user.is_verified:
         flash("Account already verified. Please log in.", "success")
     else:
