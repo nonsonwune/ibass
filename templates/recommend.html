@@ -66,9 +66,6 @@ Institutions Finder{% endblock %} {% block content %}
           <p class="card-text">
             <strong>Program Type:</strong> {{ uni.program_type }}
           </p>
-          <p class="card-text">
-            <strong>Number of Courses:</strong> {{ uni.courses|length }}
-          </p>
           <div class="mt-auto">
             <!-- View Details Button -->
             <button
@@ -198,7 +195,7 @@ Institutions Finder{% endblock %} {% block content %}
                 aria-controls="courses"
                 aria-selected="false"
               >
-                Courses
+                All Courses
               </button>
             </li>
           </ul>
