@@ -164,3 +164,4 @@ cython_debug/
 .env
 logs/
 *.sh
+push_to_main.sh
