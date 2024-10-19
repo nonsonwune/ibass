@@ -415,10 +415,12 @@ def recommend():
         location = request.form.get("location")
         preferred_university = request.form.get("university")
         preferred_course = request.form.get("course")
+        program_type = request.form.get("program_type")
     else:  # GET request
         location = request.args.get("location")
         preferred_university = request.args.get("university")
         preferred_course = request.args.get("course")
+        program_type = request.args.get("program_type")
 
     query = db.session.query(University).outerjoin(Course)
     if location:
@@ -427,11 +429,19 @@ def recommend():
         query = query.filter(University.university_name == preferred_university)
     if preferred_course:
         query = query.filter(Course.course_name == preferred_course)
+    if program_type:
+        query = query.filter(University.program_type == program_type)
 
-    results = query.order_by(University.university_name, Course.course_name).all()
+    results = query.order_by(University.university_name).all()
+
+    # Collect universities and avoid duplicates
+    universities = {}
+    for uni in results:
+        if uni.id not in universities:
+            universities[uni.id] = uni
 
     recommendations = []
-    for uni in results:
+    for uni in universities.values():
         uni_data = {
             "id": uni.id,
             "university_name": uni.university_name,
@@ -451,6 +461,9 @@ def recommend():
         }
         recommendations.append(uni_data)
 
+    # Get the list of available program types from current recommendations
+    program_types = sorted(set(uni.program_type for uni in universities.values()))
+
     # Get user's bookmarks if authenticated
     user_bookmarks = set()
     if current_user.is_authenticated:
@@ -465,7 +478,11 @@ def recommend():
         university=preferred_university,
         course=preferred_course,
         user_bookmarks=user_bookmarks,
+        program_types=program_types,
+        selected_program_type=program_type,
     )
+
+
 
 
 @app.route("/course/<int:course_id>")
