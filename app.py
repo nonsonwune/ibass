@@ -479,7 +479,10 @@ def recommend():
         university=preferred_university,
         course=preferred_course,
         user_bookmarks=user_bookmarks,
+        program_types=program_types,
+        selected_program_type=program_type,
     )
+
 
 
 @app.route("/course/<int:course_id>")
