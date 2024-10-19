@@ -461,9 +461,8 @@ def recommend():
         }
         recommendations.append(uni_data)
 
-    # Get the list of available program types for the filter
-    program_types_query = db.session.query(University.program_type).distinct()
-    program_types = [pt[0] for pt in program_types_query.all()]
+    # Get the list of available program types from current recommendations
+    program_types = sorted(set(uni.program_type for uni in universities.values()))
 
     # Get user's bookmarks if authenticated
     user_bookmarks = set()
@@ -482,6 +481,7 @@ def recommend():
         program_types=program_types,
         selected_program_type=program_type,
     )
+
 
 
 

@@ -1,22 +1,18 @@
 <!-- templates/recommend.html -->
-{% extends "base.html" %} {% block title %}Recommended Institutions - Nigerian
-Institutions Finder{% endblock %} {% block content %}
+{% extends "base.html" %}
+{% block title %}Recommended Institutions - Nigerian Institutions Finder{% endblock %}
+{% block content %}
 <div class="container my-5">
-  {% with messages = get_flashed_messages(with_categories=true) %} {% if
-  messages %} {% for category, message in messages %}
-  <div
-    class="alert alert-{{ category }} alert-dismissible fade show"
-    role="alert"
-  >
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  {% for category, message in messages %}
+  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
     {{ message }}
-    <button
-      type="button"
-      class="btn-close"
-      data-bs-dismiss="alert"
-      aria-label="Close"
-    ></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   </div>
-  {% endfor %} {% endif %} {% endwith %}
+  {% endfor %}
+  {% endif %}
+  {% endwith %}
 
   <!-- Breadcrumb Navigation -->
   <nav aria-label="breadcrumb">
@@ -29,6 +25,7 @@ Institutions Finder{% endblock %} {% block content %}
   </nav>
 
   <h1 class="mb-4">Recommended Institutions</h1>
+
   <!-- Filters -->
   <form id="filter-form" method="GET" action="{{ url_for('recommend') }}" class="mb-4">
     <!-- Hidden inputs to preserve existing search criteria -->
@@ -57,6 +54,7 @@ Institutions Finder{% endblock %} {% block content %}
       </div>
     </div>
   </form>
+
   <!-- Search Criteria Display -->
   {% if location or university or course or selected_program_type %}
   <div class="search-criteria mb-4 p-3 bg-light rounded">
@@ -86,7 +84,7 @@ Institutions Finder{% endblock %} {% block content %}
   </div>
   {% endif %}
 
-   <!-- Recommendations Display -->
+  <!-- Recommendations Display -->
   {% if recommendations %}
   <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
     {% for uni in recommendations %}
@@ -99,9 +97,6 @@ Institutions Finder{% endblock %} {% block content %}
           </p>
           <p class="card-text">
             <strong>Program Type:</strong> {{ uni.program_type }}
-          </p>
-          <p class="card-text">
-            <strong>Number of Courses:</strong> {{ uni.courses|length }}
           </p>
           <div class="mt-auto">
             <!-- View Details Button -->
@@ -123,8 +118,6 @@ Institutions Finder{% endblock %} {% block content %}
             >
               <i class="fas fa-bookmark"></i>
               <span class="bookmark-text">
-                {% if uni.id in user_bookmarks %} Bookmarked {% else %} Bookmark
-                {% endif %}
                 {% if uni.id in user_bookmarks %}Bookmarked{% else %}Bookmark{% endif %}
               </span>
             </button>
@@ -296,6 +289,7 @@ Institutions Finder{% endblock %} {% block content %}
   document.addEventListener("DOMContentLoaded", function () {
     console.log("DOM fully loaded in recommend.html");
     initializeBookmarkButtons();
+    initializeInstitutionModal();
   });
 
   function initializeBookmarkButtons() {
