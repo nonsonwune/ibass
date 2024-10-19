@@ -153,14 +153,50 @@ endblock %} {% block content %}
       });
     });
 
-    // Load programme types
-    $.getJSON("/api/programme_types", function (data) {
+    // When state is selected, load programme types for that state
+    $("#location").change(function () {
+      var selectedState = $(this).val();
       var programmeTypeSelect = $("#programmeType");
-      $.each(data, function (index, value) {
-        programmeTypeSelect.append(
-          $("<option></option>").attr("value", value).text(value)
+
+      if (selectedState) {
+        // Clear and disable Programme Type dropdown
+        programmeTypeSelect
+          .empty()
+          .append($("<option></option>").attr("value", "").text("Loading..."));
+        programmeTypeSelect.prop("disabled", true);
+
+        // Fetch programme types for the selected state
+        $.getJSON(
+          "/api/programme_types",
+          { state: selectedState },
+          function (data) {
+            programmeTypeSelect
+              .empty()
+              .append(
+                $("<option></option>")
+                  .attr("value", "")
+                  .text("Select Programme Type")
+              );
+
+            $.each(data, function (index, value) {
+              programmeTypeSelect.append(
+                $("<option></option>").attr("value", value).text(value)
+              );
+            });
+
+            programmeTypeSelect.prop("disabled", false);
+          }
         );
-      });
+      } else {
+        // If no state is selected, reset Programme Type dropdown
+        programmeTypeSelect
+          .empty()
+          .append(
+            $("<option></option>")
+              .attr("value", "")
+              .text("Select Programme Type")
+          );
+      }
     });
 
     // Next step button click
