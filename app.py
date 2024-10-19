@@ -415,13 +415,24 @@ def get_courses():
 
 @app.route("/api/programme_types", methods=["GET"])
 def get_programme_types():
-    programme_types = (
-        db.session.query(University.program_type)
-        .distinct()
-        .order_by(University.program_type)
-        .all()
-    )
+    state = request.args.get("state")
+    if state:
+        programme_types = (
+            db.session.query(University.program_type)
+            .filter(University.state == state)
+            .distinct()
+            .order_by(University.program_type)
+            .all()
+        )
+    else:
+        programme_types = (
+            db.session.query(University.program_type)
+            .distinct()
+            .order_by(University.program_type)
+            .all()
+        )
     return jsonify([ptype[0] for ptype in programme_types])
+
 
 
 @app.route("/recommend", methods=["GET", "POST"])
