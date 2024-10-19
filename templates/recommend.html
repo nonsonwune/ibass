@@ -1,18 +1,22 @@
 <!-- templates/recommend.html -->
-{% extends "base.html" %}
-{% block title %}Recommended Institutions - Nigerian Institutions Finder{% endblock %}
-{% block content %}
+{% extends "base.html" %} {% block title %}Recommended Institutions - Nigerian
+Institutions Finder{% endblock %} {% block content %}
 <div class="container my-5">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-  {% for category, message in messages %}
-  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+  {% with messages = get_flashed_messages(with_categories=true) %} {% if
+  messages %} {% for category, message in messages %}
+  <div
+    class="alert alert-{{ category }} alert-dismissible fade show"
+    role="alert"
+  >
     {{ message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <button
+      type="button"
+      class="btn-close"
+      data-bs-dismiss="alert"
+      aria-label="Close"
+    ></button>
   </div>
-  {% endfor %}
-  {% endif %}
-  {% endwith %}
+  {% endfor %} {% endif %} {% endwith %}
 
   <!-- Breadcrumb Navigation -->
   <nav aria-label="breadcrumb">
@@ -26,37 +30,8 @@
 
   <h1 class="mb-4">Recommended Institutions</h1>
 
-  <!-- Filters -->
-  <form id="filter-form" method="GET" action="{{ url_for('recommend') }}" class="mb-4">
-    <!-- Hidden inputs to preserve existing search criteria -->
-    {% if location %}
-    <input type="hidden" name="location" value="{{ location }}">
-    {% endif %}
-    {% if university %}
-    <input type="hidden" name="university" value="{{ university }}">
-    {% endif %}
-    {% if course %}
-    <input type="hidden" name="course" value="{{ course }}">
-    {% endif %}
-
-    <div class="row">
-      <div class="col-md-4">
-        <label for="program-type-filter" class="form-label">Program Type</label>
-        <select id="program-type-filter" name="program_type" class="form-select">
-          <option value="">All Types</option>
-          {% for type in program_types %}
-          <option value="{{ type }}" {% if type == selected_program_type %}selected{% endif %}>{{ type }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="col-md-2 align-self-end">
-        <button type="submit" class="btn btn-primary mt-2">Apply Filters</button>
-      </div>
-    </div>
-  </form>
-
   <!-- Search Criteria Display -->
-  {% if location or university or course or selected_program_type %}
+  {% if location or university or course %}
   <div class="search-criteria mb-4 p-3 bg-light rounded">
     <h5>Search Criteria:</h5>
     <div>
@@ -64,20 +39,13 @@
       <span class="badge bg-primary me-2">
         <i class="fas fa-map-marker-alt me-1"></i> Location: {{ location }}
       </span>
-      {% endif %}
-      {% if university %}
+      {% endif %} {% if university %}
       <span class="badge bg-success me-2">
         <i class="fas fa-university me-1"></i> University: {{ university }}
       </span>
-      {% endif %}
-      {% if course %}
+      {% endif %} {% if course %}
       <span class="badge bg-warning text-dark me-2">
         <i class="fas fa-book me-1"></i> Course: {{ course }}
-      </span>
-      {% endif %}
-      {% if selected_program_type %}
-      <span class="badge bg-info me-2">
-        <i class="fas fa-graduation-cap me-1"></i> Program Type: {{ selected_program_type }}
       </span>
       {% endif %}
     </div>
@@ -118,7 +86,8 @@
             >
               <i class="fas fa-bookmark"></i>
               <span class="bookmark-text">
-                {% if uni.id in user_bookmarks %}Bookmarked{% else %}Bookmark{% endif %}
+                {% if uni.id in user_bookmarks %}Bookmarked{% else %}Bookmark{%
+                endif %}
               </span>
             </button>
             {% else %}
@@ -135,7 +104,7 @@
     </div>
     {% endfor %}
   </div>
-  {% else %} 
+  {% else %}
   <div class="alert alert-info" role="alert">
     No matching institutions found. Please try different search criteria.
   </div>
@@ -287,14 +256,12 @@
 {% endblock %} {% block scripts %} {{ super() }}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    console.log("DOM fully loaded in recommend.html");
     initializeBookmarkButtons();
     initializeInstitutionModal();
   });
 
   function initializeBookmarkButtons() {
     const bookmarkButtons = document.querySelectorAll(".bookmark-btn");
-    console.log("Found bookmark buttons:", bookmarkButtons.length);
 
     bookmarkButtons.forEach((button) => {
       const isBookmarked = button.getAttribute("data-bookmarked") === "true";
@@ -324,11 +291,9 @@
 
   function handleBookmarkClick(event) {
     event.preventDefault();
-    console.log("Bookmark button clicked");
     const button = this;
     const uniId = button.getAttribute("data-uni-id");
     const isBookmarked = button.getAttribute("data-bookmarked") === "true";
-    console.log("University ID:", uniId, "Is Bookmarked:", isBookmarked);
 
     // Send AJAX request
     const url = isBookmarked ? `/remove_bookmark/${uniId}` : "/bookmark";
@@ -343,12 +308,8 @@
       },
       body: body,
     })
-      .then((response) => {
-        console.log("Response status:", response.status);
-        return response.json();
-      })
+      .then((response) => response.json())
       .then((data) => {
-        console.log("Response data:", data);
         if (data.success) {
           const newBookmarkState = !isBookmarked;
           button.setAttribute("data-bookmarked", newBookmarkState.toString());
@@ -392,6 +353,7 @@
       institutionProgramType: document.getElementById("institutionProgramType"),
       searchCriteria: document.getElementById("searchCriteria"),
       selectedCourseContent: document.getElementById("selectedCourseContent"),
+      selectedCourseDetails: document.getElementById("selectedCourseDetails"),
       institutionCoursesList: document.getElementById("institutionCoursesList"),
     };
 
@@ -405,12 +367,10 @@
     elements.searchCriteria.textContent = "";
     elements.selectedCourseContent.innerHTML = "";
     elements.institutionCoursesList.innerHTML = "";
+    elements.selectedCourseDetails.style.display = "none";
   }
 
   function fetchInstitutionDetails(uniId, selectedCourse) {
-    console.log(
-      `Fetching details for institution ID: ${uniId}, Selected Course: ${selectedCourse}`
-    );
     fetch(
       `/api/institution/${uniId}?course=${encodeURIComponent(selectedCourse)}`,
       {
@@ -428,7 +388,6 @@
         return response.json();
       })
       .then((uni) => {
-        console.log("Received university data:", uni);
         populateModal(uni);
       })
       .catch((error) => {
@@ -441,8 +400,6 @@
   }
 
   function populateModal(uni) {
-    console.log("Populating modal with data:", uni);
-
     const elements = {
       institutionName: document.getElementById("institutionName"),
       institutionState: document.getElementById("institutionState"),
@@ -456,10 +413,9 @@
     elements.institutionName.textContent = uni.university_name;
     elements.institutionState.textContent = uni.state;
     elements.institutionProgramType.textContent = uni.program_type;
-    elements.searchCriteria.textContent =
-      uni.search_type === "course"
-        ? `Course: ${uni.selected_course}`
-        : `Location: ${uni.state}`;
+    elements.searchCriteria.textContent = uni.selected_course
+      ? `Course: ${uni.selected_course}`
+      : `Location: ${uni.state}`;
 
     // Populate selected course details
     if (uni.selected_course && uni.courses && uni.courses.length > 0) {
@@ -475,6 +431,8 @@
         elements.selectedCourseContent.innerHTML = `<p class="alert alert-warning">No details available for the selected course "${uni.selected_course}" in this institution.</p>`;
         elements.selectedCourseDetails.style.display = "block";
       }
+    } else {
+      elements.selectedCourseDetails.style.display = "none";
     }
 
     // Populate all courses
@@ -488,8 +446,8 @@
     }
 
     // Show the institution details and hide loading
-    document.getElementById("loadingIndicator").style.display = "none";
-    document.getElementById("institutionDetails").style.display = "block";
+    elements.loadingIndicator.style.display = "none";
+    elements.institutionDetails.style.display = "block";
   }
 
   function createCourseHTML(course) {
@@ -551,5 +509,4 @@
     }
   }
 </script>
-{% endblock %} if (uni.selected_course && uni.courses && uni.courses.length > 0)
-{ const selectedCourseData = uni
+{% endblock %}

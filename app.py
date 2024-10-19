@@ -386,10 +386,14 @@ def get_universities():
 @app.route("/api/courses", methods=["GET"])
 def get_courses():
     state = request.args.get("state")
+    programme_type = request.args.get("programme_type")
     university = request.args.get("university")
+    
     query = db.session.query(Course).join(University)
     if state:
         query = query.filter(University.state == state)
+    if programme_type:
+        query = query.filter(University.program_type == programme_type)
     if university:
         query = query.filter(University.university_name == university)
     courses = query.order_by(Course.course_name).all()
@@ -409,39 +413,44 @@ def get_courses():
     )
 
 
+@app.route("/api/programme_types", methods=["GET"])
+def get_programme_types():
+    programme_types = (
+        db.session.query(University.program_type)
+        .distinct()
+        .order_by(University.program_type)
+        .all()
+    )
+    return jsonify([ptype[0] for ptype in programme_types])
+
+
 @app.route("/recommend", methods=["GET", "POST"])
 def recommend():
     if request.method == "POST":
         location = request.form.get("location")
+        programme_type = request.form.get("programme_type")
         preferred_university = request.form.get("university")
         preferred_course = request.form.get("course")
-        program_type = request.form.get("program_type")
     else:  # GET request
         location = request.args.get("location")
+        programme_type = request.args.get("programme_type")
         preferred_university = request.args.get("university")
         preferred_course = request.args.get("course")
-        program_type = request.args.get("program_type")
 
     query = db.session.query(University).outerjoin(Course)
     if location:
         query = query.filter(University.state == location)
+    if programme_type:
+        query = query.filter(University.program_type == programme_type)
     if preferred_university:
         query = query.filter(University.university_name == preferred_university)
     if preferred_course:
         query = query.filter(Course.course_name == preferred_course)
-    if program_type:
-        query = query.filter(University.program_type == program_type)
 
-    results = query.order_by(University.university_name).all()
-
-    # Collect universities and avoid duplicates
-    universities = {}
-    for uni in results:
-        if uni.id not in universities:
-            universities[uni.id] = uni
+    results = query.order_by(University.university_name, Course.course_name).all()
 
     recommendations = []
-    for uni in universities.values():
+    for uni in results:
         uni_data = {
             "id": uni.id,
             "university_name": uni.university_name,
@@ -461,9 +470,6 @@ def recommend():
         }
         recommendations.append(uni_data)
 
-    # Get the list of available program types from current recommendations
-    program_types = sorted(set(uni.program_type for uni in universities.values()))
-
     # Get user's bookmarks if authenticated
     user_bookmarks = set()
     if current_user.is_authenticated:
@@ -478,9 +484,8 @@ def recommend():
         university=preferred_university,
         course=preferred_course,
         user_bookmarks=user_bookmarks,
-        program_types=program_types,
-        selected_program_type=program_type,
     )
+
 
 
 

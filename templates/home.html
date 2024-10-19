@@ -11,13 +11,22 @@ endblock %} {% block content %}
 
     <div id="wizard-container" class="mx-auto" style="max-width: 500px">
       <div class="wizard-step active" id="step1">
-        <h3 class="text-white mb-4">Step 1: Select Your Preferred State</h3>
+        <h3 class="text-white mb-4">
+          Step 1: Select Your Preferred State and Programme Type
+        </h3>
         <select
           id="location"
           name="location"
           class="form-select form-select-lg mb-3"
         >
           <option value="">Select a State</option>
+        </select>
+        <select
+          id="programmeType"
+          name="programmeType"
+          class="form-select form-select-lg mb-3"
+        >
+          <option value="">Select Programme Type</option>
         </select>
         <button id="nextStep" class="btn btn-primary btn-lg w-100">Next</button>
       </div>
@@ -144,10 +153,21 @@ endblock %} {% block content %}
       });
     });
 
+    // Load programme types
+    $.getJSON("/api/programme_types", function (data) {
+      var programmeTypeSelect = $("#programmeType");
+      $.each(data, function (index, value) {
+        programmeTypeSelect.append(
+          $("<option></option>").attr("value", value).text(value)
+        );
+      });
+    });
+
     // Next step button click
     $("#nextStep").click(function () {
       var selectedState = $("#location").val();
-      if (selectedState) {
+      var selectedProgrammeType = $("#programmeType").val();
+      if (selectedState && selectedProgrammeType) {
         $("#step1").removeClass("active");
         $("#step2").addClass("active");
 
@@ -156,36 +176,46 @@ endblock %} {% block content %}
         $("#course").hide();
         $("#findInstitution").hide();
 
-        // Load courses based on selected state
-        $.getJSON("/api/courses", { state: selectedState }, function (data) {
-          var courseSelect = $("#course");
-          courseSelect
-            .empty()
-            .append(
-              $("<option></option>").attr("value", "").text("Select a Course")
-            );
-
-          // Use a Set to keep track of unique course names
-          var uniqueCourses = new Set();
-
-          $.each(data, function (index, course) {
-            if (!uniqueCourses.has(course.course_name)) {
-              uniqueCourses.add(course.course_name);
-              courseSelect.append(
-                $("<option></option>")
-                  .attr("value", course.course_name)
-                  .text(course.course_name)
+        // Load courses based on selected state and programme type
+        $.getJSON(
+          "/api/courses",
+          { state: selectedState, programme_type: selectedProgrammeType },
+          function (data) {
+            var courseSelect = $("#course");
+            courseSelect
+              .empty()
+              .append(
+                $("<option></option>").attr("value", "").text("Select a Course")
               );
-            }
-          });
 
-          // Hide loading spinner and show course selection
-          $("#loading-spinner").hide();
-          $("#course").show();
-          $("#findInstitution").show();
-        });
+            // Use a Set to keep track of unique course names
+            var uniqueCourses = new Set();
+
+            $.each(data, function (index, course) {
+              if (!uniqueCourses.has(course.course_name)) {
+                uniqueCourses.add(course.course_name);
+                courseSelect.append(
+                  $("<option></option>")
+                    .attr("value", course.course_name)
+                    .text(course.course_name)
+                );
+              }
+            });
+
+            // Hide loading spinner and show course selection
+            $("#loading-spinner").hide();
+            $("#course").show();
+            $("#findInstitution").show();
+          }
+        );
       } else {
-        alert("Please select a state.");
+        if (!selectedState && !selectedProgrammeType) {
+          alert("Please select a state and programme type.");
+        } else if (!selectedState) {
+          alert("Please select a state.");
+        } else if (!selectedProgrammeType) {
+          alert("Please select a programme type.");
+        }
       }
     });
 
@@ -198,11 +228,14 @@ endblock %} {% block content %}
     // Find Institution button click
     $("#findInstitution").click(function () {
       var selectedState = $("#location").val();
+      var selectedProgrammeType = $("#programmeType").val();
       var selectedCourse = $("#course").val();
       if (selectedCourse) {
         window.location.href =
           "/recommend?location=" +
           encodeURIComponent(selectedState) +
+          "&programme_type=" +
+          encodeURIComponent(selectedProgrammeType) +
           "&course=" +
           encodeURIComponent(selectedCourse);
       } else {
