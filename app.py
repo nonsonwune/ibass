@@ -632,7 +632,7 @@ def signup():
         send_verification_email(new_user.email, token)
 
         flash(
-            "Account created successfully. A verification email has been sent to your email address.",
+            "Account created successfully. A verification email has been sent to your email address (Check Spam Folder).",
             "success",
         )
         return redirect(url_for("login"))
