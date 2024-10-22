@@ -127,6 +127,16 @@ endblock %} {% block content %}
     width: 3rem;
     height: 3rem;
   }
+  optgroup {
+    font-weight: bold;
+    color: #2c3e50;
+  }
+  .form-select optgroup {
+    background-color: #f8f9fa;
+  }
+  .form-select option {
+    padding: 8px;
+  }
 </style>
 {% endblock %} {% block extra_scripts %}
 <script>
@@ -153,6 +163,30 @@ endblock %} {% block content %}
       });
     });
 
+    // Programme type groupings
+    const programmeGroups = {
+      "DEGREE AWARDING INSTITUTIONS": [
+        "E-LEARNING UNIVERSITIES OF NIGERIA",
+        "FEDERAL UNIVERSITIES",
+        "FEDERAL UNIVERSITIES OF AGRICULTURE",
+        "FEDERAL UNIVERSITIES OF HEALTH SCIENCES",
+        "FEDERAL UNIVERSITIES OF TECHNOLOGY",
+        "OPEN AND DISTANCE LEARNING PROGRAMMES",
+        "OTHER DEGREE AWARDING INSTITUTIONS",
+        "PRIVATE UNIVERSITIES",
+        "SANDWICH PROGRAMMES",
+        "STATE UNIVERSITIES",
+        "STATE UNIVERSITIES OF AGRICULTURE",
+        "STATE UNIVERSITIES OF MEDICAL SCIENCES",
+        "STATE UNIVERSITIES OF TECHNOLOGY",
+      ],
+      NCE: [
+        "FEDERAL COLLEGES OF EDUCATION",
+        "STATE COLLEGES OF EDUCATION",
+        "PRIVATE COLLEGES OF EDUCATION",
+      ],
+    };
+
     // When state is selected, load programme types for that state
     $("#location").change(function () {
       var selectedState = $(this).val();
@@ -178,17 +212,63 @@ endblock %} {% block content %}
                   .text("Select Programme Type")
               );
 
-            $.each(data, function (index, value) {
-              programmeTypeSelect.append(
-                $("<option></option>").attr("value", value).text(value)
+            // Create object to store optgroups
+            const optgroups = {};
+
+            // Initialize optgroups for all categories
+            Object.keys(programmeGroups).forEach((group) => {
+              optgroups[group] = $("<optgroup>").attr("label", group);
+            });
+
+            // Sort programme types into their groups
+            data.forEach((programmeType) => {
+              let grouped = false;
+
+              // Check each group for the programme type
+              Object.entries(programmeGroups).forEach(
+                ([groupName, programmes]) => {
+                  // Check if the programme type or a similar variant exists in the group
+                  const matchingProgramme = programmes.find(
+                    (p) =>
+                      programmeType.includes(p) ||
+                      p.includes(programmeType) ||
+                      programmeType.replace(" OF ", " ") ===
+                        p.replace(" OF ", " ")
+                  );
+
+                  if (matchingProgramme) {
+                    optgroups[groupName].append(
+                      $("<option></option>")
+                        .attr("value", programmeType)
+                        .text(programmeType)
+                    );
+                    grouped = true;
+                  }
+                }
               );
+
+              // If the programme type doesn't belong to any group, add it directly
+              if (!grouped) {
+                programmeTypeSelect.append(
+                  $("<option></option>")
+                    .attr("value", programmeType)
+                    .text(programmeType)
+                );
+              }
+            });
+
+            // Add non-empty optgroups to select element
+            Object.values(optgroups).forEach((optgroup) => {
+              if (optgroup.children().length > 0) {
+                programmeTypeSelect.append(optgroup);
+              }
             });
 
             programmeTypeSelect.prop("disabled", false);
           }
         );
       } else {
-        // If no state is selected, reset Programme Type dropdown
+        // Reset Programme Type dropdown when no state is selected
         programmeTypeSelect
           .empty()
           .append(
@@ -199,23 +279,25 @@ endblock %} {% block content %}
       }
     });
 
-    // Next step button click
+    // Next step button click handler
     $("#nextStep").click(function () {
       var selectedState = $("#location").val();
       var selectedProgrammeType = $("#programmeType").val();
+
       if (selectedState && selectedProgrammeType) {
         $("#step1").removeClass("active");
         $("#step2").addClass("active");
 
-        // Show loading spinner and hide course selection
         $("#loading-spinner").show();
         $("#course").hide();
         $("#findInstitution").hide();
 
-        // Load courses based on selected state and programme type
         $.getJSON(
           "/api/courses",
-          { state: selectedState, programme_type: selectedProgrammeType },
+          {
+            state: selectedState,
+            programme_type: selectedProgrammeType,
+          },
           function (data) {
             var courseSelect = $("#course");
             courseSelect
@@ -238,12 +320,15 @@ endblock %} {% block content %}
               }
             });
 
-            // Hide loading spinner and show course selection
             $("#loading-spinner").hide();
             $("#course").show();
             $("#findInstitution").show();
           }
-        );
+        ).fail(function (jqXHR, textStatus, errorThrown) {
+          $("#loading-spinner").hide();
+          alert("Error loading courses. Please try again.");
+          console.error("Error loading courses:", textStatus, errorThrown);
+        });
       } else {
         if (!selectedState && !selectedProgrammeType) {
           alert("Please select a state and programme type.");
@@ -255,25 +340,26 @@ endblock %} {% block content %}
       }
     });
 
-    // Previous step button click
+    // Previous step button click handler
     $("#prevStep").click(function () {
       $("#step2").removeClass("active");
       $("#step1").addClass("active");
     });
 
-    // Find Institution button click
+    // Find Institution button click handler
     $("#findInstitution").click(function () {
       var selectedState = $("#location").val();
       var selectedProgrammeType = $("#programmeType").val();
       var selectedCourse = $("#course").val();
+
       if (selectedCourse) {
         window.location.href =
-          "/recommend?location=" +
-          encodeURIComponent(selectedState) +
-          "&programme_type=" +
-          encodeURIComponent(selectedProgrammeType) +
-          "&course=" +
-          encodeURIComponent(selectedCourse);
+          "/recommend?" +
+          $.param({
+            location: selectedState,
+            programme_type: selectedProgrammeType,
+            course: selectedCourse,
+          });
       } else {
         alert("Please select a course.");
       }
