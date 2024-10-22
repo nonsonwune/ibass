@@ -125,18 +125,21 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     is_verified = db.Column(db.Boolean, default=False)
     score = db.Column(db.Integer, default=0, nullable=False, index=True)
-    comments = db.relationship(
-        "Comment", backref="author", lazy=True, cascade="all, delete-orphan"
-    )
-    votes = db.relationship(
-        "Vote", backref="voter", lazy=True, cascade="all, delete-orphan"
-    )
-    feedback = db.relationship(
-        "Feedback", backref="user", lazy=True, cascade="all, delete-orphan"
-    )
-    bookmarks = db.relationship(
-        "Bookmark", backref="user", lazy=True, cascade="all, delete-orphan"
-    )
+    comments = db.relationship("Comment", backref="author", lazy=True, cascade="all, delete-orphan")
+    votes = db.relationship("Vote", backref="voter", lazy=True, cascade="all, delete-orphan")
+    feedback = db.relationship("Feedback", backref="user", lazy=True, cascade="all, delete-orphan")
+    bookmarks = db.relationship("Bookmark", backref="user", lazy=True, cascade="all, delete-orphan")
+
+    @staticmethod
+    def normalize_username(username):
+        """Convert username to lowercase for case-insensitive comparison"""
+        return username.lower() if username else None
+
+    def __init__(self, **kwargs):
+        # Normalize username before saving
+        if 'username' in kwargs:
+            kwargs['username'] = self.normalize_username(kwargs['username'])
+        super(User, self).__init__(**kwargs)
 
     def calculate_score(self):
         return sum(comment.score for comment in self.comments)
@@ -603,7 +606,7 @@ def about():
 def signup():
     form = SignupForm()
     if form.validate_on_submit():
-        username = form.username.data
+        username = User.normalize_username(form.username.data)
         email = form.email.data
         password = form.password.data
         confirm_password = form.confirm_password.data
@@ -612,7 +615,8 @@ def signup():
             flash("Passwords do not match.", "danger")
             return redirect(url_for("signup"))
 
-        existing_user = User.query.filter_by(username=username).first()
+        # Check for existing username case-insensitively
+        existing_user = User.query.filter(func.lower(User.username) == username).first()
         if existing_user:
             flash("Username already exists.", "danger")
             return redirect(url_for("signup"))
@@ -631,10 +635,7 @@ def signup():
         token = generate_verification_token(new_user.email)
         send_verification_email(new_user.email, token)
 
-        flash(
-            "Account created successfully. A verification email has been sent to your email address (Check Spam Folder).",
-            "success",
-        )
+        flash("Account created successfully. A verification email has been sent to your email address (Check Spam Folder).", "success")
         return redirect(url_for("login"))
 
     return render_template("signup.html", form=form)
@@ -644,11 +645,12 @@ def signup():
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        username = form.username.data
+        username = User.normalize_username(form.username.data)
         password = form.password.data
         remember = form.remember_me.data
 
-        user = User.query.filter_by(username=username).first()
+        # Use case-insensitive username lookup
+        user = User.query.filter(func.lower(User.username) == username).first()
         if user and check_password_hash(user.password, password):
             if not user.is_verified:
                 flash("Please verify your email address before logging in.", "warning")
@@ -661,11 +663,9 @@ def login():
                 next_page = request.args.get("next")
                 return redirect(next_page) if next_page else redirect(url_for("home"))
         else:
-            flash(
-                "Login unsuccessful. Please check username and password.",
-                "danger",
-            )
+            flash("Login unsuccessful. Please check username and password.", "danger")
     return render_template("login.html", form=form)
+
 
 
 @app.route("/logout")
@@ -1167,16 +1167,7 @@ def get_user_bookmarks():
 def init_db():
     try:
 
-        # Add missing columns
-        with app.app_context():
-            # Reflect the database
-            db.reflect()
-            # Check if 'is_verified' column exists
-            if not hasattr(User, "is_verified"):
-                with db.engine.connect() as conn:
-                    conn.execute(
-                        "ALTER TABLE user ADD COLUMN is_verified BOOLEAN DEFAULT FALSE"
-                    )
+
 
         # Update user emails if necessary
         users = User.query.all()
