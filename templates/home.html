@@ -216,7 +216,7 @@ endblock %} {% block extra_head %}
   $(document).ready(function () {
     // Programme type groupings
     const programmeGroups = {
-      ALL_DEGREE_AWARDING_INSTITUTIONS: [
+      "ALL DEGREE AWARDING INSTITUTIONS": [
         "E-LEARNING UNIVERSITIES OF NIGERIA",
         "FEDERAL UNIVERSITIES",
         "FEDERAL UNIVERSITIES OF AGRICULTURE",
@@ -231,7 +231,7 @@ endblock %} {% block extra_head %}
         "STATE UNIVERSITIES OF MEDICAL SCIENCES",
         "STATE UNIVERSITIES OF TECHNOLOGY",
       ],
-      ALL_NCE: [
+      "ALL NCE": [
         "FEDERAL COLLEGES OF EDUCATION",
         "STATE COLLEGES OF EDUCATION",
         "PRIVATE COLLEGES OF EDUCATION",
@@ -261,7 +261,6 @@ endblock %} {% block extra_head %}
     });
 
     // When state is selected, load programme types
-    // When state is selected, load programme types
     $("#location").change(function () {
       const selectedState = $(this).val();
       const programmeTypeSelect = $("#programmeType");
@@ -285,7 +284,14 @@ endblock %} {% block extra_head %}
           "/api/programme_types",
           { state: selectedState },
           function (data) {
-            // Iterate over each programme type and append to dropdown
+            // Create optgroups
+            const degreeGroup = $("<optgroup>").attr(
+              "label",
+              "DEGREE AWARDING INSTITUTIONS"
+            );
+            const nceGroup = $("<optgroup>").attr("label", "NCE");
+
+            // Sort programs into groups
             data.forEach((type) => {
               if (type === "ALL_INSTITUTION_TYPES") return; // Skip if already added
 
@@ -293,10 +299,31 @@ endblock %} {% block extra_head %}
                 .attr("value", type)
                 .text(type);
 
-              programmeTypeSelect.append(option);
+              // Check if type belongs to DEGREE group
+              if (
+                type === "ALL DEGREE AWARDING INSTITUTIONS" ||
+                type.includes("UNIVERSITIES") ||
+                type.includes("DEGREE") ||
+                type.includes("SANDWICH") ||
+                type === "OPEN AND DISTANCE LEARNING PROGRAMMES" ||
+                type === "OTHER DEGREE AWARDING INSTITUTIONS"
+              ) {
+                degreeGroup.append(option);
+              }
+              // Check if type belongs to NCE group
+              else if (
+                type === "ALL NCE" ||
+                type.includes("COLLEGES OF EDUCATION")
+              ) {
+                nceGroup.append(option);
+              }
             });
 
-            programmeTypeSelect.prop("disabled", false);
+            // Add groups to select
+            programmeTypeSelect
+              .append(degreeGroup)
+              .append(nceGroup)
+              .prop("disabled", false);
           }
         );
       } else {
