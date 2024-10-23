@@ -10,10 +10,10 @@ def migrate_to_sqlite():
     with app.app_context():
         try:
             # Read existing CSV files
-            universities_df = pd.read_csv("universities.csv")
+            universities_df = pd.read_csv("universities_updated.csv")
             courses_df = pd.read_csv("courses.csv")
 
-            # Insert universities
+            # Insert universities with new columns
             for _, row in universities_df.iterrows():
                 existing_university = University.query.filter_by(
                     university_name=row["university_name"]
@@ -23,18 +23,23 @@ def migrate_to_sqlite():
                         university_name=row["university_name"],
                         state=row["state"],
                         program_type=row["program_type"],
+                        website=row["website"],
+                        established=row["established"]
                     )
                     db.session.add(university)
                     logger.info(f"Added new university: {row['university_name']}")
                 else:
+                    # Update existing university with new information
+                    existing_university.website = row["website"]
+                    existing_university.established = row["established"]
                     logger.info(
-                        f"University '{row['university_name']}' already exists. Skipping."
+                        f"Updated existing university: {row['university_name']}"
                     )
 
             db.session.commit()
             logger.info("Universities data migrated successfully.")
 
-            # Insert courses
+            # Insert courses (unchanged)
             for _, row in courses_df.iterrows():
                 existing_course = Course.query.filter_by(
                     course_name=row["course_name"],
