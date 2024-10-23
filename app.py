@@ -205,6 +205,8 @@ class University(db.Model):
     university_name = db.Column(db.String(256), unique=True, nullable=False)
     state = db.Column(db.String(50), nullable=False)
     program_type = db.Column(db.String(50), nullable=False)
+    website = db.Column(db.String(255))  # Add this
+    established = db.Column(db.Integer)  # Add this
     courses = db.relationship(
         "Course", backref="university", lazy=True, cascade="all, delete-orphan"
     )
