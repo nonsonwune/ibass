@@ -166,3 +166,7 @@ logs/
 *.sh
 push_to_main.sh
 x/
+.csv
+*.csv
+.txt
+*.txt
