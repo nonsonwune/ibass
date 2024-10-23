@@ -100,12 +100,12 @@ function populateModal(uni) {
     institutionName: document.getElementById("institutionName"),
     institutionState: document.getElementById("institutionState"),
     institutionProgramType: document.getElementById("institutionProgramType"),
-    searchCriteria: document.getElementById("searchCriteria"),
-    selectedCourseDetails: document.getElementById("selectedCourseDetails"),
-    selectedCourseContent: document.getElementById("selectedCourseContent"),
-    institutionCoursesList: document.getElementById("institutionCoursesList"),
+    institutionWebsite: document.getElementById("institutionWebsite"),
+    institutionEstablished: document.getElementById("institutionEstablished"),
+    coursesList: document.getElementById("coursesList"),
   };
 
+  // Check only for essential elements
   const missingElements = Object.entries(elements)
     .filter(([key, value]) => !value)
     .map(([key]) => key);
@@ -116,37 +116,51 @@ function populateModal(uni) {
     return;
   }
 
+  // Populate basic information
   elements.institutionName.textContent = uni.university_name;
   elements.institutionState.textContent = uni.state;
   elements.institutionProgramType.textContent = uni.program_type;
-  elements.searchCriteria.textContent =
-    uni.search_type === "course"
-      ? `Course: ${uni.selected_course}`
-      : `Location: ${uni.state}`;
 
-  // Populate selected course details
-  if (uni.selected_course && uni.courses && uni.courses.length > 0) {
-    const selectedCourseData = uni.courses.find(
-      (course) =>
-        course.course_name.toLowerCase() === uni.selected_course.toLowerCase()
-    );
-    if (selectedCourseData) {
-      elements.selectedCourseContent.innerHTML =
-        createCourseHTML(selectedCourseData);
-      elements.selectedCourseDetails.style.display = "block";
-    } else {
-      elements.selectedCourseContent.innerHTML = `<p class="alert alert-warning">No details available for the selected course "${uni.selected_course}" in this institution.</p>`;
-      elements.selectedCourseDetails.style.display = "block";
-    }
+  // Handle website
+  if (uni.website) {
+    elements.institutionWebsite.innerHTML = `<a href="${uni.website}" target="_blank" rel="noopener noreferrer">${uni.website}</a>`;
+  } else {
+    elements.institutionWebsite.textContent = "Not Available";
   }
 
-  // Populate all courses
+  // Handle established date
+  elements.institutionEstablished.textContent =
+    uni.established || "Not Available";
+
+  // Populate courses
   if (uni.courses && uni.courses.length > 0) {
-    elements.institutionCoursesList.innerHTML = uni.courses
-      .map((course, index) => createAccordionItem(course, index))
+    elements.coursesList.innerHTML = uni.courses
+      .map(
+        (course, index) => `
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#course-${index}">
+              ${course.course_name}
+              ${
+                course.abbrv
+                  ? `<span class="ms-2 badge bg-secondary">${course.abbrv}</span>`
+                  : ""
+              }
+            </button>
+          </h2>
+          <div id="course-${index}" class="accordion-collapse collapse">
+            <div class="accordion-body">
+              ${createCourseHTML(course)}
+            </div>
+          </div>
+        </div>
+      `
+      )
       .join("");
   } else {
-    elements.institutionCoursesList.innerHTML =
+    elements.coursesList.innerHTML =
       '<p class="text-muted">No courses available for this institution.</p>';
   }
 

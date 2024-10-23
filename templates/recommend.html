@@ -1,26 +1,6 @@
 <!-- templates/recommend.html -->
 {% extends "base.html" %} {% block title %}Recommended Institutions - Nigerian
-Institutions Finder{% endblock %} {% block extra_head %}
-<style>
-  .institution-info p {
-    margin-bottom: 0.5rem;
-    font-size: 1.1rem;
-  }
-
-  .institution-info i {
-    color: #6c757d;
-  }
-
-  .institution-info a {
-    text-decoration: none;
-    color: #0d6efd;
-  }
-
-  .institution-info a:hover {
-    text-decoration: underline;
-  }
-</style>
-{% endblock %} {% block content %}
+Institutions Finder{% endblock %} {% block content %}
 <div class="container my-5">
   {% with messages = get_flashed_messages(with_categories=true) %} {% if
   messages %} {% for category, message in messages %}
@@ -40,7 +20,9 @@ Institutions Finder{% endblock %} {% block extra_head %}
 
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="/">Home</a></li>
+      <li class="breadcrumb-item">
+        <a href="/"><i class="fas fa-home me-1"></i>Home</a>
+      </li>
       <li class="breadcrumb-item active" aria-current="page">
         Recommended Institutions
       </li>
@@ -49,17 +31,13 @@ Institutions Finder{% endblock %} {% block extra_head %}
 
   <h1 class="mb-4">Recommended Institutions</h1>
 
-  {% if location or university or course %}
+  {% if location or course %}
   <div class="search-criteria mb-4 p-3 bg-light rounded">
-    <h5>Search Criteria:</h5>
+    <h5 class="mb-3">Search Criteria:</h5>
     <div>
       {% if location %}
       <span class="badge bg-primary me-2">
         <i class="fas fa-map-marker-alt me-1"></i> Location: {{ location }}
-      </span>
-      {% endif %} {% if university %}
-      <span class="badge bg-success me-2">
-        <i class="fas fa-university me-1"></i> University: {{ university }}
       </span>
       {% endif %} {% if course %}
       <span class="badge bg-warning text-dark me-2">
@@ -75,19 +53,22 @@ Institutions Finder{% endblock %} {% block extra_head %}
       <div class="card h-100 shadow-sm recommendation-card">
         <div class="card-body d-flex flex-column">
           <h5 class="card-title">{{ uni.university_name }}</h5>
-          <p class="card-text mb-2">
-            <i class="fas fa-map-marker-alt me-1 text-muted"></i>{{ uni.state }}
-          </p>
-          <p class="card-text">
-            <strong>Program Type:</strong> {{ uni.program_type }}
-          </p>
+          <div class="card-text mb-3">
+            <p class="mb-2">
+              <i class="fas fa-map-marker-alt me-2 text-muted"></i>{{ uni.state
+              }}
+            </p>
+            <p class="mb-0">
+              <i class="fas fa-graduation-cap me-2 text-muted"></i>{{
+              uni.program_type }}
+            </p>
+          </div>
           <div class="mt-auto">
             <button
-              class="btn btn-primary w-100 mb-2"
+              class="btn btn-primary w-100 mb-2 view-details-btn"
               data-bs-toggle="modal"
               data-bs-target="#institutionModal"
               data-uni-id="{{ uni.id }}"
-              data-selected-course="{{ course if course else '' }}"
             >
               <i class="fas fa-info-circle me-2"></i> View Details
             </button>
@@ -97,7 +78,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
               data-uni-id="{{ uni.id }}"
               data-bookmarked="{{ 'true' if uni.id in user_bookmarks else 'false' }}"
             >
-              <i class="fas fa-bookmark"></i>
+              <i class="fas fa-bookmark me-1"></i>
               <span class="bookmark-text">
                 {% if uni.id in user_bookmarks %}Bookmarked{% else %}Bookmark{%
                 endif %}
@@ -108,7 +89,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
               href="{{ url_for('login', next=request.url) }}"
               class="btn btn-outline-secondary w-100"
             >
-              <i class="fas fa-bookmark"></i> Login to Bookmark
+              <i class="fas fa-bookmark me-1"></i> Login to Bookmark
             </a>
             {% endif %}
           </div>
@@ -119,6 +100,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
   </div>
   {% else %}
   <div class="alert alert-info" role="alert">
+    <i class="fas fa-info-circle me-2"></i>
     No matching institutions found. Please try different search criteria.
   </div>
   {% endif %}
@@ -130,6 +112,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
   </div>
 </div>
 
+<!-- Institution Details Modal -->
 <div
   class="modal fade"
   id="institutionModal"
@@ -139,7 +122,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
 >
   <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content">
-      <div class="modal-header institution">
+      <div class="modal-header">
         <h5 class="modal-title" id="institutionModalLabel">
           <i class="fas fa-university me-2"></i> Institution Details
         </h5>
@@ -153,125 +136,113 @@ Institutions Finder{% endblock %} {% block extra_head %}
       <div class="modal-body">
         <div
           id="loadingIndicator"
-          class="text-center mb-3"
+          class="text-center py-4"
           style="display: none"
         >
           <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading...</span>
           </div>
-        </div>
-
-        <div id="institutionDetails" style="display: none">
-          <div class="row">
-            <div class="col-12">
-              <h3 id="institutionName"></h3>
-              <div class="institution-info">
-                <p>
-                  <strong
-                    ><i class="fas fa-map-marker-alt me-2"></i>State:</strong
-                  >
-                  <span id="institutionState"></span>
-                </p>
-                <p>
-                  <strong
-                    ><i class="fas fa-graduation-cap me-2"></i>Program
-                    Type:</strong
-                  >
-                  <span id="institutionProgramType"></span>
-                </p>
-                <p>
-                  <strong><i class="fas fa-globe me-2"></i>Website:</strong>
-                  <a
-                    id="institutionWebsite"
-                    href=""
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  ></a>
-                </p>
-                <p>
-                  <strong
-                    ><i class="fas fa-calendar-alt me-2"></i
-                    >Established:</strong
-                  >
-                  <span id="institutionEstablished"></span>
-                </p>
-                <p>
-                  <strong
-                    ><i class="fas fa-search me-2"></i>Search Criteria:</strong
-                  >
-                  <span id="searchCriteria"></span>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <ul class="nav nav-tabs mt-4" id="institutionTab" role="tablist">
-            <li class="nav-item" role="presentation">
-              <button
-                class="nav-link active"
-                id="overview-tab"
-                data-bs-toggle="tab"
-                data-bs-target="#overview"
-                type="button"
-                role="tab"
-                aria-controls="overview"
-                aria-selected="true"
-              >
-                Selected Course's Requirements
-              </button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button
-                class="nav-link"
-                id="courses-tab"
-                data-bs-toggle="tab"
-                data-bs-target="#courses"
-                type="button"
-                role="tab"
-                aria-controls="courses"
-                aria-selected="false"
-              >
-                All Courses
-              </button>
-            </li>
-          </ul>
-          <div class="tab-content" id="institutionTabContent">
-            <div
-              class="tab-pane fade show active p-3"
-              id="overview"
-              role="tabpanel"
-              aria-labelledby="overview-tab"
-            >
-              <div
-                id="selectedCourseDetails"
-                class="mt-3"
-                style="display: none"
-              >
-                <h4>Selected Course <i class="fas fa-book"></i></h4>
-                <div id="selectedCourseContent"></div>
-              </div>
-            </div>
-            <div
-              class="tab-pane fade p-3"
-              id="courses"
-              role="tabpanel"
-              aria-labelledby="courses-tab"
-            >
-              <div id="institutionCoursesList" class="accordion"></div>
-            </div>
-          </div>
+          <p class="mt-2">Loading institution details...</p>
         </div>
 
         <div
           id="modalErrorMessage"
           class="alert alert-danger"
-          role="alert"
           style="display: none"
         ></div>
+
+        <div id="institutionDetails" style="display: none">
+          <div class="row">
+            <div class="col-12">
+              <h3 id="institutionName" class="mb-4"></h3>
+              <div class="institution-info">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                      <div>
+                        <strong>State:</strong>
+                        <span id="institutionState" class="ms-2"></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-graduation-cap me-2 text-primary"></i>
+                      <div>
+                        <strong>Program Type:</strong>
+                        <span id="institutionProgramType" class="ms-2"></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-globe me-2 text-primary"></i>
+                      <div>
+                        <strong>Website:</strong>
+                        <span id="institutionWebsite" class="ms-2"></span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-calendar-alt me-2 text-primary"></i>
+                      <div>
+                        <strong>Established:</strong>
+                        <span id="institutionEstablished" class="ms-2"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="courses-section mt-4">
+            <ul class="nav nav-tabs" id="institutionTab" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button
+                  class="nav-link active"
+                  id="courses-tab"
+                  data-bs-toggle="tab"
+                  data-bs-target="#courses"
+                  type="button"
+                  role="tab"
+                  aria-controls="courses"
+                  aria-selected="true"
+                >
+                  <i class="fas fa-list me-1"></i> Available Courses
+                </button>
+              </li>
+            </ul>
+
+            <div
+              class="tab-content p-3 border border-top-0 rounded-bottom"
+              id="institutionTabContent"
+            >
+              <div
+                class="tab-pane fade show active"
+                id="courses"
+                role="tabpanel"
+                aria-labelledby="courses-tab"
+              >
+                <div class="mb-3">
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="courseSearch"
+                    placeholder="Search courses..."
+                  />
+                </div>
+                <div id="coursesList" class="accordion"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times me-2"></i> Close
+          <i class="fas fa-times me-2"></i>Close
         </button>
       </div>
     </div>
@@ -279,98 +250,13 @@ Institutions Finder{% endblock %} {% block extra_head %}
 </div>
 {% endblock %} {% block scripts %} {{ super() }}
 <script>
-  function resetModal() {
-    const elements = {
-      institutionDetails: document.getElementById("institutionDetails"),
-      modalErrorMessage: document.getElementById("modalErrorMessage"),
-      loadingIndicator: document.getElementById("loadingIndicator"),
-      institutionName: document.getElementById("institutionName"),
-      institutionState: document.getElementById("institutionState"),
-      institutionProgramType: document.getElementById("institutionProgramType"),
-      institutionWebsite: document.getElementById("institutionWebsite"),
-      institutionEstablished: document.getElementById("institutionEstablished"),
-      searchCriteria: document.getElementById("searchCriteria"),
-      selectedCourseContent: document.getElementById("selectedCourseContent"),
-      selectedCourseDetails: document.getElementById("selectedCourseDetails"),
-      institutionCoursesList: document.getElementById("institutionCoursesList"),
-    };
+  $(document).ready(function () {
+    initializeInstitutionModal();
+    initializeBookmarkButtons();
 
-    elements.institutionDetails.style.display = "none";
-    elements.modalErrorMessage.style.display = "none";
-    elements.loadingIndicator.style.display = "block";
-
-    elements.institutionName.textContent = "";
-    elements.institutionState.textContent = "";
-    elements.institutionProgramType.textContent = "";
-    elements.institutionWebsite.textContent = "";
-    elements.institutionWebsite.removeAttribute("href");
-    elements.institutionEstablished.textContent = "";
-    elements.searchCriteria.textContent = "";
-    elements.selectedCourseContent.innerHTML = "";
-    elements.institutionCoursesList.innerHTML = "";
-    elements.selectedCourseDetails.style.display = "none";
-  }
-
-  function populateModal(uni) {
-    const elements = {
-      institutionName: document.getElementById("institutionName"),
-      institutionState: document.getElementById("institutionState"),
-      institutionProgramType: document.getElementById("institutionProgramType"),
-      institutionWebsite: document.getElementById("institutionWebsite"),
-      institutionEstablished: document.getElementById("institutionEstablished"),
-      searchCriteria: document.getElementById("searchCriteria"),
-      selectedCourseDetails: document.getElementById("selectedCourseDetails"),
-      selectedCourseContent: document.getElementById("selectedCourseContent"),
-      institutionCoursesList: document.getElementById("institutionCoursesList"),
-    };
-
-    elements.institutionName.textContent = uni.university_name;
-    elements.institutionState.textContent = uni.state;
-    elements.institutionProgramType.textContent = uni.program_type;
-
-    if (uni.website) {
-      elements.institutionWebsite.href = uni.website;
-      elements.institutionWebsite.textContent = uni.website;
-    } else {
-      elements.institutionWebsite.textContent = "Not available";
-      elements.institutionWebsite.removeAttribute("href");
+    if (window.isAuthenticated) {
+      fetchUserBookmarks();
     }
-
-    elements.institutionEstablished.textContent =
-      uni.established || "Not available";
-
-    elements.searchCriteria.textContent = uni.selected_course
-      ? `Course: ${uni.selected_course}`
-      : `Location: ${uni.state}`;
-
-    if (uni.selected_course && uni.courses && uni.courses.length > 0) {
-      const selectedCourseData = uni.courses.find(
-        (course) =>
-          course.course_name.toLowerCase() === uni.selected_course.toLowerCase()
-      );
-      if (selectedCourseData) {
-        elements.selectedCourseContent.innerHTML =
-          createCourseHTML(selectedCourseData);
-        elements.selectedCourseDetails.style.display = "block";
-      } else {
-        elements.selectedCourseContent.innerHTML = `<p class="alert alert-warning">No details available for the selected course "${uni.selected_course}" in this institution.</p>`;
-        elements.selectedCourseDetails.style.display = "block";
-      }
-    } else {
-      elements.selectedCourseDetails.style.display = "none";
-    }
-
-    if (uni.courses && uni.courses.length > 0) {
-      elements.institutionCoursesList.innerHTML = uni.courses
-        .map((course, index) => createAccordionItem(course, index))
-        .join("");
-    } else {
-      elements.institutionCoursesList.innerHTML =
-        '<p class="text-muted">No courses available for this institution.</p>';
-    }
-
-    document.getElementById("loadingIndicator").style.display = "none";
-    document.getElementById("institutionDetails").style.display = "block";
-  }
+  });
 </script>
 {% endblock %}

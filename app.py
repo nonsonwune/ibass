@@ -449,30 +449,37 @@ def get_courses():
 @app.route("/api/programme_types", methods=["GET"])
 def get_programme_types():
     state = request.args.get("state")
-    if state:
-        programme_types = (
-            db.session.query(University.program_type)
-            .filter(University.state == state)
-            .distinct()
-            .order_by(University.program_type)
-            .all()
-        )
-    else:
-        programme_types = (
-            db.session.query(University.program_type)
-            .distinct()
-            .order_by(University.program_type)
-            .all()
-        )
+    try:
+        if state:
+            programme_types = (
+                db.session.query(University.program_type)
+                .filter(University.state == state)
+                .distinct()
+                .order_by(University.program_type)
+                .all()
+            )
+        else:
+            programme_types = (
+                db.session.query(University.program_type)
+                .distinct()
+                .order_by(University.program_type)
+                .all()
+            )
 
-    # Convert list of tuples to list of strings
-    programme_types_list = [ptype[0] for ptype in programme_types]
+        # Convert list of tuples to list of strings
+        programme_types_list = [ptype[0] for ptype in programme_types]
 
-    # Include the programme groups as options
-    programme_types_list.extend(PROGRAMME_GROUPS.keys())
-    programme_types_list = list(set(programme_types_list))  # Remove duplicates
+        # Only include ALL_INSTITUTION_TYPES from the special types
+        if "ALL_INSTITUTION_TYPES" not in programme_types_list:
+            programme_types_list.append("ALL_INSTITUTION_TYPES")
 
-    return jsonify(programme_types_list)
+        # Filter out other ALL_ types
+        programme_types_list = [pt for pt in programme_types_list if not (pt.startswith('ALL_') and pt != 'ALL_INSTITUTION_TYPES')]
+
+        return jsonify(programme_types_list)
+    except Exception as e:
+        app.logger.error(f"Error in get_programme_types: {str(e)}")
+        return jsonify({"error": "An error occurred while fetching programme types."}), 500
 
 
 
@@ -992,24 +999,20 @@ def add_comment():
 @app.route("/api/institution/<int:uni_id>")
 def get_institution_details(uni_id):
     try:
-        selected_course = request.args.get("course", "").strip()
-
         university = db.session.get(University, uni_id)
         if not university:
             return jsonify({"error": "Institution not found."}), 404
 
-        courses = Course.query.filter_by(
-            university_name=university.university_name
-        ).all()
+        courses = Course.query.filter_by(university_name=university.university_name).all()
 
+        # Format the response data
         response_data = {
             "id": university.id,
             "university_name": university.university_name,
             "state": university.state,
             "program_type": university.program_type,
-            "website": university.website,
-            "established": university.established,
-            "selected_course": selected_course,
+            "website": university.website,  # Pass the raw website URL
+            "established": university.established,  # Pass the raw established year
             "courses": [
                 {
                     "id": course.id,
@@ -1020,16 +1023,13 @@ def get_institution_details(uni_id):
                     "abbrv": course.abbrv or "N/A",
                 }
                 for course in courses
-            ],
+            ]
         }
 
         return jsonify(response_data), 200
     except Exception as e:
         app.logger.error(f"Error in get_institution_details: {str(e)}", exc_info=True)
-        return (
-            jsonify({"error": "An error occurred while fetching institution details."}),
-            500,
-        )
+        return jsonify({"error": "An error occurred while fetching institution details."}), 500
 
 
 
