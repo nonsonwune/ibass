@@ -261,6 +261,7 @@ endblock %} {% block extra_head %}
     });
 
     // When state is selected, load programme types
+    // When state is selected, load programme types
     $("#location").change(function () {
       const selectedState = $(this).val();
       const programmeTypeSelect = $("#programmeType");
@@ -284,38 +285,16 @@ endblock %} {% block extra_head %}
           "/api/programme_types",
           { state: selectedState },
           function (data) {
-            const degreeGroup = $("<optgroup>").attr(
-              "label",
-              "Degree Awarding Institutions"
-            );
-            const nceGroup = $("<optgroup>").attr("label", "NCE");
-
+            // Iterate over each programme type and append to dropdown
             data.forEach((type) => {
-              if (type === "ALL_INSTITUTION_TYPES") return;
+              if (type === "ALL_INSTITUTION_TYPES") return; // Skip if already added
 
               const option = $("<option></option>")
                 .attr("value", type)
                 .text(type);
 
-              if (
-                type.includes("COLLEGE OF EDUCATION") ||
-                programmeGroups.ALL_NCE.includes(type)
-              ) {
-                nceGroup.append(option);
-              } else if (
-                type.includes("UNIVERSIT") ||
-                programmeGroups.ALL_DEGREE_AWARDING_INSTITUTIONS.includes(type)
-              ) {
-                degreeGroup.append(option);
-              }
+              programmeTypeSelect.append(option);
             });
-
-            if (degreeGroup.children().length > 0) {
-              programmeTypeSelect.append(degreeGroup);
-            }
-            if (nceGroup.children().length > 0) {
-              programmeTypeSelect.append(nceGroup);
-            }
 
             programmeTypeSelect.prop("disabled", false);
           }

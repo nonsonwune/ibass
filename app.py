@@ -445,7 +445,6 @@ def get_courses():
         ]
     )
 
-
 @app.route("/api/programme_types", methods=["GET"])
 def get_programme_types():
     state = request.args.get("state")
@@ -469,17 +468,23 @@ def get_programme_types():
         # Convert list of tuples to list of strings
         programme_types_list = [ptype[0] for ptype in programme_types]
 
-        # Only include ALL_INSTITUTION_TYPES from the special types
-        if "ALL_INSTITUTION_TYPES" not in programme_types_list:
-            programme_types_list.append("ALL_INSTITUTION_TYPES")
+        # Add "ALL_INSTITUTION_TYPES" as the first option if not already present
+        if programme_types_list and "ALL_INSTITUTION_TYPES" not in programme_types_list:
+            programme_types_list.insert(0, "ALL_INSTITUTION_TYPES")
 
-        # Filter out other ALL_ types
-        programme_types_list = [pt for pt in programme_types_list if not (pt.startswith('ALL_') and pt != 'ALL_INSTITUTION_TYPES')]
+        # Sort programme types alphabetically, keeping "ALL_INSTITUTION_TYPES" at the top
+        if "ALL_INSTITUTION_TYPES" in programme_types_list:
+            all_institution = programme_types_list.pop(programme_types_list.index("ALL_INSTITUTION_TYPES"))
+            programme_types_list.sort()
+            programme_types_list.insert(0, all_institution)
+        else:
+            programme_types_list.sort()
 
         return jsonify(programme_types_list)
     except Exception as e:
         app.logger.error(f"Error in get_programme_types: {str(e)}")
         return jsonify({"error": "An error occurred while fetching programme types."}), 500
+
 
 
 
