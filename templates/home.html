@@ -1,4 +1,5 @@
 <!-- templates/home.html -->
+<!-- templates/home.html -->
 {% extends "base.html" %} {% block title %}Home - Nigerian Institutions Finder{%
 endblock %} {% block content %}
 <section class="hero hero-with-bg text-center" id="hero-section">
@@ -210,6 +211,19 @@ endblock %} {% block content %}
                 $("<option></option>")
                   .attr("value", "")
                   .text("Select Institution Type")
+              )
+              .append(
+                $("<option></option>")
+                  .attr("value", "ALL_INSTITUTION_TYPES")
+                  .text("All Institution Types")
+              )
+              .append(
+                $("<option></option>")
+                  .attr("value", "ALL_DEGREE_AWARDING_INSTITUTIONS")
+                  .text("All Degree Awarding Institutions")
+              )
+              .append(
+                $("<option></option>").attr("value", "ALL_NCE").text("All NCE")
               );
 
             // Create object to store optgroups
@@ -227,7 +241,6 @@ endblock %} {% block content %}
               // Check each group for the programme type
               Object.entries(programmeGroups).forEach(
                 ([groupName, programmes]) => {
-                  // Check if the programme type or a similar variant exists in the group
                   const matchingProgramme = programmes.find(
                     (p) =>
                       programmeType.includes(p) ||
@@ -284,7 +297,7 @@ endblock %} {% block content %}
       var selectedState = $("#location").val();
       var selectedProgrammeType = $("#programmeType").val();
 
-      if (selectedState && selectedProgrammeType) {
+      if (selectedState && selectedProgrammeType !== "") {
         $("#step1").removeClass("active");
         $("#step2").addClass("active");
 
@@ -306,7 +319,6 @@ endblock %} {% block content %}
                 $("<option></option>").attr("value", "").text("Select a Course")
               );
 
-            // Use a Set to keep track of unique course names
             var uniqueCourses = new Set();
 
             $.each(data, function (index, course) {
@@ -334,8 +346,8 @@ endblock %} {% block content %}
           alert("Please select a state and institution type.");
         } else if (!selectedState) {
           alert("Please select a state.");
-        } else if (!selectedProgrammeType) {
-          alert("Please select a programme type.");
+        } else if (selectedProgrammeType === "") {
+          alert("Please select an institution type.");
         }
       }
     });

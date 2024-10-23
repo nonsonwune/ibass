@@ -115,6 +115,28 @@ app.config["MAIL_DEFAULT_SENDER"] = os.getenv("MAIL_DEFAULT_SENDER")
 # Initialize Flask-Mail
 mail = Mail(app)
 
+PROGRAMME_GROUPS = {
+    "ALL_DEGREE_AWARDING_INSTITUTIONS": [
+        "E-LEARNING UNIVERSITIES OF NIGERIA",
+        "FEDERAL UNIVERSITIES",
+        "FEDERAL UNIVERSITIES OF AGRICULTURE",
+        "FEDERAL UNIVERSITIES OF HEALTH SCIENCES",
+        "FEDERAL UNIVERSITIES OF TECHNOLOGY",
+        "OPEN AND DISTANCE LEARNING PROGRAMMES",
+        "OTHER DEGREE AWARDING INSTITUTIONS",
+        "PRIVATE UNIVERSITIES",
+        "SANDWICH PROGRAMMES",
+        "STATE UNIVERSITIES",
+        "STATE UNIVERSITIES OF AGRICULTURE",
+        "STATE UNIVERSITIES OF MEDICAL SCIENCES",
+        "STATE UNIVERSITIES OF TECHNOLOGY",
+    ],
+    "ALL_NCE": [
+        "FEDERAL COLLEGES OF EDUCATION",
+        "STATE COLLEGES OF EDUCATION",
+        "PRIVATE COLLEGES OF EDUCATION",
+    ],
+}
 
 # Database Models
 class User(UserMixin, db.Model):
@@ -398,7 +420,13 @@ def get_courses():
     if state:
         query = query.filter(University.state == state)
     if programme_type:
-        query = query.filter(University.program_type == programme_type)
+        if programme_type in PROGRAMME_GROUPS:
+            programme_types = PROGRAMME_GROUPS[programme_type]
+            query = query.filter(University.program_type.in_(programme_types))
+        elif programme_type == "ALL_INSTITUTION_TYPES":
+            pass  # Do not filter by programme_type
+        else:
+            query = query.filter(University.program_type == programme_type)
     if university:
         query = query.filter(University.university_name == university)
     courses = query.order_by(Course.course_name).all()
@@ -436,7 +464,16 @@ def get_programme_types():
             .order_by(University.program_type)
             .all()
         )
-    return jsonify([ptype[0] for ptype in programme_types])
+
+    # Convert list of tuples to list of strings
+    programme_types_list = [ptype[0] for ptype in programme_types]
+
+    # Include the programme groups as options
+    programme_types_list.extend(PROGRAMME_GROUPS.keys())
+    programme_types_list = list(set(programme_types_list))  # Remove duplicates
+
+    return jsonify(programme_types_list)
+
 
 
 
@@ -457,7 +494,13 @@ def recommend():
     if location:
         query = query.filter(University.state == location)
     if programme_type:
-        query = query.filter(University.program_type == programme_type)
+        if programme_type in PROGRAMME_GROUPS:
+            programme_types = PROGRAMME_GROUPS[programme_type]
+            query = query.filter(University.program_type.in_(programme_types))
+        elif programme_type == "ALL_INSTITUTION_TYPES":
+            pass  # Do not filter by programme_type
+        else:
+            query = query.filter(University.program_type == programme_type)
     if preferred_university:
         query = query.filter(University.university_name == preferred_university)
     if preferred_course:
@@ -483,6 +526,7 @@ def recommend():
                 }
                 for course in uni.courses
             ],
+            "selected_course": preferred_course,
         }
         recommendations.append(uni_data)
 
@@ -501,6 +545,7 @@ def recommend():
         course=preferred_course,
         user_bookmarks=user_bookmarks,
     )
+
 
 
 
@@ -947,27 +992,23 @@ def add_comment():
 @app.route("/api/institution/<int:uni_id>")
 def get_institution_details(uni_id):
     try:
-        search_type = request.args.get("search_type", "location")
-        selected_course = request.args.get("course", "")
+        selected_course = request.args.get("course", "").strip()
 
         university = db.session.get(University, uni_id)
+        if not university:
+            return jsonify({"error": "Institution not found."}), 404
+
         courses = Course.query.filter_by(
             university_name=university.university_name
         ).all()
-
-        if search_type == "course" and selected_course:
-            courses = [
-                course
-                for course in courses
-                if course.course_name.lower() == selected_course.lower()
-            ]
 
         response_data = {
             "id": university.id,
             "university_name": university.university_name,
             "state": university.state,
             "program_type": university.program_type,
-            "search_type": search_type,
+            "website": university.website,
+            "established": university.established,
             "selected_course": selected_course,
             "courses": [
                 {
@@ -975,8 +1016,7 @@ def get_institution_details(uni_id):
                     "course_name": course.course_name,
                     "utme_requirements": course.utme_requirements or "N/A",
                     "subjects": course.subjects or "N/A",
-                    "direct_entry_requirements": course.direct_entry_requirements
-                    or "N/A",
+                    "direct_entry_requirements": course.direct_entry_requirements or "N/A",
                     "abbrv": course.abbrv or "N/A",
                 }
                 for course in courses
@@ -990,6 +1030,7 @@ def get_institution_details(uni_id):
             jsonify({"error": "An error occurred while fetching institution details."}),
             500,
         )
+
 
 
 @app.route("/admin")
