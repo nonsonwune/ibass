@@ -995,10 +995,10 @@ def add_comment():
 
     return redirect(url_for("contact"))
 
-
 @app.route("/api/institution/<int:uni_id>")
 def get_institution_details(uni_id):
     try:
+        selected_course = request.args.get('selected_course')
         university = db.session.get(University, uni_id)
         if not university:
             return jsonify({"error": "Institution not found."}), 404
@@ -1011,8 +1011,9 @@ def get_institution_details(uni_id):
             "university_name": university.university_name,
             "state": university.state,
             "program_type": university.program_type,
-            "website": university.website,  # Pass the raw website URL
-            "established": university.established,  # Pass the raw established year
+            "website": university.website,
+            "established": university.established,
+            "selected_course": selected_course,  # Added this line
             "courses": [
                 {
                     "id": course.id,
@@ -1030,7 +1031,6 @@ def get_institution_details(uni_id):
     except Exception as e:
         app.logger.error(f"Error in get_institution_details: {str(e)}", exc_info=True)
         return jsonify({"error": "An error occurred while fetching institution details."}), 500
-
 
 
 @app.route("/admin")

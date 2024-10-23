@@ -69,6 +69,7 @@ Institutions Finder{% endblock %} {% block content %}
               data-bs-toggle="modal"
               data-bs-target="#institutionModal"
               data-uni-id="{{ uni.id }}"
+              data-selected-course="{{ course }}"
             >
               <i class="fas fa-info-circle me-2"></i> View Details
             </button>
@@ -152,6 +153,7 @@ Institutions Finder{% endblock %} {% block content %}
         ></div>
 
         <div id="institutionDetails" style="display: none">
+          <!-- Institution Info Section -->
           <div class="row">
             <div class="col-12">
               <h3 id="institutionName" class="mb-4"></h3>
@@ -198,6 +200,22 @@ Institutions Finder{% endblock %} {% block content %}
             </div>
           </div>
 
+          <!-- Selected Course Section -->
+          <div id="selectedCourseSection" class="mt-4" style="display: none">
+            <div class="card border-primary">
+              <div
+                class="card-header bg-primary text-white d-flex align-items-center"
+              >
+                <i class="fas fa-star me-2"></i>
+                <h5 class="mb-0">Selected Course</h5>
+              </div>
+              <div class="card-body" id="selectedCourseDetails">
+                <!-- Content will be populated by JavaScript -->
+              </div>
+            </div>
+          </div>
+
+          <!-- All Courses Section -->
           <div class="courses-section mt-4">
             <ul class="nav nav-tabs" id="institutionTab" role="tablist">
               <li class="nav-item" role="presentation">
@@ -208,10 +226,8 @@ Institutions Finder{% endblock %} {% block content %}
                   data-bs-target="#courses"
                   type="button"
                   role="tab"
-                  aria-controls="courses"
-                  aria-selected="true"
                 >
-                  <i class="fas fa-list me-1"></i> Available Courses
+                  <i class="fas fa-list me-1"></i> All Available Courses
                 </button>
               </li>
             </ul>
@@ -224,7 +240,6 @@ Institutions Finder{% endblock %} {% block content %}
                 class="tab-pane fade show active"
                 id="courses"
                 role="tabpanel"
-                aria-labelledby="courses-tab"
               >
                 <div class="mb-3">
                   <input

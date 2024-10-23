@@ -10,23 +10,55 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function initializeInstitutionModal() {
+  console.log("Initializing institution modal");
+
   const institutionModal = document.getElementById("institutionModal");
+  if (!institutionModal) return;
 
-  if (institutionModal) {
-    institutionModal.addEventListener("show.bs.modal", function (event) {
-      const button = event.relatedTarget;
-      const uniId = button.getAttribute("data-uni-id");
-      const selectedCourse = button.getAttribute("data-selected-course") || "";
+  // Setup modal events
+  institutionModal.addEventListener("show.bs.modal", function (event) {
+    const button = event.relatedTarget;
+    const uniId = button.getAttribute("data-uni-id");
+    const selectedCourse = button.getAttribute("data-selected-course");
+    resetModal();
 
-      resetModal();
+    if (uniId) {
+      fetchInstitutionDetails(uniId, selectedCourse);
+    } else {
+      showErrorMessage("Unable to retrieve institution details.");
+    }
+  });
 
-      if (uniId) {
-        fetchInstitutionDetails(uniId, selectedCourse);
-      } else {
-        showErrorMessage("Unable to retrieve institution details.");
+  // Initialize course search when modal is shown
+  institutionModal.addEventListener("shown.bs.modal", function () {
+    setupCourseSearch();
+  });
+}
+
+function fetchInstitutionDetails(uniId, selectedCourse) {
+  const url = selectedCourse
+    ? `/api/institution/${uniId}?selected_course=${encodeURIComponent(
+        selectedCourse
+      )}`
+    : `/api/institution/${uniId}`;
+
+  fetch(url)
+    .then((response) => {
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
+      return response.json();
+    })
+    .then((data) => {
+      // Ensure selected_course is set in the data
+      if (selectedCourse) {
+        data.selected_course = selectedCourse;
       }
+      populateModal(data);
+    })
+    .catch((error) => {
+      console.error("Error fetching institution details:", error);
+      showErrorMessage("Error loading institution details. Please try again.");
     });
-  }
 }
 
 function resetModal() {
@@ -37,60 +69,80 @@ function resetModal() {
     institutionName: document.getElementById("institutionName"),
     institutionState: document.getElementById("institutionState"),
     institutionProgramType: document.getElementById("institutionProgramType"),
-    searchCriteria: document.getElementById("searchCriteria"),
-    selectedCourseContent: document.getElementById("selectedCourseContent"),
-    institutionCoursesList: document.getElementById("institutionCoursesList"),
+    institutionWebsite: document.getElementById("institutionWebsite"),
+    institutionEstablished: document.getElementById("institutionEstablished"),
+    coursesList: document.getElementById("coursesList"),
   };
 
-  if (elements.institutionDetails)
-    elements.institutionDetails.style.display = "none";
-  if (elements.modalErrorMessage)
-    elements.modalErrorMessage.style.display = "none";
-  if (elements.loadingIndicator)
-    elements.loadingIndicator.style.display = "block";
+  // Hide/show appropriate elements
+  elements.institutionDetails.style.display = "none";
+  elements.modalErrorMessage.style.display = "none";
+  elements.loadingIndicator.style.display = "block";
 
-  if (elements.institutionName) elements.institutionName.textContent = "";
-  if (elements.institutionState) elements.institutionState.textContent = "";
-  if (elements.institutionProgramType)
-    elements.institutionProgramType.textContent = "";
-  if (elements.searchCriteria) elements.searchCriteria.textContent = "";
-  if (elements.selectedCourseContent)
-    elements.selectedCourseContent.innerHTML = "";
-  if (elements.institutionCoursesList)
-    elements.institutionCoursesList.innerHTML = "";
+  // Clear content
+  elements.institutionName.textContent = "";
+  elements.institutionState.textContent = "";
+  elements.institutionProgramType.textContent = "";
+  elements.institutionWebsite.textContent = "";
+  elements.institutionEstablished.textContent = "";
+  elements.coursesList.innerHTML = "";
+}
+function setupCourseSearch() {
+  const searchInput = document.getElementById("courseSearch");
+  if (!searchInput) return;
+
+  // Remove any existing event listeners
+  searchInput.removeEventListener("input", handleCourseSearch);
+
+  // Add new event listener
+  searchInput.addEventListener("input", handleCourseSearch);
+
+  // Clear search input
+  searchInput.value = "";
 }
 
-function fetchInstitutionDetails(uniId, selectedCourse) {
-  console.log(
-    `Fetching details for institution ID: ${uniId}, Selected Course: ${selectedCourse}`
+function handleCourseSearch(event) {
+  const searchTerm = event.target.value.toLowerCase();
+  const accordionItems = document.querySelectorAll(
+    "#coursesList .accordion-item"
   );
-  fetch(
-    `/api/institution/${uniId}?course=${encodeURIComponent(selectedCourse)}`,
-    {
-      headers: {
-        "X-CSRFToken": window.csrfToken,
-        Accept: "application/json",
-      },
-      credentials: "same-origin",
-    }
-  )
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+
+  accordionItems.forEach((item) => {
+    const courseName = item
+      .querySelector(".accordion-button")
+      .textContent.toLowerCase();
+    const isVisible = courseName.includes(searchTerm);
+
+    // Handle visibility
+    if (isVisible) {
+      item.style.display = "block";
+      // If it's a selected course, ensure it remains highlighted
+      if (item.classList.contains("selected-course")) {
+        item.classList.add("search-match");
       }
-      return response.json();
-    })
-    .then((uni) => {
-      console.log("Received university data:", uni);
-      populateModal(uni);
-    })
-    .catch((error) => {
-      console.error("Error fetching institution details:", error);
-      hideLoadingIndicator();
-      showErrorMessage(
-        `Error loading institution details. Please try again. Error: ${error.message}`
-      );
-    });
+    } else {
+      item.style.display = "none";
+      item.classList.remove("search-match");
+    }
+  });
+
+  // Update no results message
+  const visibleItems = document.querySelectorAll(
+    '#coursesList .accordion-item[style="display: block"]'
+  );
+  const noResultsMsg = document.getElementById("noCoursesFound");
+
+  if (visibleItems.length === 0) {
+    if (!noResultsMsg) {
+      const message = document.createElement("div");
+      message.id = "noCoursesFound";
+      message.className = "alert alert-info mt-3";
+      message.textContent = "No courses found matching your search.";
+      document.getElementById("coursesList").appendChild(message);
+    }
+  } else if (noResultsMsg) {
+    noResultsMsg.remove();
+  }
 }
 
 function populateModal(uni) {
@@ -102,21 +154,12 @@ function populateModal(uni) {
     institutionProgramType: document.getElementById("institutionProgramType"),
     institutionWebsite: document.getElementById("institutionWebsite"),
     institutionEstablished: document.getElementById("institutionEstablished"),
+    selectedCourseSection: document.getElementById("selectedCourseSection"),
+    selectedCourseDetails: document.getElementById("selectedCourseDetails"),
     coursesList: document.getElementById("coursesList"),
   };
 
-  // Check only for essential elements
-  const missingElements = Object.entries(elements)
-    .filter(([key, value]) => !value)
-    .map(([key]) => key);
-
-  if (missingElements.length > 0) {
-    console.error("Missing elements:", missingElements);
-    showErrorMessage("Required modal elements are missing.");
-    return;
-  }
-
-  // Populate basic information
+  // Populate basic institution information
   elements.institutionName.textContent = uni.university_name;
   elements.institutionState.textContent = uni.state;
   elements.institutionProgramType.textContent = uni.program_type;
@@ -132,32 +175,88 @@ function populateModal(uni) {
   elements.institutionEstablished.textContent =
     uni.established || "Not Available";
 
-  // Populate courses
-  if (uni.courses && uni.courses.length > 0) {
-    elements.coursesList.innerHTML = uni.courses
-      .map(
-        (course, index) => `
-        <div class="accordion-item">
-          <h2 class="accordion-header">
-            <button class="accordion-button collapsed" type="button" 
-                    data-bs-toggle="collapse" 
-                    data-bs-target="#course-${index}">
-              ${course.course_name}
-              ${
-                course.abbrv
-                  ? `<span class="ms-2 badge bg-secondary">${course.abbrv}</span>`
-                  : ""
-              }
-            </button>
-          </h2>
-          <div id="course-${index}" class="accordion-collapse collapse">
-            <div class="accordion-body">
-              ${createCourseHTML(course)}
-            </div>
+  // Handle selected course if any
+  if (uni.selected_course && uni.courses?.length > 0) {
+    const selectedCourseData = uni.courses.find(
+      (course) =>
+        course.course_name.toLowerCase() === uni.selected_course.toLowerCase()
+    );
+
+    if (selectedCourseData) {
+      elements.selectedCourseSection.style.display = "block";
+      elements.selectedCourseDetails.innerHTML = `
+        <h4 class="mb-3">${selectedCourseData.course_name}</h4>
+        <div class="selected-course-requirements">
+          <div class="mb-3">
+            <h6 class="text-primary"><i class="fas fa-file-alt me-2"></i>UTME Requirements</h6>
+            <p class="mb-0">${
+              selectedCourseData.utme_requirements || "Not specified"
+            }</p>
+          </div>
+          <div class="mb-3">
+            <h6 class="text-primary"><i class="fas fa-door-open me-2"></i>Direct Entry Requirements</h6>
+            <p class="mb-0">${
+              selectedCourseData.direct_entry_requirements || "Not specified"
+            }</p>
+          </div>
+          <div>
+            <h6 class="text-primary"><i class="fas fa-books me-2"></i>Required Subjects</h6>
+            <p class="mb-0">${
+              selectedCourseData.subjects || "Not specified"
+            }</p>
           </div>
         </div>
-      `
-      )
+      `;
+    } else {
+      elements.selectedCourseSection.style.display = "none";
+    }
+  } else {
+    elements.selectedCourseSection.style.display = "none";
+  }
+
+  // Populate courses list
+  if (uni.courses && uni.courses.length > 0) {
+    elements.coursesList.innerHTML = uni.courses
+      .map((course, index) => {
+        const isSelected =
+          uni.selected_course &&
+          course.course_name.toLowerCase() ===
+            uni.selected_course.toLowerCase();
+
+        return `
+          <div class="accordion-item ${isSelected ? "selected-course" : ""}">
+            <h2 class="accordion-header">
+              <button class="accordion-button ${
+                !isSelected ? "collapsed" : ""
+              }" 
+                      type="button" 
+                      data-bs-toggle="collapse" 
+                      data-bs-target="#course-${index}"
+                      aria-expanded="${isSelected}"
+                      aria-controls="course-${index}">
+                ${course.course_name}
+                ${
+                  course.abbrv
+                    ? `<span class="ms-2 badge bg-secondary">${course.abbrv}</span>`
+                    : ""
+                }
+                ${
+                  isSelected
+                    ? '<span class="ms-2 badge bg-success">Selected Course</span>'
+                    : ""
+                }
+              </button>
+            </h2>
+            <div id="course-${index}" 
+                 class="accordion-collapse collapse ${isSelected ? "show" : ""}"
+                 aria-expanded="${isSelected}">
+              <div class="accordion-body">
+                ${createCourseHTML(course)}
+              </div>
+            </div>
+          </div>
+        `;
+      })
       .join("");
   } else {
     elements.coursesList.innerHTML =
@@ -171,19 +270,23 @@ function populateModal(uni) {
 
 function createCourseHTML(course) {
   return `
-          <div class="card mb-3">
-            <div class="card-body">
-              <h5 class="card-title">${course.course_name}</h5>
-              <p><strong>UTME Requirements:</strong> ${
-                course.utme_requirements || "N/A"
-              }</p>
-              <p><strong>Direct Entry Requirements:</strong> ${
-                course.direct_entry_requirements || "N/A"
-              }</p>
-              <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
-            </div>
-          </div>
-        `;
+    <div class="course-details">
+      <div class="mb-3">
+        <h6 class="text-primary mb-2">UTME Requirements</h6>
+        <p class="mb-0">${course.utme_requirements || "Not specified"}</p>
+      </div>
+      <div class="mb-3">
+        <h6 class="text-primary mb-2">Direct Entry Requirements</h6>
+        <p class="mb-0">${
+          course.direct_entry_requirements || "Not specified"
+        }</p>
+      </div>
+      <div>
+        <h6 class="text-primary mb-2">Required Subjects</h6>
+        <p class="mb-0">${course.subjects || "Not specified"}</p>
+      </div>
+    </div>
+  `;
 }
 
 function createAccordionItem(course, index) {
@@ -216,6 +319,7 @@ function showErrorMessage(message) {
   if (errorDiv) {
     errorDiv.textContent = message;
     errorDiv.style.display = "block";
+    document.getElementById("loadingIndicator").style.display = "none";
   } else {
     console.error("Error div not found:", message);
   }
