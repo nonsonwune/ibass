@@ -1,4 +1,4 @@
-<!-- templates/profile.html -->
+<!-- app/templates/profile.html -->
 {% extends "base.html" %} {% block title %}{{ user.username }}'s Profile -
 Nigerian Institutions Finder{% endblock %} {% block content %}
 <div class="container mt-5">
@@ -10,7 +10,9 @@ Nigerian Institutions Finder{% endblock %} {% block content %}
           <p class="card-text"><strong>Email:</strong> {{ user.email }}</p>
           <p class="card-text"><strong>User Score:</strong> {{ user.score }}</p>
           {% if current_user.id == user.id %}
-          <a href="{{ url_for('change_password') }}" class="btn btn-primary"
+          <a
+            href="{{ url_for('auth.change_password') }}"
+            class="btn btn-primary"
             >Change Password</a
           >
           {% endif %}
@@ -401,7 +403,7 @@ Nigerian Institutions Finder{% endblock %} {% block content %}
     }
 
     function removeBookmark(bookmarkId, buttonElement) {
-      fetch(`/remove_bookmark/${bookmarkId}`, {
+      fetch(`/university/remove_bookmark/${bookmarkId}`, {
         method: "POST",
         headers: {
           "X-CSRFToken": "{{ csrf_token() }}",
@@ -435,7 +437,7 @@ Nigerian Institutions Finder{% endblock %} {% block content %}
 
     function deleteComment(commentId, buttonElement) {
       if (confirm("Are you sure you want to delete this comment?")) {
-        fetch(`/delete_comment/${commentId}`, {
+        fetch(`/admin/delete_comment/${commentId}`, {
           method: "POST",
           headers: {
             "X-CSRFToken": csrfToken,

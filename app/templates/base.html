@@ -1,10 +1,9 @@
-<!-- templates/base.html -->
+<!-- app/templates/base.html -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- CSRF Token Meta Tag -->
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <title>{% block title %}Nigerian Institutions Finder{% endblock %}</title>
     <link
@@ -30,7 +29,9 @@
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container">
-        <a class="navbar-brand" href="/">Nigerian Institutions Finder</a>
+        <a class="navbar-brand" href="{{ url_for('main.home') }}"
+          >Nigerian Institutions Finder</a
+        >
         <button
           class="navbar-toggler"
           type="button"
@@ -46,29 +47,29 @@
           <ul class="navbar-nav me-auto">
             <li class="nav-item">
               <a
-                class="nav-link {% if request.path == '/' %}active{% endif %}"
-                href="/"
+                class="nav-link {% if request.endpoint == 'main.home' %}active{% endif %}"
+                href="{{ url_for('main.home') }}"
                 >Home</a
               >
             </li>
             <li class="nav-item">
               <a
-                class="nav-link {% if request.path == '/about' %}active{% endif %}"
-                href="/about"
+                class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}"
+                href="{{ url_for('main.about') }}"
                 >About</a
               >
             </li>
             <li class="nav-item position-relative">
               <a
-                class="nav-link {% if request.path == '/contact' %}active{% endif %}"
-                href="/contact"
+                class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}"
+                href="{{ url_for('main.contact') }}"
                 >Contact <span class="notification-badge"></span
               ></a>
             </li>
           </ul>
           <form
             class="d-flex me-2"
-            action="{{ url_for('search_results') }}"
+            action="{{ url_for('main.search_results') }}"
             method="GET"
           >
             <input
@@ -85,24 +86,28 @@
             <li class="nav-item">
               <a
                 class="nav-link"
-                href="{{ url_for('profile', username=current_user.username) }}"
+                href="{{ url_for('main.profile', username=current_user.username) }}"
                 >Profile</a
               >
             </li>
             {% if current_user.is_admin %}
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('admin') }}">Admin</a>
+              <a class="nav-link" href="{{ url_for('admin.admin_dashboard') }}"
+                >Admin</a
+              >
             </li>
             {% endif %}
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('logout') }}">Logout</a>
+              <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
             </li>
             {% else %}
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+              <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('signup') }}">Sign Up</a>
+              <a class="nav-link" href="{{ url_for('auth.signup') }}"
+                >Sign Up</a
+              >
             </li>
             {% endif %}
           </ul>
@@ -140,9 +145,19 @@
           <div class="col-md-3">
             <h5>Quick Links</h5>
             <ul class="list-unstyled">
-              <li><a href="/" class="text-white">Home</a></li>
-              <li><a href="/about" class="text-white">About</a></li>
-              <li><a href="/contact" class="text-white">Contact</a></li>
+              <li>
+                <a href="{{ url_for('main.home') }}" class="text-white">Home</a>
+              </li>
+              <li>
+                <a href="{{ url_for('main.about') }}" class="text-white"
+                  >About</a
+                >
+              </li>
+              <li>
+                <a href="{{ url_for('main.contact') }}" class="text-white"
+                  >Contact</a
+                >
+              </li>
             </ul>
           </div>
           <div class="col-md-3">
@@ -167,9 +182,7 @@
       </div>
     </footer>
 
-    <!-- CSRF Token and Authentication State for AJAX Requests -->
     <script>
-      // Ensure CSRF token is available in JavaScript
       window.csrfToken = "{{ csrf_token() }}";
       window.isAuthenticated = {{ current_user.is_authenticated|tojson }};
     </script>
@@ -178,7 +191,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
     {% block extra_scripts %}{% endblock %}
-    <!-- Add this just before the closing </body> tag in your base.html -->
+
     <div
       id="consent-banner"
       style="
@@ -270,7 +283,6 @@
 
     <script>
       (function () {
-        // Initialize Google's tag for ad personalization control
         window.googletag = window.googletag || { cmd: [] };
 
         function showConsentBanner() {
@@ -351,10 +363,8 @@
           }
         }
 
-        // Run on page load
         window.addEventListener("load", showConsentBanner);
 
-        // Expose necessary functions to global scope
         window.acceptAllConsent = acceptAllConsent;
         window.rejectAllConsent = rejectAllConsent;
         window.managePreferences = managePreferences;

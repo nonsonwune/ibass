@@ -1,4 +1,4 @@
-<!-- templates/signup.html -->
+<!-- app/templates/signup.html -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -80,7 +80,7 @@
               <h2 class="text-center mb-0">Sign Up</h2>
             </div>
             <div class="card-body">
-              <form action="{{ url_for('signup') }}" method="POST">
+              <form action="{{ url_for('auth.signup') }}" method="POST">
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
                   {{ form.username.label(class="form-label") }} {{
@@ -117,7 +117,7 @@
             </div>
             <div class="card-footer text-center">
               Already have an account?
-              <a href="{{ url_for('login') }}">Login here</a>
+              <a href="{{ url_for('auth.login') }}">Login here</a>
             </div>
           </div>
         </div>

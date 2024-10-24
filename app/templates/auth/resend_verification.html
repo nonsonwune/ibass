@@ -6,7 +6,7 @@ Institutions Finder{% endblock %} {% block content %}
     If you haven't received your verification email, you can request a new one
     here.
   </p>
-  <form method="POST" action="{{ url_for('resend_verification') }}">
+  <form method="POST" action="{{ url_for('auth.resend_verification') }}">
     {{ form.hidden_tag() }}
     <div class="mb-3">
       <label for="email" class="form-label">Email address</label>

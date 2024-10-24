@@ -1,4 +1,4 @@
-// static/js/scripts.js
+// app/static/js/scripts.js
 document.addEventListener("DOMContentLoaded", function () {
   console.log("DOM fully loaded in scripts.js");
   initializeInstitutionModal();
