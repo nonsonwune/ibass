@@ -2,8 +2,10 @@
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload
 from ..models.university import University, Course
-from ..models.interaction import Bookmark
+from ..models.interaction import Bookmark, Comment, Vote
+from ..models.user import User
 from ..extensions import db
 from ..config import Config
 
@@ -130,3 +132,113 @@ def add_bookmark():
 def get_user_bookmarks():
     bookmarks = [bookmark.university_id for bookmark in current_user.bookmarks]
     return jsonify(bookmarks)
+
+
+@bp.route('/api/vote/<int:comment_id>/<string:vote_type>', methods=['POST'])
+@login_required
+def vote(comment_id, vote_type):
+    if vote_type not in ['like', 'dislike']:
+        return jsonify({'success': False, 'message': 'Invalid vote type'}), 400
+
+    try:
+        # Close any existing transaction
+        if db.session.is_active:
+            db.session.rollback()
+
+        # Get comment with FOR UPDATE and eagerly load author using INNER JOIN
+        comment = db.session.query(Comment).options(
+            joinedload(Comment.author, innerjoin=True)
+        ).filter_by(id=comment_id).with_for_update().first()
+
+        if not comment:
+            return jsonify({'success': False, 'message': 'Comment not found'}), 404
+
+        # Get existing vote with FOR UPDATE
+        existing_vote = db.session.query(Vote).filter_by(
+            user_id=current_user.id,
+            comment_id=comment_id
+        ).with_for_update().first()
+
+        if existing_vote:
+            if existing_vote.vote_type == vote_type:
+                # Remove vote if clicking the same button
+                db.session.delete(existing_vote)
+                if vote_type == 'like':
+                    comment.likes = max(0, comment.likes - 1)
+                else:
+                    comment.dislikes = max(0, comment.dislikes - 1)
+            else:
+                # Change vote type
+                existing_vote.vote_type = vote_type
+                if vote_type == 'like':
+                    comment.likes += 1
+                    comment.dislikes = max(0, comment.dislikes - 1)
+                else:
+                    comment.dislikes += 1
+                    comment.likes = max(0, comment.likes - 1)
+        else:
+            # New vote
+            new_vote = Vote(
+                user_id=current_user.id,
+                comment_id=comment_id,
+                vote_type=vote_type
+            )
+            if vote_type == 'like':
+                comment.likes += 1
+            else:
+                comment.dislikes += 1
+            db.session.add(new_vote)
+
+        author = comment.author
+
+        # Update comment author's score
+        author.score = db.session.query(
+            db.func.sum(Comment.likes - Comment.dislikes)
+        ).filter(Comment.user_id == author.id).scalar() or 0
+
+        # Save changes
+        db.session.commit()
+
+        # Get fresh data after commit
+        current_vote = db.session.query(Vote).filter_by(
+            user_id=current_user.id,
+            comment_id=comment_id
+        ).first()
+
+        # Build response with fresh data
+        result = {
+            'success': True,
+            'likes': comment.likes,
+            'dislikes': comment.dislikes,
+            'user_vote': current_vote.vote_type if current_vote else None,
+            'user_id': author.id,
+            'user_score': author.score,
+            'comment_score': comment.likes - comment.dislikes
+        }
+
+        return jsonify(result)
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error processing vote: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while processing your vote.'
+        }), 500
+
+    
+@bp.route('/api/user_votes', methods=['GET'])
+@login_required
+def get_user_votes():
+    try:
+        votes = {}
+        user_votes = Vote.query.filter_by(user_id=current_user.id).all()
+        for vote in user_votes:
+            votes[vote.comment_id] = vote.vote_type
+        return jsonify(votes)
+    except SQLAlchemyError as e:
+        current_app.logger.error(f"Error fetching user votes: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Error retrieving vote data'
+        }), 500

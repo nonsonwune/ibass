@@ -57,14 +57,13 @@ Finder{% endblock %} {% block content %}
                       >
                         {{ comment.author.username }}
                       </span>
-                      <span class="badge user-score bg-secondary"
-                        >{{ comment.author.score }}</span
-                      >
+                      <span class="badge user-score bg-secondary">
+                        {{ comment.author.score }}
+                      </span>
                     </h5>
-                    <small class="text-muted"
-                      >{{ comment.date_posted.strftime('%Y-%m-%d %H:%M')
-                      }}</small
-                    >
+                    <small class="text-muted">
+                      {{ comment.date_posted.strftime('%Y-%m-%d %H:%M') }}
+                    </small>
                   </div>
                   <p class="mb-1">{{ comment.content }}</p>
                   <div
@@ -76,22 +75,26 @@ Finder{% endblock %} {% block content %}
                         data-comment-id="{{ comment.id }}"
                         data-vote-type="like"
                       >
-                        <i class="fas fa-thumbs-up"></i> Like ({{ comment.likes
-                        }})
+                        <i class="fas fa-thumbs-up"></i>
+                        Like
+                        <span class="like-count">({{ comment.likes }})</span>
                       </button>
                       <button
                         class="btn btn-sm btn-outline-danger me-2 vote-btn"
                         data-comment-id="{{ comment.id }}"
                         data-vote-type="dislike"
                       >
-                        <i class="fas fa-thumbs-down"></i> Dislike ({{
-                        comment.dislikes }})
+                        <i class="fas fa-thumbs-down"></i>
+                        Dislike
+                        <span class="dislike-count"
+                          >({{ comment.dislikes }})</span
+                        >
                       </button>
                     </div>
                     {% if current_user.is_authenticated and (current_user.id ==
                     comment.user_id or current_user.is_admin) %}
                     <form
-                      action="{{ url_for('delete_comment', comment_id=comment.id) }}"
+                      action="{{ url_for('main.delete_comment', comment_id=comment.id) }}"
                       method="POST"
                       class="d-inline"
                     >
@@ -113,7 +116,6 @@ Finder{% endblock %} {% block content %}
         </div>
       </div>
     </div>
-
     <!-- Contact Form Section -->
     <div class="col-12 col-md-6 mb-4 order-2">
       <div class="card shadow-sm">
@@ -170,7 +172,7 @@ Finder{% endblock %} {% block content %}
 >
   <div class="modal-dialog">
     <div class="modal-content">
-      <form action="{{ url_for('add_comment') }}" method="POST" novalidate>
+      <form action="{{ url_for('main.add_comment') }}" method="POST" novalidate>
         {{ form.hidden_tag() }}
         <div class="modal-header">
           <h5 class="modal-title" id="addCommentModalLabel">
@@ -216,17 +218,27 @@ Finder{% endblock %} {% block content %}
     </div>
   </div>
 </div>
-{% endif %} {% endblock %} {% block extra_scripts %}
+{% endif %}
+
+<!-- Toast Container -->
+<div
+  class="toast-container position-fixed bottom-0 end-0 p-3"
+  id="toastContainer"
+></div>
+
+{% endblock %} {% block extra_scripts %} {{ super() }}
+<script>
+  window.isAuthenticated =
+    "{{ 'true' if current_user.is_authenticated else 'false' }}";
+  const csrfToken = "{{ csrf_token() }}";
+</script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // Fetch and apply user votes
-    fetchUserVotes();
-
-    // Initialize Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(
       document.querySelectorAll('[data-bs-toggle="tooltip"]')
     );
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
       return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
@@ -237,6 +249,154 @@ Finder{% endblock %} {% block content %}
       commentTextarea.addEventListener("input", function () {
         const remaining = 200 - this.value.length;
         charCount.textContent = `${remaining} characters remaining`;
+        charCount.classList.toggle("text-danger", remaining < 20);
+      });
+    }
+
+    // Vote button handlers
+    document.querySelectorAll(".vote-btn").forEach((button) => {
+      button.addEventListener("click", function (event) {
+        event.preventDefault();
+
+        if (window.isAuthenticated !== "true") {
+          window.location.href = "/auth/login";
+          return;
+        }
+
+        const commentId = this.getAttribute("data-comment-id");
+        const voteType = this.getAttribute("data-vote-type");
+        const loadingSpinner =
+          '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>';
+        const originalContent = this.innerHTML;
+
+        // Show loading state
+        this.innerHTML =
+          loadingSpinner + (voteType === "like" ? "Liking..." : "Disliking...");
+        this.disabled = true;
+
+        // Fetch URL
+        const fetchUrl = `/api/vote/${commentId}/${voteType}`;
+        console.log(`Fetching URL: ${fetchUrl}`);
+
+        fetch(fetchUrl, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": csrfToken,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          credentials: "same-origin",
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not OK");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            if (data.success) {
+              const comment = this.closest(".list-group-item");
+              const likeButton = comment.querySelector(
+                '[data-vote-type="like"]'
+              );
+              const dislikeButton = comment.querySelector(
+                '[data-vote-type="dislike"]'
+              );
+
+              // Update vote counts
+              likeButton.querySelector(
+                ".like-count"
+              ).textContent = `(${data.likes})`;
+              dislikeButton.querySelector(
+                ".dislike-count"
+              ).textContent = `(${data.dislikes})`;
+
+              // Update button states
+              if (data.user_vote === "like") {
+                likeButton.classList.add("active");
+                dislikeButton.classList.remove("active");
+              } else if (data.user_vote === "dislike") {
+                dislikeButton.classList.add("active");
+                likeButton.classList.remove("active");
+              } else {
+                likeButton.classList.remove("active");
+                dislikeButton.classList.remove("active");
+              }
+
+              showToast("Vote recorded successfully", "success");
+            } else {
+              showToast(data.message || "Failed to process vote", "danger");
+            }
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            showToast("An error occurred while processing your vote", "danger");
+          })
+          .finally(() => {
+            // Restore button state
+            this.innerHTML = originalContent;
+            this.disabled = false;
+          });
+      });
+    });
+
+    // Function to update vote button states
+    function updateVoteButtonStates() {
+      if (window.isAuthenticated !== "true") return;
+
+      fetch("/api/user_votes")
+        .then((response) => {
+          if (!response.ok) throw new Error("Failed to fetch vote states");
+          return response.json();
+        })
+        .then((votes) => {
+          document.querySelectorAll(".vote-btn").forEach((button) => {
+            const commentId = button.getAttribute("data-comment-id");
+            const voteType = button.getAttribute("data-vote-type");
+
+            if (
+              votes[voteType === "like" ? "liked" : "disliked"].includes(
+                parseInt(commentId)
+              )
+            ) {
+              button.classList.add("active");
+            } else {
+              button.classList.remove("active");
+            }
+          });
+        })
+        .catch((error) => {
+          console.error("Error fetching vote states:", error);
+        });
+    }
+
+    // Function to show toast notifications
+    function showToast(message, type = "info") {
+      const toastContainer = document.getElementById("toastContainer");
+      const toastHTML = `
+      <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="d-flex">
+              <div class="toast-body">
+                  ${message}
+              </div>
+              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+      </div>
+    `;
+
+      const toastElement = document.createElement("div");
+      toastElement.innerHTML = toastHTML;
+      toastContainer.appendChild(toastElement.firstChild);
+
+      const toast = new bootstrap.Toast(toastContainer.lastChild, {
+        autohide: true,
+        delay: 3000,
+      });
+      toast.show();
+
+      // Remove toast from DOM after it's hidden
+      toastContainer.lastChild.addEventListener("hidden.bs.toast", function () {
+        this.remove();
       });
     }
 
@@ -255,6 +415,9 @@ Finder{% endblock %} {% block content %}
         false
       );
     });
+
+    // Initialize vote states on page load
+    updateVoteButtonStates();
   });
 </script>
 {% endblock %}

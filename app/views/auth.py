@@ -37,7 +37,7 @@ def login():
             
         flash('Login unsuccessful. Please check username and password.', 'danger')
     
-    return render_template('login.html', form=form)
+    return render_template('auth/login.html', form=form)
 
 @bp.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -68,7 +68,7 @@ def signup():
         flash('Account created successfully. Please check your email to verify your account.', 'success')
         return redirect(url_for('auth.login'))
 
-    return render_template('signup.html', form=form)
+    return render_template('auth/signup.html', form=form)
 
 
 @bp.route('/logout')
@@ -111,7 +111,7 @@ def resend_verification():
         else:
             flash('Email address is not associated with any unverified account.', 'danger')
         return redirect(url_for('auth.login'))
-    return render_template('resend_verification.html', form=form)
+    return render_template('auth/resend_verification.html', form=form)
 
 @bp.route('/change_password', methods=['GET', 'POST'])
 @login_required

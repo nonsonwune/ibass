@@ -1,5 +1,5 @@
 # app/views/main.py
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify,current_app
 from flask_login import login_required, current_user
 from ..models.feedback import Feedback
 from ..forms.feedback import ContactForm
@@ -8,6 +8,7 @@ from ..models.interaction import Comment
 from ..models.university import University, Course
 from ..models.user import User
 from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
 
 bp = Blueprint('main', __name__)
 
@@ -83,3 +84,39 @@ def contact():
 
     comments = Comment.query.order_by(Comment.date_posted.desc()).all()
     return render_template('contact.html', form=form, comments=comments)
+
+@bp.route("/add_comment", methods=["POST"])
+@login_required
+def add_comment():
+    content = request.form.get("comment", "").strip()
+    if not content:
+        flash("Comment cannot be empty.", "danger")
+        return redirect(url_for("main.contact"))
+
+    new_comment = Comment(content=content, author=current_user)
+    try:
+        db.session.add(new_comment)
+        db.session.commit()
+        flash("Your comment has been added.", "success")
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error adding comment: {str(e)}")
+        flash("An error occurred while adding your comment. Please try again.", "danger")
+
+    return redirect(url_for("main.contact"))
+
+@bp.route('/delete_comment/<int:comment_id>', methods=['POST'])
+@login_required
+def delete_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+    if current_user.id == comment.user_id or current_user.is_admin:
+        try:
+            db.session.delete(comment)
+            db.session.commit()
+            flash('Comment deleted successfully.', 'success')
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            flash('An error occurred while deleting the comment.', 'danger')
+    else:
+        flash('You do not have permission to delete this comment.', 'danger')
+    return redirect(url_for('main.contact'))

@@ -1,3 +1,4 @@
+<!-- app/templates/admin.html -->
 {% extends "base.html" %} {% block title %}Admin Dashboard - Nigerian
 Institutions Finder{% endblock %} {% block content %}
 <div class="container my-5">
@@ -34,7 +35,7 @@ Institutions Finder{% endblock %} {% block content %}
             <td>
               {% if not user.is_admin %}
               <form
-                action="{{ url_for('delete_user', user_id=user.id) }}"
+                action="{{ url_for('main.delete_user', user_id=user.id) }}"
                 method="POST"
                 class="d-inline"
               >
@@ -93,7 +94,7 @@ Institutions Finder{% endblock %} {% block content %}
             <td>{{ comment.score }}</td>
             <td>
               <form
-                action="{{ url_for('delete_comment', comment_id=comment.id) }}"
+                action="{{ url_for('admin.delete_comment', comment_id=comment.id) }}"
                 method="POST"
                 class="d-inline"
               >
@@ -149,7 +150,7 @@ Institutions Finder{% endblock %} {% block content %}
             <td>{{ feedback.date_submitted.strftime('%Y-%m-%d %H:%M') }}</td>
             <td>
               <form
-                action="{{ url_for('delete_feedback', feedback_id=feedback.id) }}"
+                action="{{ url_for('admin.delete_feedback', feedback_id=feedback.id) }}"
                 method="POST"
                 class="d-inline"
               >

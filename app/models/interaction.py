@@ -1,3 +1,4 @@
+# app/models/interaction.py
 from datetime import datetime
 from .base import BaseModel
 from ..extensions import db
