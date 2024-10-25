@@ -173,5 +173,32 @@ Institutions Finder{% endblock %} {% block content %}
       {% endif %}
     </div>
   </div>
+  <!-- Universities Management Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+      <h2 class="h5 mb-0">
+        <i class="fas fa-university me-2"></i>Manage Universities
+      </h2>
+    </div>
+    <div class="card-body">
+      <a
+        href="{{ url_for('admin.admin_universities') }}"
+        class="btn btn-primary"
+        >Manage Universities</a
+      >
+    </div>
+  </div>
+
+  <!-- Courses Management Section -->
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+      <h2 class="h5 mb-0"><i class="fas fa-book me-2"></i>Manage Courses</h2>
+    </div>
+    <div class="card-body">
+      <a href="{{ url_for('admin.admin_courses') }}" class="btn btn-primary"
+        >Manage Courses</a
+      >
+    </div>
+  </div>
 </div>
 {% endblock %}
