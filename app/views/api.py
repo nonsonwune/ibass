@@ -280,3 +280,57 @@ def get_user_votes():
             'success': False,
             'message': 'Error retrieving vote data'
         }), 500
+        
+@bp.route("/api/search", methods=["GET"])
+def search():
+    query_text = request.args.get("q", "").lower()
+    state = request.args.get("state")
+    program_type = request.args.get("program_type")
+
+    try:
+        universities_query = University.query.filter(
+            University.university_name.ilike(f"%{query_text}%")
+        )
+        if state:
+            universities_query = universities_query.filter(
+                University.state.ilike(f"%{state}%")
+            )
+        if program_type:
+            universities_query = universities_query.filter(
+                University.program_type.ilike(f"%{program_type}%")
+            )
+        universities = universities_query.all()
+
+        courses_query = Course.query.filter(
+            (Course.course_name.ilike(f"%{query_text}%"))
+            | (Course.abbrv.ilike(f"%{query_text}%"))
+        )
+        courses = courses_query.all()
+
+        return jsonify({
+            "universities": [
+                {
+                    "university_name": uni.university_name,
+                    "state": uni.state,
+                    "program_type": uni.program_type,
+                }
+                for uni in universities
+            ],
+            "courses": [
+                {
+                    "id": course.id,
+                    "course_name": course.course_name,
+                    "university_name": course.university_name,
+                    "abbrv": course.abbrv,
+                    "direct_entry_requirements": course.direct_entry_requirements,
+                    "utme_requirements": course.utme_requirements,
+                    "subjects": course.subjects,
+                }
+                for course in courses
+            ],
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error in search: {str(e)}")
+        return jsonify({
+            "error": "An error occurred while processing your search. Please try again."
+        }), 500
