@@ -173,3 +173,4 @@ clear_postgres.py
 migration_db.py
 reset_transfer_log.py
 uni_match.py
+transfer_data.py

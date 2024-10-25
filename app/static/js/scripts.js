@@ -72,23 +72,24 @@ function vote(commentId, action, buttonElement) {
     return;
   }
 
-  // Cache all necessary elements
+  // Cache elements and original state
   const buttons = {
     like: commentElement.querySelector('[data-vote-type="like"]'),
     dislike: commentElement.querySelector('[data-vote-type="dislike"]'),
   };
 
-  if (!buttons.like || !buttons.dislike) {
-    showToast("Error finding vote buttons", "danger");
-    return;
-  }
-
-  const originalContents = {
-    like: buttons.like.innerHTML,
-    dislike: buttons.dislike.innerHTML,
+  const originalState = {
+    like: {
+      content: buttons.like.innerHTML,
+      disabled: buttons.like.disabled,
+    },
+    dislike: {
+      content: buttons.dislike.innerHTML,
+      disabled: buttons.dislike.disabled,
+    },
   };
 
-  // Disable buttons and show loading state
+  // Show loading state
   const loadingSpinner =
     '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>';
   buttons[action].innerHTML =
@@ -96,6 +97,12 @@ function vote(commentId, action, buttonElement) {
   Object.values(buttons).forEach((btn) => (btn.disabled = true));
 
   pendingVotes.add(voteKey);
+
+  // Set timeout to prevent UI from being stuck
+  const timeout = setTimeout(() => {
+    resetVoteButtonState();
+    showToast("Vote request timed out. Please try again.", "warning");
+  }, 5000);
 
   fetch(`/api/vote/${commentId}/${action}`, {
     method: "POST",
@@ -107,6 +114,7 @@ function vote(commentId, action, buttonElement) {
     credentials: "same-origin",
   })
     .then(async (response) => {
+      clearTimeout(timeout);
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || response.statusText);
       return data;
@@ -114,8 +122,6 @@ function vote(commentId, action, buttonElement) {
     .then((data) => {
       if (!data.success)
         throw new Error(data.message || "Vote processing failed");
-
-      // Update all UI elements
       updateVoteUI(commentElement, data);
       showToast("Vote recorded successfully", "success");
     })
@@ -124,15 +130,18 @@ function vote(commentId, action, buttonElement) {
       showToast(error.message || "Error processing vote", "danger");
     })
     .finally(() => {
-      // Always restore button states
-      buttons.like.innerHTML = originalContents.like;
-      buttons.dislike.innerHTML = originalContents.dislike;
-      Object.values(buttons).forEach((btn) => (btn.disabled = false));
+      resetVoteButtonState();
       pendingVotes.delete(voteKey);
-
-      // Refresh vote states
       fetchUserVotes();
     });
+
+  function resetVoteButtonState() {
+    // Restore original button states
+    Object.entries(buttons).forEach(([type, button]) => {
+      button.innerHTML = originalState[type].content;
+      button.disabled = originalState[type].disabled;
+    });
+  }
 }
 
 function updateVoteUI(commentElement, data) {

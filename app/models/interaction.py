@@ -7,15 +7,19 @@ class Comment(BaseModel):
     __tablename__ = 'comments'
     content = db.Column(db.Text, nullable=False)
     date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     likes = db.Column(db.Integer, default=0)
     dislikes = db.Column(db.Integer, default=0)
     votes = db.relationship('Vote', backref='comment', lazy=True, cascade='all, delete-orphan')
 
+    # Add index for likes and dislikes columns
+    __table_args__ = (
+        db.Index('idx_comments_user_scores', 'user_id', 'likes', 'dislikes'),
+    )
+
     @property
     def score(self):
         return self.likes - self.dislikes
-
 
 class Vote(BaseModel):
     __tablename__ = 'votes'
@@ -27,6 +31,7 @@ class Vote(BaseModel):
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'comment_id', name='user_comment_uc'),
+        db.Index('idx_votes_user_comment', 'user_id', 'comment_id'),
     )
 
 

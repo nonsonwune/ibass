@@ -74,3 +74,15 @@ class Config:
             "PRIVATE COLLEGES OF EDUCATION",
         ],
     }
+
+    # Set transaction isolation level and other engine options
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'isolation_level': 'SERIALIZABLE',
+        'pool_size': 10,
+        'max_overflow': 20,
+        'pool_timeout': 30,  # 30 seconds
+        'pool_recycle': 1800,  # 30 minutes
+    }
+    
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ECHO = True  # Set to False in production
