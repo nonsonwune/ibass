@@ -4,40 +4,38 @@ from .base import BaseModel
 from ..extensions import db
 
 class Comment(BaseModel):
-    __tablename__ = 'comments'
+    __tablename__ = 'comment'
     content = db.Column(db.Text, nullable=False)
     date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     likes = db.Column(db.Integer, default=0)
     dislikes = db.Column(db.Integer, default=0)
-    votes = db.relationship('Vote', backref='comment', lazy=True, cascade='all, delete-orphan')
-
-    # Add index for likes and dislikes columns
-    __table_args__ = (
-        db.Index('idx_comments_user_scores', 'user_id', 'likes', 'dislikes'),
+    
+    votes = db.relationship(
+        'Vote', 
+        backref='comment', 
+        lazy=True,
+        cascade='all, delete-orphan'
     )
 
-    @property
-    def score(self):
-        return self.likes - self.dislikes
-
 class Vote(BaseModel):
-    __tablename__ = 'votes'
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', name='fk_vote_user_id_user'), nullable=False)
-    comment_id = db.Column(db.Integer, db.ForeignKey('comments.id', ondelete='CASCADE', 
-                                                    name='fk_vote_comment_id_comment'), nullable=False)
-    vote_type = db.Column(db.String(10), nullable=False)  # 'like' or 'dislike'
+    __tablename__ = 'vote'
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('comment.id', ondelete='CASCADE'), nullable=False)
+    vote_type = db.Column(db.String(10), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'comment_id', name='user_comment_uc'),
-        db.Index('idx_votes_user_comment', 'user_id', 'comment_id'),
+        db.CheckConstraint(
+            vote_type.in_(['like', 'dislike']),
+            name='vote_type_check'
+        )
     )
 
-
 class Bookmark(BaseModel):
-    __tablename__ = 'bookmarks'
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    university_id = db.Column(db.Integer, db.ForeignKey('universities.id', ondelete='CASCADE'), nullable=False)
-    course_id = db.Column(db.Integer, db.ForeignKey('courses.id', ondelete='CASCADE'), nullable=True)
+    __tablename__ = 'bookmark'
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    university_id = db.Column(db.Integer, db.ForeignKey('university.id', ondelete='CASCADE'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id', ondelete='CASCADE'), nullable=True)
     date_added = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)

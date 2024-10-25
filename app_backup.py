@@ -144,8 +144,8 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(20), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)
-    is_verified = db.Column(db.Boolean, default=False)
+    is_admin = db.Column(db.Integer, default=0)  # Changed from Boolean to Integer
+    is_verified = db.Column(db.Integer, default=0)  # Changed from Boolean to Integer
     score = db.Column(db.Integer, default=0, nullable=False, index=True)
     comments = db.relationship("Comment", backref="author", lazy=True, cascade="all, delete-orphan")
     votes = db.relationship("Vote", backref="voter", lazy=True, cascade="all, delete-orphan")
@@ -158,13 +158,30 @@ class User(UserMixin, db.Model):
         return username.lower() if username else None
 
     def __init__(self, **kwargs):
+        # Convert boolean values to integers for is_admin and is_verified
+        if 'is_admin' in kwargs:
+            kwargs['is_admin'] = 1 if kwargs['is_admin'] else 0
+        if 'is_verified' in kwargs:
+            kwargs['is_verified'] = 1 if kwargs['is_verified'] else 0
+        
         # Normalize username before saving
         if 'username' in kwargs:
             kwargs['username'] = self.normalize_username(kwargs['username'])
+        
         super(User, self).__init__(**kwargs)
 
     def calculate_score(self):
         return sum(comment.score for comment in self.comments)
+
+    @property
+    def is_admin_bool(self):
+        """Convert integer to boolean for admin status"""
+        return bool(self.is_admin)
+
+    @property
+    def is_verified_bool(self):
+        """Convert integer to boolean for verification status"""
+        return bool(self.is_verified)
 
 
 class Comment(db.Model):
@@ -686,7 +703,13 @@ def signup():
             return redirect(url_for("signup"))
 
         hashed_password = generate_password_hash(password)
-        new_user = User(username=username, email=email, password=hashed_password)
+        new_user = User(
+            username=username,
+            email=email,
+            password=hashed_password,
+            is_admin=0,      # Explicitly set as integer
+            is_verified=0    # Explicitly set as integer
+        )
         db.session.add(new_user)
         db.session.commit()
 
@@ -711,12 +734,12 @@ def login():
         # Use case-insensitive username lookup
         user = User.query.filter(func.lower(User.username) == username).first()
         if user and check_password_hash(user.password, password):
-            if not user.is_verified:
+            if not user.is_verified_bool:
                 flash("Please verify your email address before logging in.", "warning")
                 return redirect(url_for("login"))
             login_user(user, remember=remember)
             flash("Logged in successfully.", "success")
-            if user.is_admin:
+            if user.is_admin_bool:
                 return redirect(url_for("admin"))
             else:
                 next_page = request.args.get("next")
@@ -1041,7 +1064,7 @@ def get_institution_details(uni_id):
 @app.route("/admin")
 @login_required
 def admin():
-    if not current_user.is_admin:
+    if not current_user.is_admin_bool:
         flash("You do not have permission to access the admin page.", "danger")
         return redirect(url_for("home"))
 
@@ -1091,10 +1114,10 @@ def verify_email(token):
         flash("User not found.", "danger")
         return redirect(url_for("login"))
 
-    if user.is_verified:
+    if user.is_verified_bool:
         flash("Account already verified. Please log in.", "success")
     else:
-        user.is_verified = True
+        user.is_verified = 1  # Set as integer instead of boolean
         db.session.commit()
         flash("Your account has been verified. You can now log in.", "success")
     return redirect(url_for("login"))
@@ -1214,9 +1237,6 @@ def get_user_bookmarks():
 # Database initialization function using SQLAlchemy
 def init_db():
     try:
-
-
-
         # Update user emails if necessary
         users = User.query.all()
         for user in users:
@@ -1232,8 +1252,9 @@ def init_db():
                 username="admin",
                 email="admin@example.com",
                 password=generate_password_hash("adminpassword"),
-                is_admin=True,
-                is_verified=True,  # Set is_verified to True
+                is_admin=1,      # Using integer instead of boolean
+                is_verified=1,   # Using integer instead of boolean
+                score=0
             )
             db.session.add(admin)
             db.session.commit()

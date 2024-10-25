@@ -23,6 +23,49 @@ def get_locations():
         current_app.logger.error(f"Error retrieving locations: {str(e)}")
         return jsonify({"error": "Failed to retrieve locations"}), 500
 
+@bp.route('/api/programme_types', methods=['GET'])
+def get_programme_types():
+    state = request.args.get('state')
+    try:
+        if state:
+            programme_types = (
+                db.session.query(University.program_type)
+                .filter(University.state == state)
+                .distinct()
+                .order_by(University.program_type)
+                .all()
+            )
+        else:
+            programme_types = (
+                db.session.query(University.program_type)
+                .distinct()
+                .order_by(University.program_type)
+                .all()
+            )
+
+        # Convert list of tuples to list of strings
+        programme_types_list = [ptype[0] for ptype in programme_types]
+
+        # Add "ALL_INSTITUTION_TYPES" as the first option if not already present
+        if programme_types_list and "ALL_INSTITUTION_TYPES" not in programme_types_list:
+            programme_types_list.insert(0, "ALL_INSTITUTION_TYPES")
+
+        # Sort programme types alphabetically, keeping "ALL_INSTITUTION_TYPES" at the top
+        if "ALL_INSTITUTION_TYPES" in programme_types_list:
+            all_institution = programme_types_list.pop(
+                programme_types_list.index("ALL_INSTITUTION_TYPES")
+            )
+            programme_types_list.sort()
+            programme_types_list.insert(0, all_institution)
+        else:
+            programme_types_list.sort()
+
+        current_app.logger.info(f"Retrieved {len(programme_types_list)} programme types for state: {state}")
+        return jsonify(programme_types_list)
+    except Exception as e:
+        current_app.logger.error(f"Error in get_programme_types: {str(e)}")
+        return jsonify({"error": "An error occurred while fetching programme types."}), 500
+
 @bp.route('/api/universities', methods=['GET'])
 def get_universities():
     state = request.args.get('state')
@@ -149,46 +192,44 @@ def atomic_transaction():
     finally:
         db.session.close()
 
-@bp.route('/api/vote/<int:comment_id>/<string:vote_type>', methods=['POST'])
+@bp.route('/api/vote/<int:comment_id>/<vote_type>', methods=['POST'])
 @login_required
 def vote(comment_id, vote_type):
     if vote_type not in ['like', 'dislike']:
         return jsonify({'success': False, 'message': 'Invalid vote type'}), 400
 
     try:
-        with atomic_transaction():
-            # Get comment with FOR UPDATE and eagerly load author
-            comment = db.session.query(Comment).options(
-                joinedload(Comment.author)
-            ).filter_by(id=comment_id).with_for_update().first()
-
-            if not comment:
-                return jsonify({'success': False, 'message': 'Comment not found'}), 404
-
-            # Get existing vote with FOR UPDATE
-            existing_vote = db.session.query(Vote).filter_by(
+        with db.session.begin_nested():
+            comment = Comment.query.get_or_404(comment_id)
+            comment_author = User.query.get_or_404(comment.user_id)
+            existing_vote = Vote.query.filter_by(
                 user_id=current_user.id,
                 comment_id=comment_id
-            ).with_for_update().first()
+            ).first()
 
-            # Update vote and counts atomically
             if existing_vote:
                 if existing_vote.vote_type == vote_type:
                     # Remove vote if clicking same button
-                    db.session.delete(existing_vote)
                     if vote_type == 'like':
-                        comment.likes = max(0, comment.likes - 1)
+                        comment.likes -= 1
+                        comment_author.score -= 1
                     else:
-                        comment.dislikes = max(0, comment.dislikes - 1)
+                        comment.dislikes -= 1
+                        comment_author.score += 1  # Removing a dislike increases score
+                    db.session.delete(existing_vote)
+                    current_vote = None
                 else:
                     # Change vote type
-                    existing_vote.vote_type = vote_type
                     if vote_type == 'like':
                         comment.likes += 1
-                        comment.dislikes = max(0, comment.dislikes - 1)
+                        comment.dislikes -= 1
+                        comment_author.score += 2  # +2 for changing dislike to like
                     else:
+                        comment.likes -= 1
                         comment.dislikes += 1
-                        comment.likes = max(0, comment.likes - 1)
+                        comment_author.score -= 2  # -2 for changing like to dislike
+                    existing_vote.vote_type = vote_type
+                    current_vote = vote_type
             else:
                 # New vote
                 new_vote = Vote(
@@ -198,41 +239,31 @@ def vote(comment_id, vote_type):
                 )
                 if vote_type == 'like':
                     comment.likes += 1
+                    comment_author.score += 1
                 else:
                     comment.dislikes += 1
+                    comment_author.score -= 1
                 db.session.add(new_vote)
+                current_vote = vote_type
 
-            # Update comment author's score
-            comment.author.score = db.session.query(
-                db.func.sum(Comment.likes - Comment.dislikes)
-            ).filter(Comment.user_id == comment.author.id).scalar() or 0
+            db.session.commit()
 
-            # Return updated data
-            result = {
-                'success': True,
-                'likes': comment.likes,
-                'dislikes': comment.dislikes,
-                'user_vote': vote_type,
-                'user_id': comment.author.id,
-                'user_score': comment.author.score,
-                'comment_score': comment.likes - comment.dislikes
-            }
-
-            return jsonify(result)
-
-    except exc.SQLAlchemyError as e:
-        current_app.logger.error(f"Database error in vote: {str(e)}")
         return jsonify({
-            'success': False,
-            'message': 'Database error occurred while processing vote.'
-        }), 500
+            'success': True,
+            'message': 'Vote recorded successfully',
+            'likes': comment.likes,
+            'dislikes': comment.dislikes,
+            'user_vote': current_vote,
+            'user_id': comment.user_id,
+            'user_score': comment_author.score
+        })
+
     except Exception as e:
-        current_app.logger.error(f"Unexpected error in vote: {str(e)}")
+        db.session.rollback()
         return jsonify({
             'success': False,
-            'message': 'An unexpected error occurred while processing vote.'
+            'message': f'Error processing vote: {str(e)}'
         }), 500
-
     
 @bp.route('/api/user_votes', methods=['GET'])
 @login_required

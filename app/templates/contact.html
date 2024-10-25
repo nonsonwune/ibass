@@ -265,13 +265,27 @@ Finder{% endblock %} {% block content %}
 
         const commentId = this.getAttribute("data-comment-id");
         const voteType = this.getAttribute("data-vote-type");
+        const isLike = voteType === "like";
+
+        // Store the current count
+        const countSpan = this.querySelector(
+          isLike ? ".like-count" : ".dislike-count"
+        );
+        const currentCount = countSpan.textContent;
+
+        // Create loading state content
         const loadingSpinner =
           '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>';
-        const originalContent = this.innerHTML;
+        const loadingText = isLike ? "Liking..." : "Disliking...";
+
+        // Store original content structure
+        const originalIcon = isLike
+          ? '<i class="fas fa-thumbs-up"></i>'
+          : '<i class="fas fa-thumbs-down"></i>';
+        const originalText = isLike ? "Like" : "Dislike";
 
         // Show loading state
-        this.innerHTML =
-          loadingSpinner + (voteType === "like" ? "Liking..." : "Disliking...");
+        this.innerHTML = `${loadingSpinner}${loadingText}${currentCount}`;
         this.disabled = true;
 
         // Fetch URL
@@ -323,6 +337,22 @@ Finder{% endblock %} {% block content %}
                 dislikeButton.classList.remove("active");
               }
 
+              // Update user score
+              if (data.user_id && typeof data.user_score === "number") {
+                const userScoreBadges =
+                  document.querySelectorAll(`.user-score`);
+                userScoreBadges.forEach((badge) => {
+                  if (
+                    badge
+                      .closest(".list-group-item")
+                      .querySelector(".mb-1")
+                      .textContent.includes(comment.author.username)
+                  ) {
+                    badge.textContent = data.user_score;
+                  }
+                });
+              }
+
               showToast("Vote recorded successfully", "success");
             } else {
               showToast(data.message || "Failed to process vote", "danger");
@@ -333,8 +363,10 @@ Finder{% endblock %} {% block content %}
             showToast("An error occurred while processing your vote", "danger");
           })
           .finally(() => {
-            // Restore button state
-            this.innerHTML = originalContent;
+            // Restore button to original state
+            this.innerHTML = `${originalIcon} ${originalText} <span class="${
+              isLike ? "like" : "dislike"
+            }-count">${currentCount}</span>`;
             this.disabled = false;
           });
       });

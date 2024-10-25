@@ -6,99 +6,98 @@ from werkzeug.security import generate_password_hash
 import logging
 from sqlalchemy import inspect, text
 import sqlalchemy.exc
+import time
+
+# Configure logging once at the module level
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 app = create_app()
 
+def wait_for_db(max_retries=5, retry_interval=5):
+    """Wait for database to become available."""
+    for attempt in range(max_retries):
+        try:
+            # Test connection with a simple query
+            with db.engine.connect() as conn:
+                conn.execute(text("SELECT 1")).first()
+            return True
+        except Exception as e:
+            if attempt == max_retries - 1:
+                logging.error(f"Failed to connect to database after {max_retries} attempts: {e}")
+                return False
+            logging.warning(f"Database connection attempt {attempt + 1} failed. Retrying in {retry_interval} seconds...")
+            time.sleep(retry_interval)
+
 def verify_table_exists(table_name):
-    """Verify if a table exists and has the correct structure."""
+    """Verify if a table exists."""
     try:
         with db.engine.connect() as conn:
-            conn.execute(text(f"SELECT 1 FROM {table_name} LIMIT 1"))
-            return True
-    except sqlalchemy.exc.ProgrammingError:
+            result = conn.execute(text(
+                "SELECT 1 FROM information_schema.tables "
+                "WHERE table_name = :table_name"
+            ), {'table_name': table_name}).first()
+            return result is not None
+    except Exception as e:
+        logging.error(f"Error checking table {table_name}: {str(e)}")
         return False
 
-def drop_all_tables():
-    """Drop all existing tables in the correct order."""
+def verify_admin_exists():
+    """Verify if admin user exists."""
     try:
-        with db.engine.connect() as conn:
-            # First drop all constraints
-            conn.execute(text("""
-                DO $$ 
-                DECLARE
-                    r RECORD;
-                BEGIN
-                    FOR r IN (SELECT constraint_name, table_name 
-                             FROM information_schema.table_constraints 
-                             WHERE constraint_type IN ('FOREIGN KEY', 'UNIQUE')) 
-                    LOOP
-                        EXECUTE 'ALTER TABLE ' || quote_ident(r.table_name) || 
-                                ' DROP CONSTRAINT IF EXISTS ' || quote_ident(r.constraint_name);
-                    END LOOP;
-                END $$;
-            """))
-            
-            # Then drop all tables in reverse dependency order
-            tables = ['votes', 'comments', 'courses', 'universities', 'users']
-            for table in tables:
-                conn.execute(text(f"DROP TABLE IF EXISTS {table} CASCADE"))
-            
-            conn.commit()
+        with app.app_context():
+            admin = User.query.filter_by(username="admin").first()
+            return admin is not None
     except Exception as e:
-        logging.warning(f"Error dropping tables and constraints: {str(e)}")
+        logging.error(f"Error verifying admin: {str(e)}")
+        return False
 
 def init_db():
     """Initialize database with proper error handling and verification."""
     with app.app_context():
         try:
-            # Check if tables exist but are incomplete/corrupted
-            tables_exist = all(
-                verify_table_exists(table_name) 
-                for table_name in ['users', 'universities', 'courses', 'comments', 'votes']
-            )
+            # First, wait for database to be available
+            if not wait_for_db():
+                raise Exception("Could not establish database connection")
+
+            # Configure SQLAlchemy engine with keepalive settings
+            db.engine.pool_pre_ping = True
+            db.engine.pool_recycle = 3600
             
-            if not tables_exist:
-                logging.info("Tables missing or incomplete. Recreating all tables...")
-                
-                # Drop everything and start fresh
-                drop_all_tables()
-                
-                # Create all tables
-                db.create_all()
-                logging.info("Database tables created successfully")
-                
-                # Create admin user
+            # Check if tables exist
+            required_tables = ['user', 'university', 'course', 'comment', 'vote']
+            missing_tables = []
+            
+            for table in required_tables:
+                if not verify_table_exists(table):
+                    missing_tables.append(table)
+            
+            if missing_tables:
+                logging.error("The following tables are missing: %s", missing_tables)
+                logging.error("Please ensure all required tables exist in the database")
+                raise Exception(f"Missing required tables: {missing_tables}")
+            
+            logging.info("All required tables exist")
+            
+            # Only create admin user if it doesn't exist
+            if not verify_admin_exists():
+                logging.info("Creating admin user...")
                 admin = User(
                     username="admin",
                     email="admin@example.com",
                     password=generate_password_hash("adminpassword"),
-                    is_admin=True,
-                    is_verified=True,
+                    is_admin=1,
+                    is_verified=1,
                     score=0
                 )
                 db.session.add(admin)
                 db.session.commit()
                 logging.info("Admin user created successfully")
-            
             else:
-                logging.info("All required tables exist")
-                
-                # Verify admin user exists
-                admin_user = User.query.filter_by(username="admin").first()
-                if not admin_user:
-                    admin = User(
-                        username="admin",
-                        email="admin@example.com",
-                        password=generate_password_hash("adminpassword"),
-                        is_admin=True,
-                        is_verified=True,
-                        score=0
-                    )
-                    db.session.add(admin)
-                    db.session.commit()
-                    logging.info("Admin user created")
-                else:
-                    logging.info("Admin user already exists")
+                logging.info("Admin user already exists")
             
             logging.info("Database initialization completed successfully")
             
@@ -110,15 +109,22 @@ def init_db():
             db.session.close()
 
 if __name__ == "__main__":
-    # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s %(levelname)s: %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
+    logging.info("University Finder startup")
     
     try:
         init_db()
+        # Configure the app to handle connection drops
+        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+            'pool_pre_ping': True,
+            'pool_recycle': 3600,
+            'connect_args': {
+                'connect_timeout': 30,
+                'keepalives': 1,
+                'keepalives_idle': 30,
+                'keepalives_interval': 10,
+                'keepalives_count': 5
+            }
+        }
         app.run(host="0.0.0.0", port=5001)
     except Exception as e:
         logging.error(f"Failed to start application: {str(e)}")

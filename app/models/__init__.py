@@ -1,3 +1,4 @@
+# app/models/__init__.py
 from .user import User
 from .university import University, Course
 from .interaction import Comment, Vote, Bookmark

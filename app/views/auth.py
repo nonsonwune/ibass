@@ -94,7 +94,7 @@ def verify_email(token):
     if user.is_verified:
         flash('Account already verified. Please log in.', 'success')
     else:
-        user.is_verified = True
+        user.is_verified = 1
         db.session.commit()
         flash('Your account has been verified. You can now log in.', 'success')
     return redirect(url_for('auth.login'))

@@ -72,37 +72,19 @@ function vote(commentId, action, buttonElement) {
     return;
   }
 
-  // Cache elements and original state
+  // Show loading state
   const buttons = {
     like: commentElement.querySelector('[data-vote-type="like"]'),
     dislike: commentElement.querySelector('[data-vote-type="dislike"]'),
   };
 
-  const originalState = {
-    like: {
-      content: buttons.like.innerHTML,
-      disabled: buttons.like.disabled,
-    },
-    dislike: {
-      content: buttons.dislike.innerHTML,
-      disabled: buttons.dislike.disabled,
-    },
-  };
-
-  // Show loading state
   const loadingSpinner =
-    '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>';
+    '<span class="spinner-border spinner-border-sm me-1" role="status"></span>';
   buttons[action].innerHTML =
     loadingSpinner + (action === "like" ? "Liking..." : "Disliking...");
   Object.values(buttons).forEach((btn) => (btn.disabled = true));
 
   pendingVotes.add(voteKey);
-
-  // Set timeout to prevent UI from being stuck
-  const timeout = setTimeout(() => {
-    resetVoteButtonState();
-    showToast("Vote request timed out. Please try again.", "warning");
-  }, 5000);
 
   fetch(`/api/vote/${commentId}/${action}`, {
     method: "POST",
@@ -114,34 +96,54 @@ function vote(commentId, action, buttonElement) {
     credentials: "same-origin",
   })
     .then(async (response) => {
-      clearTimeout(timeout);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || response.statusText);
-      return data;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to process vote");
+      }
+      return response.json();
     })
     .then((data) => {
-      if (!data.success)
-        throw new Error(data.message || "Vote processing failed");
-      updateVoteUI(commentElement, data);
-      showToast("Vote recorded successfully", "success");
+      if (!data.success) {
+        throw new Error(data.message || "Vote not recorded");
+      }
+
+      // Update UI
+      if (buttons.like && buttons.dislike) {
+        // Update counts
+        const likeCount = buttons.like.querySelector(".like-count");
+        const dislikeCount = buttons.dislike.querySelector(".dislike-count");
+        if (likeCount) likeCount.textContent = `(${data.likes})`;
+        if (dislikeCount) dislikeCount.textContent = `(${data.dislikes})`;
+
+        // Update active states
+        buttons.like.classList.remove("active");
+        buttons.dislike.classList.remove("active");
+        if (data.user_vote === "like") {
+          buttons.like.classList.add("active");
+        } else if (data.user_vote === "dislike") {
+          buttons.dislike.classList.add("active");
+        }
+      }
+
+      showToast(data.message || "Vote recorded successfully", "success");
     })
     .catch((error) => {
       console.error("Vote error:", error);
       showToast(error.message || "Error processing vote", "danger");
     })
     .finally(() => {
-      resetVoteButtonState();
+      // Reset button states
+      if (buttons.like && buttons.dislike) {
+        buttons.like.innerHTML =
+          '<i class="fas fa-thumbs-up"></i> Like <span class="like-count"></span>';
+        buttons.dislike.innerHTML =
+          '<i class="fas fa-thumbs-down"></i> Dislike <span class="dislike-count"></span>';
+        buttons.like.disabled = false;
+        buttons.dislike.disabled = false;
+      }
       pendingVotes.delete(voteKey);
-      fetchUserVotes();
+      fetchUserVotes(); // Refresh vote states
     });
-
-  function resetVoteButtonState() {
-    // Restore original button states
-    Object.entries(buttons).forEach(([type, button]) => {
-      button.innerHTML = originalState[type].content;
-      button.disabled = originalState[type].disabled;
-    });
-  }
 }
 
 function updateVoteUI(commentElement, data) {
@@ -343,48 +345,136 @@ function updateBookmarkButtonUI(button, isBookmarked) {
 function initializeInstitutionModal() {
   console.log("Initializing institution modal");
   const institutionModal = document.getElementById("institutionModal");
-  if (!institutionModal) return;
+  if (!institutionModal) {
+    console.error("Modal element not found");
+    return;
+  }
+
+  // Create a Bootstrap modal instance
+  const modal = new bootstrap.Modal(institutionModal);
 
   institutionModal.addEventListener("show.bs.modal", function (event) {
-    const button = event.relatedTarget;
-    const uniId = button.getAttribute("data-uni-id");
-    const selectedCourse = button.getAttribute("data-selected-course");
+    console.log("Modal show event triggered");
+    // Reset modal state and show loading
     resetModal();
 
-    if (uniId) {
-      fetchInstitutionDetails(uniId, selectedCourse);
-    } else {
-      showModalError("Unable to retrieve institution details.");
+    const button = event.relatedTarget;
+    if (!button) {
+      showModalError("Invalid trigger element");
+      return;
     }
+
+    const uniId = button.getAttribute("data-uni-id");
+    const selectedCourse = button.getAttribute("data-selected-course");
+
+    if (!uniId) {
+      showModalError("Invalid institution ID");
+      return;
+    }
+
+    // Store data for use after modal is shown
+    institutionModal.dataset.pendingUniId = uniId;
+    institutionModal.dataset.pendingSelectedCourse = selectedCourse;
   });
 
   institutionModal.addEventListener("shown.bs.modal", function () {
+    console.log("Modal shown event triggered");
+    const uniId = institutionModal.dataset.pendingUniId;
+    const selectedCourse = institutionModal.dataset.pendingSelectedCourse;
+
+    if (uniId) {
+      fetchInstitutionDetails(uniId, selectedCourse);
+    }
+
+    // Clean up stored data
+    delete institutionModal.dataset.pendingUniId;
+    delete institutionModal.dataset.pendingSelectedCourse;
+
     setupCourseSearch();
   });
 }
 
 function resetModal() {
-  const elements = {
-    institutionDetails: document.getElementById("institutionDetails"),
-    modalErrorMessage: document.getElementById("modalErrorMessage"),
-    loadingIndicator: document.getElementById("loadingIndicator"),
-    institutionName: document.getElementById("institutionName"),
-    institutionState: document.getElementById("institutionState"),
-    institutionProgramType: document.getElementById("institutionProgramType"),
-    institutionWebsite: document.getElementById("institutionWebsite"),
-    institutionEstablished: document.getElementById("institutionEstablished"),
-    coursesList: document.getElementById("coursesList"),
-  };
+  const modalBody = document.querySelector("#institutionModal .modal-body");
+  if (!modalBody) {
+    console.error("Modal body not found");
+    return;
+  }
 
-  elements.institutionDetails.style.display = "none";
-  elements.modalErrorMessage.style.display = "none";
-  elements.loadingIndicator.style.display = "block";
-
-  Object.keys(elements).forEach((key) => {
-    if (elements[key] && typeof elements[key].textContent !== "undefined") {
-      elements[key].textContent = "";
-    }
-  });
+  // Reset by recreating the entire modal content structure
+  modalBody.innerHTML = `
+      <div id="loadingIndicator" class="text-center py-4">
+          <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+          </div>
+          <p class="mt-2">Loading institution details...</p>
+      </div>
+      <div id="modalErrorMessage" class="alert alert-danger" style="display: none"></div>
+      <div id="institutionDetails" style="display: none">
+          <div class="row">
+              <div class="col-12">
+                  <h3 id="institutionName" class="mb-4"></h3>
+                  <div class="institution-info">
+                      <div class="row g-3">
+                          <div class="col-md-6">
+                              <div class="d-flex align-items-center">
+                                  <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                                  <div>
+                                      <strong>State:</strong>
+                                      <span id="institutionState" class="ms-2"></span>
+                                  </div>
+                              </div>
+                          </div>
+                          <div class="col-md-6">
+                              <div class="d-flex align-items-center">
+                                  <i class="fas fa-graduation-cap me-2 text-primary"></i>
+                                  <div>
+                                      <strong>Program Type:</strong>
+                                      <span id="institutionProgramType" class="ms-2"></span>
+                                  </div>
+                              </div>
+                          </div>
+                          <div class="col-md-6">
+                              <div class="d-flex align-items-center">
+                                  <i class="fas fa-globe me-2 text-primary"></i>
+                                  <div>
+                                      <strong>Website:</strong>
+                                      <span id="institutionWebsite" class="ms-2"></span>
+                                  </div>
+                              </div>
+                          </div>
+                          <div class="col-md-6">
+                              <div class="d-flex align-items-center">
+                                  <i class="fas fa-calendar-alt me-2 text-primary"></i>
+                                  <div>
+                                      <strong>Established:</strong>
+                                      <span id="institutionEstablished" class="ms-2"></span>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+          <div class="courses-section mt-4">
+              <ul class="nav nav-tabs" id="institutionTab" role="tablist">
+                  <li class="nav-item" role="presentation">
+                      <button class="nav-link active" id="courses-tab" data-bs-toggle="tab" data-bs-target="#courses" type="button" role="tab">
+                          <i class="fas fa-list me-1"></i> All Available Courses
+                      </button>
+                  </li>
+              </ul>
+              <div class="tab-content p-3 border border-top-0 rounded-bottom" id="institutionTabContent">
+                  <div class="tab-pane fade show active" id="courses" role="tabpanel">
+                      <div class="mb-3">
+                          <input type="text" class="form-control" id="courseSearch" placeholder="Search courses...">
+                      </div>
+                      <div id="coursesList" class="accordion"></div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  `;
 }
 
 function fetchInstitutionDetails(uniId, selectedCourse) {
@@ -395,12 +485,20 @@ function fetchInstitutionDetails(uniId, selectedCourse) {
     : `/api/institution/${uniId}`;
 
   fetch(url)
-    .then((response) => {
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
+    .then(async (response) => {
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`
+        );
+      }
       return response.json();
     })
     .then((data) => {
+      if (!data) {
+        throw new Error("No data received from server");
+      }
+      console.log("Received institution data:", data); // Debug log
       if (selectedCourse) {
         data.selected_course = selectedCourse;
       }
@@ -408,50 +506,95 @@ function fetchInstitutionDetails(uniId, selectedCourse) {
     })
     .catch((error) => {
       console.error("Error fetching institution details:", error);
-      showModalError("Error loading institution details. Please try again.");
+      showModalError(
+        error.message || "Error loading institution details. Please try again."
+      );
     });
 }
 
 function populateModal(data) {
+  try {
+    const elements = {
+      institutionName: document.getElementById("institutionName"),
+      institutionState: document.getElementById("institutionState"),
+      institutionProgramType: document.getElementById("institutionProgramType"),
+      institutionWebsite: document.getElementById("institutionWebsite"),
+      institutionEstablished: document.getElementById("institutionEstablished"),
+      coursesList: document.getElementById("coursesList"),
+      loadingIndicator: document.getElementById("loadingIndicator"),
+      institutionDetails: document.getElementById("institutionDetails"),
+      modalErrorMessage: document.getElementById("modalErrorMessage"),
+    };
+
+    // Verify all required elements exist
+    Object.entries(elements).forEach(([key, element]) => {
+      if (!element) {
+        throw new Error(`Required element ${key} not found in DOM`);
+      }
+    });
+
+    // Hide error message if it was previously shown
+    elements.modalErrorMessage.style.display = "none";
+
+    // Populate basic info
+    elements.institutionName.textContent = data.university_name || "N/A";
+    elements.institutionState.textContent = data.state || "N/A";
+    elements.institutionProgramType.textContent = data.program_type || "N/A";
+    elements.institutionWebsite.innerHTML = data.website
+      ? `<a href="${data.website}" target="_blank" rel="noopener noreferrer">${data.website}</a>`
+      : "Not Available";
+    elements.institutionEstablished.textContent =
+      data.established || "Not Available";
+
+    // Populate courses
+    if (Array.isArray(data.courses) && data.courses.length > 0) {
+      elements.coursesList.innerHTML = data.courses
+        .map((course, index) =>
+          createCourseHTML(course, data.selected_course, index)
+        )
+        .join("");
+    } else {
+      elements.coursesList.innerHTML =
+        '<p class="text-muted">No courses available for this institution.</p>';
+    }
+
+    // Show details
+    elements.loadingIndicator.style.display = "none";
+    elements.institutionDetails.style.display = "block";
+
+    // Setup course search
+    setupCourseSearch();
+
+    console.log("Modal populated successfully"); // Debug log
+  } catch (error) {
+    console.error("Error in populateModal:", error);
+    showModalError(`Error displaying institution details: ${error.message}`);
+  }
+}
+
+function showModalError(message) {
   const elements = {
-    institutionName: document.getElementById("institutionName"),
-    institutionState: document.getElementById("institutionState"),
-    institutionProgramType: document.getElementById("institutionProgramType"),
-    institutionWebsite: document.getElementById("institutionWebsite"),
-    institutionEstablished: document.getElementById("institutionEstablished"),
-    coursesList: document.getElementById("coursesList"),
+    errorDiv: document.getElementById("modalErrorMessage"),
     loadingIndicator: document.getElementById("loadingIndicator"),
     institutionDetails: document.getElementById("institutionDetails"),
   };
 
-  // Populate basic info
-  elements.institutionName.textContent = data.university_name;
-  elements.institutionState.textContent = data.state;
-  elements.institutionProgramType.textContent = data.program_type;
-  elements.institutionWebsite.innerHTML = data.website
-    ? `<a href="${data.website}" target="_blank" rel="noopener noreferrer">${data.website}</a>`
-    : "Not Available";
-  elements.institutionEstablished.textContent =
-    data.established || "Not Available";
-
-  // Populate courses
-  if (data.courses?.length > 0) {
-    elements.coursesList.innerHTML = data.courses
-      .map((course, index) =>
-        createCourseHTML(course, data.selected_course, index)
-      )
-      .join("");
-  } else {
-    elements.coursesList.innerHTML =
-      '<p class="text-muted">No courses available for this institution.</p>';
+  if (!elements.errorDiv) {
+    console.error("Error element not found");
+    return;
   }
 
-  // Show details
-  elements.loadingIndicator.style.display = "none";
-  elements.institutionDetails.style.display = "block";
+  // Hide other elements
+  if (elements.loadingIndicator) {
+    elements.loadingIndicator.style.display = "none";
+  }
+  if (elements.institutionDetails) {
+    elements.institutionDetails.style.display = "none";
+  }
 
-  // Setup course search if needed
-  setupCourseSearch();
+  // Show error message
+  elements.errorDiv.textContent = message;
+  elements.errorDiv.style.display = "block";
 }
 
 function createCourseHTML(course, selectedCourse, index) {
@@ -546,21 +689,6 @@ function updateNoResultsMessage(visibleCount) {
     }
   } else if (existingMessage) {
     existingMessage.remove();
-  }
-}
-
-function showModalError(message) {
-  const errorDiv = document.getElementById("modalErrorMessage");
-  const loadingIndicator = document.getElementById("loadingIndicator");
-
-  if (errorDiv) {
-    errorDiv.textContent = message;
-    errorDiv.style.display = "block";
-    if (loadingIndicator) {
-      loadingIndicator.style.display = "none";
-    }
-  } else {
-    console.error("Error element not found:", message);
   }
 }
 
