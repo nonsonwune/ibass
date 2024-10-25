@@ -34,13 +34,12 @@ class Config:
         logging.error("Database URI not found in environment variables!")
         raise ValueError("Database URI must be set in environment variables")
     
-    logging.info(f"Connecting to database: {SQLALCHEMY_DATABASE_URI}")
 
     # -------------------------------
     # SQLAlchemy Configuration
     # -------------------------------
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ECHO = True  # Set to False in production
+    SQLALCHEMY_ECHO = False  # Set to False in production
     
     # Configure connection pool
     SQLALCHEMY_ENGINE_OPTIONS = {

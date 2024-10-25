@@ -109,7 +109,6 @@ def init_db():
             db.session.close()
 
 if __name__ == "__main__":
-    logging.info("University Finder startup")
     
     try:
         init_db()
