@@ -109,7 +109,6 @@ def init_db():
             db.session.close()
 
 if __name__ == "__main__":
-    
     try:
         init_db()
         # Configure the app to handle connection drops
@@ -124,7 +123,8 @@ if __name__ == "__main__":
                 'keepalives_count': 5
             }
         }
-        app.run(host="0.0.0.0", port=5001)
+        port = int(os.environ.get("PORT", 5001))
+        app.run(host="0.0.0.0", port=port)
     except Exception as e:
         logging.error(f"Failed to start application: {str(e)}")
         exit(1)
