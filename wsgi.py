@@ -7,6 +7,7 @@ import logging
 from sqlalchemy import inspect, text
 import sqlalchemy.exc
 import time
+import os
 
 # Configure logging once at the module level
 logging.basicConfig(
