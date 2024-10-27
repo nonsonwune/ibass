@@ -282,6 +282,86 @@
   #loadingSpinner {
     transition: opacity var(--transition-normal);
   }
+
+  /* Course Search and Autocomplete Styles */
+  .course-search-container {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+
+  .course-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: none;
+  }
+
+  .course-suggestion-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .course-suggestion-item:last-child {
+    border-bottom: none;
+  }
+
+  .course-suggestion-item:hover,
+  .course-suggestion-item.active {
+    background-color: rgba(52, 152, 219, 0.1);
+  }
+
+  .course-suggestion-item .course-name {
+    font-weight: 500;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+  }
+
+  .course-suggestion-item .course-name strong {
+    color: #3498db;
+  }
+
+  .course-suggestion-item .institution-count {
+    font-size: 0.875rem;
+    color: #6c757d;
+  }
+
+  .course-suggestions.show {
+    display: block;
+    animation: fadeInDown 0.3s ease;
+  }
+
+  @keyframes fadeInDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Mobile Responsiveness */
+  @media (max-width: 768px) {
+    .course-suggestions {
+      max-height: 250px;
+    }
+
+    .course-suggestion-item {
+      padding: 0.5rem 1rem;
+    }
+  }
 </style>
 {% endblock %} {% block content %}
 <section class="hero-section d-flex align-items-center">
@@ -330,17 +410,22 @@
           <p class="mt-2">Loading available courses...</p>
         </div>
 
-        <div class="course-search mb-4">
-          <i class="fas fa-search search-icon"></i>
-          <input
-            type="text"
-            id="courseSearch"
-            class="form-control form-control-lg"
-            placeholder="Search courses..."
-            style="display: none"
-          />
+        <div class="course-search-container">
+          <div class="course-search mb-4">
+            <i class="fas fa-search search-icon"></i>
+            <input
+              type="text"
+              id="courseSearch"
+              class="form-control form-control-lg"
+              placeholder="Search courses..."
+              autocomplete="off"
+              style="display: none"
+            />
+          </div>
+          <div id="courseSuggestions" class="course-suggestions"></div>
         </div>
 
+        <!-- Hidden select element for maintaining compatibility -->
         <select
           id="course"
           class="form-select form-select-lg mb-4"
@@ -779,13 +864,247 @@
       window.location.href = `/recommend?${new URLSearchParams(params)}`;
     });
 
+    // Initialize course search with autocomplete
     function initializeCourseSearch() {
+      const searchInput = document.getElementById("courseSearch");
+      const suggestionsContainer = document.getElementById("courseSuggestions");
+      const courseSelect = document.getElementById("course");
+      const findInstitutionBtn = document.getElementById("findInstitution");
+      let selectedIndex = -1;
+
+      // Show the search input
+      searchInput.style.display = "block";
+
+      function showSuggestions(suggestions) {
+        if (suggestions.length === 0) {
+          suggestionsContainer.classList.remove("show");
+          return;
+        }
+
+        const html = suggestions
+          .map(
+            (course, index) => `
+      <div class="course-suggestion-item" data-index="${index}" data-value="${
+              course.name
+            }" data-institutions='${JSON.stringify(
+              Array.from(course.institutions)
+            )}'>
+        <div class="course-name">${highlightMatch(
+          course.name,
+          searchInput.value
+        )}</div>
+        <div class="institution-count">
+          ${course.institutions.size} ${
+              course.institutions.size === 1 ? "institution" : "institutions"
+            } available
+        </div>
+      </div>
+    `
+          )
+          .join("");
+
+        suggestionsContainer.innerHTML = html;
+        suggestionsContainer.classList.add("show");
+      }
+
+      function highlightMatch(text, query) {
+        if (!query) return text;
+
+        const cleanQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // Escape regex special characters
+        const regex = new RegExp(`(${cleanQuery})`, "gi");
+        return text.replace(regex, "<strong>$1</strong>");
+      }
+
+      function selectSuggestion(suggestionElement) {
+        const courseName = suggestionElement.dataset.value;
+        const institutions = JSON.parse(suggestionElement.dataset.institutions);
+
+        searchInput.value = courseName;
+        suggestionsContainer.classList.remove("show");
+
+        // Update the hidden select element
+        const option = document.createElement("option");
+        option.value = courseName;
+        option.selected = true;
+        option.dataset.institutions = JSON.stringify(institutions);
+        option.textContent = `${courseName} (${institutions.length} ${
+          institutions.length === 1 ? "institution" : "institutions"
+        })`;
+
+        courseSelect.innerHTML = "";
+        courseSelect.appendChild(option);
+
+        // Enable the find institution button
+        findInstitutionBtn.disabled = false;
+
+        // Clear selection
+        selectedIndex = -1;
+      }
+
+      // Search handler with debounce
       const searchHandler = debounce(function () {
-        populateCourseSelect(currentCourses, this.value);
+        const query = this.value.toLowerCase();
+        if (!query) {
+          suggestionsContainer.classList.remove("show");
+          findInstitutionBtn.disabled = true;
+          return;
+        }
+
+        const filteredCourses = currentCourses.filter((course) =>
+          course.name.toLowerCase().includes(query)
+        );
+
+        showSuggestions(filteredCourses);
+        selectedIndex = -1;
       }, 300);
 
-      courseSearch.value = "";
-      courseSearch.addEventListener("input", searchHandler);
+      // Event Listeners
+      searchInput.addEventListener("input", searchHandler);
+
+      // Keyboard navigation
+      searchInput.addEventListener("keydown", function (e) {
+        const suggestions = document.querySelectorAll(
+          ".course-suggestion-item"
+        );
+
+        switch (e.key) {
+          case "ArrowDown":
+            e.preventDefault();
+            selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+            updateSelection(suggestions);
+            break;
+
+          case "ArrowUp":
+            e.preventDefault();
+            selectedIndex = Math.max(selectedIndex - 1, -1);
+            updateSelection(suggestions);
+            break;
+
+          case "Enter":
+            e.preventDefault();
+            if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+              selectSuggestion(suggestions[selectedIndex]);
+            }
+            break;
+
+          case "Escape":
+            suggestionsContainer.classList.remove("show");
+            selectedIndex = -1;
+            break;
+        }
+      });
+
+      function updateSelection(suggestions) {
+        suggestions.forEach((suggestion, index) => {
+          suggestion.classList.toggle("active", index === selectedIndex);
+          if (index === selectedIndex) {
+            suggestion.scrollIntoView({ block: "nearest" });
+          }
+        });
+      }
+
+      // Handle clicks on suggestions
+      suggestionsContainer.addEventListener("click", function (e) {
+        const suggestion = e.target.closest(".course-suggestion-item");
+        if (suggestion) {
+          selectSuggestion(suggestion);
+        }
+      });
+
+      // Close suggestions when clicking outside
+      document.addEventListener("click", function (e) {
+        if (
+          !searchInput.contains(e.target) &&
+          !suggestionsContainer.contains(e.target)
+        ) {
+          suggestionsContainer.classList.remove("show");
+        }
+      });
+
+      // Reset search on load
+      searchInput.value = "";
+      findInstitutionBtn.disabled = true;
+    }
+
+    // Modify your existing loadCourses function to include the initialization
+    async function loadCourses(state, programTypes) {
+      loadingSpinner.style.display = "flex";
+      courseSelect.style.display = "none";
+      courseSearch.style.display = "none";
+      findInstitutionBtn.style.display = "none";
+
+      try {
+        const programTypesString = Array.from(programTypes).join(",");
+        const response = await fetch(
+          `/api/courses?state=${encodeURIComponent(
+            state
+          )}&programme_type=${encodeURIComponent(programTypesString)}`
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || `HTTP error! status: ${response.status}`
+          );
+        }
+
+        const courses = await response.json();
+
+        if (Array.isArray(courses)) {
+          const coursesMap = new Map();
+
+          courses.forEach((course) => {
+            const courseKey = course.course_name.toUpperCase();
+            if (!coursesMap.has(courseKey)) {
+              coursesMap.set(courseKey, {
+                name: course.course_name,
+                institutions: new Set([
+                  {
+                    name: course.university_name,
+                    state: course.state,
+                    type: course.program_type,
+                  },
+                ]),
+                details: {
+                  utme: course.utme_requirements,
+                  subjects: course.subjects,
+                  directEntry: course.direct_entry_requirements,
+                  abbreviation: course.abbrv,
+                },
+              });
+            } else {
+              coursesMap.get(courseKey).institutions.add({
+                name: course.university_name,
+                state: course.state,
+                type: course.program_type,
+              });
+            }
+          });
+
+          currentCourses = Array.from(coursesMap.values()).sort((a, b) =>
+            a.name.localeCompare(b.name)
+          );
+
+          if (currentCourses.length === 0) {
+            showInfo(
+              "No courses available for the selected location and institution types."
+            );
+          }
+        } else {
+          throw new Error("Invalid response format from server");
+        }
+      } catch (error) {
+        console.error("Error loading courses:", error);
+        showError(`Failed to load courses: ${error.message}`);
+      } finally {
+        loadingSpinner.style.display = "none";
+        courseSearch.style.display = "block";
+        findInstitutionBtn.style.display = "block";
+        findInstitutionBtn.disabled = true;
+
+        // Initialize the autocomplete search
+        initializeCourseSearch();
+      }
     }
 
     courseSelect.addEventListener("change", function () {
