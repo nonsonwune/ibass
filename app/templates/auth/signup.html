@@ -23,8 +23,8 @@ Finder{% endblock %} {% block content %}
                 <span class="input-group-text">
                   <i class="fas fa-user"></i>
                 </span>
-                {{ form.username(class="form-control", placeholder="Choose a
-                username") }}
+                {# formatter-disable #} {{ form.username(class="form-control",
+                placeholder="Choose a username") }} {# formatter-enable #}
               </div>
               {% for error in form.username.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
@@ -36,8 +36,8 @@ Finder{% endblock %} {% block content %}
                 <span class="input-group-text">
                   <i class="fas fa-envelope"></i>
                 </span>
-                {{ form.email(class="form-control", placeholder="Enter your
-                email") }}
+                {# formatter-disable #} {{ form.email(class="form-control",
+                placeholder="Enter your email") }} {# formatter-enable #}
               </div>
               {% for error in form.email.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
@@ -49,8 +49,8 @@ Finder{% endblock %} {% block content %}
                 <span class="input-group-text">
                   <i class="fas fa-lock"></i>
                 </span>
-                {{ form.password(class="form-control", placeholder="Create a
-                password") }}
+                {# formatter-disable #} {{ form.password(class="form-control",
+                placeholder="Create a password") }} {# formatter-enable #}
               </div>
               {% for error in form.password.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
