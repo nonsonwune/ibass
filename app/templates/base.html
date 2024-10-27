@@ -613,14 +613,16 @@
             }
           });
 
-          // Close mobile menu when link is clicked
-          navbarCollapse.querySelectorAll(".nav-link").forEach((link) => {
-            link.addEventListener("click", () => {
-              if (navbarCollapse.classList.contains("show")) {
-                navbarToggler.click();
-              }
+          // Close mobile menu when link is clicked, except for dropdown toggles
+          navbarCollapse
+            .querySelectorAll(".nav-link:not(.dropdown-toggle)")
+            .forEach((link) => {
+              link.addEventListener("click", () => {
+                if (navbarCollapse.classList.contains("show")) {
+                  navbarToggler.click();
+                }
+              });
             });
-          });
         }
       });
 
