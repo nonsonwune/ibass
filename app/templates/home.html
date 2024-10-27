@@ -262,6 +262,26 @@
   .institution-card {
     position: relative;
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Add scroll margin using design system spacing */
+  #wizard-container {
+    scroll-margin-top: var(--spacing-xl);
+  }
+
+  /* Ensure smooth transition when steps change */
+  .wizard-step {
+    transition: opacity var(--transition-normal),
+      transform var(--transition-normal);
+  }
+
+  /* Enhanced loading state */
+  #loadingSpinner {
+    transition: opacity var(--transition-normal);
+  }
 </style>
 {% endblock %} {% block content %}
 <section class="hero-section d-flex align-items-center">
@@ -592,9 +612,19 @@
     // Navigation handlers
     nextStepBtn.addEventListener("click", function () {
       if (locationSelect.value && selectedTypes.size > 0) {
-        step1.classList.remove("active");
-        step2.classList.add("active");
-        loadCourses(locationSelect.value, selectedTypes);
+        // First scroll to container
+        const wizardContainer = document.getElementById("wizard-container");
+        wizardContainer.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+
+        // Wait for scroll to complete before showing step 2
+        setTimeout(() => {
+          step1.classList.remove("active");
+          step2.classList.add("active");
+          loadCourses(locationSelect.value, selectedTypes);
+        }, 500); // Half second delay to match scroll animation
       }
     });
 
