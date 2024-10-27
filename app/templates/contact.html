@@ -2,111 +2,146 @@
 {% extends "base.html" %} {% block title %}Contact Us - Nigerian Institutions
 Finder{% endblock %} {% block content %}
 <div class="container my-5">
-  <h1 class="mb-4 text-center">Get in Touch & Join the Conversation</h1>
-  <p class="text-center">
-    We appreciate your feedback. Contact us using the form below or other
-    channels. Sign in to join our comment section - share thoughts, discuss
-    Nigerian institutions, or register complaints. Your insights are valuable to
-    our community!
-  </p>
+  <!-- Hero Section -->
+  <div class="text-center mb-5">
+    <h1 class="display-4 fw-bold text-gradient mb-3">
+      Get in Touch & Join the Conversation
+    </h1>
+    <p class="lead text-muted mx-auto" style="max-width: 800px">
+      We appreciate your feedback. Join our vibrant community to share thoughts,
+      discuss Nigerian institutions, or provide valuable insights. Your voice
+      matters!
+    </p>
+  </div>
 
-  <div class="row mt-5">
+  <div class="row g-4">
     <!-- Comments Section -->
-    <div class="col-12 col-md-6 mb-4 order-1">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h5 mb-0"><i class="fas fa-comments me-2"></i>Comments</h2>
-        {% if current_user.is_authenticated %}
-        <button
-          class="btn btn-primary"
-          data-bs-toggle="modal"
-          data-bs-target="#addCommentModal"
+    <div class="col-lg-7">
+      <div class="card shadow-hover h-100">
+        <div
+          class="card-header bg-gradient d-flex justify-content-between align-items-center py-3"
         >
-          <i class="fas fa-plus-circle me-1"></i> Add Comment
-        </button>
-        {% else %}
-        <button
-          class="btn btn-primary"
-          data-bs-toggle="tooltip"
-          data-bs-placement="top"
-          title="Sign in to add a comment"
-          onclick="window.location.href='{{ url_for('auth.login') }}'"
-        >
-          <i class="fas fa-plus-circle me-1"></i> Add Comment
-        </button>
-        {% endif %}
-      </div>
-      <div class="card shadow-sm">
-        <div class="card-body">
-          <div class="comments-section">
+          <h2 class="h5 mb-0">
+            <i class="fas fa-comments me-2 text-primary"></i>Community
+            Discussion
+          </h2>
+          {% if current_user.is_authenticated %}
+          <button
+            class="btn btn-primary btn-sm px-3"
+            data-bs-toggle="modal"
+            data-bs-target="#addCommentModal"
+          >
+            <i class="fas fa-plus-circle me-2"></i>Add Comment
+          </button>
+          {% else %}
+          <a
+            href="{{ url_for('auth.login') }}"
+            class="btn btn-outline-primary btn-sm px-3"
+            data-bs-toggle="tooltip"
+            data-bs-placement="top"
+            title="Sign in to add a comment"
+          >
+            <i class="fas fa-sign-in-alt me-2"></i>Login to Comment
+          </a>
+          {% endif %}
+        </div>
+
+        <div class="card-body p-0">
+          <div
+            class="comments-section"
+            style="max-height: 600px; overflow-y: auto"
+          >
             {% if not current_user.is_authenticated %}
-            <div class="alert alert-info mb-3" role="alert">
-              <i class="fas fa-info-circle me-2"></i>
-              Sign in to comment, like, and interact with others.
+            <div
+              class="alert alert-info m-3 d-flex align-items-center"
+              role="alert"
+            >
+              <i class="fas fa-info-circle me-3 fa-lg"></i>
+              <div>
+                Sign in to join the conversation and interact with other
+                members.
+              </div>
             </div>
-            {% endif %}
-            <h3 class="h6 mb-3">Recent Comments</h3>
-            {% if comments %}
-            <div class="comment-container">
+            {% endif %} {% if comments %}
+            <div class="comment-list p-3">
               {% for comment in comments %}
-              <div class="list-group mb-3">
-                <div class="list-group-item">
-                  <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">
-                      <span
-                        class="{% if comment.author.is_admin %}admin-username{% endif %}"
-                      >
-                        {{ comment.author.username }}
-                      </span>
-                      <span class="badge user-score bg-secondary">
-                        {{ comment.author.score }}
-                      </span>
-                    </h5>
-                    <small class="text-muted">
-                      {{ comment.date_posted.strftime('%Y-%m-%d %H:%M') }}
-                    </small>
+              <div class="comment-card mb-3 fade-in">
+                <div class="p-3 bg-light rounded-3">
+                  <div
+                    class="d-flex justify-content-between align-items-center mb-2"
+                  >
+                    <div class="d-flex align-items-center">
+                      <div class="user-avatar me-2">
+                        <i class="fas fa-user-circle fa-2x text-primary"></i>
+                      </div>
+                      <div>
+                        <h6
+                          class="mb-0 {% if comment.author.is_admin %}admin-username{% endif %}"
+                        >
+                          {{ comment.author.username }}
+                          <span
+                            class="badge bg-primary-soft ms-1 user-score"
+                            data-user-id="{{ comment.author.id }}"
+                          >
+                            {{ comment.author.score }}
+                          </span>
+                        </h6>
+                        <small class="text-muted">
+                          {{ comment.date_posted.strftime('%B %d, %Y at %H:%M')
+                          }}
+                        </small>
+                      </div>
+                    </div>
                   </div>
-                  <p class="mb-1">{{ comment.content }}</p>
+
+                  <div class="comment-content mb-3">
+                    <p class="mb-0">{{ comment.content }}</p>
+                  </div>
+
                   <div
                     class="d-flex justify-content-between align-items-center"
                   >
-                    <div>
+                    <div class="btn-group">
                       <button
-                        class="btn btn-sm btn-outline-primary me-2 vote-btn"
+                        class="btn btn-sm btn-outline-primary vote-btn"
                         data-comment-id="{{ comment.id }}"
                         data-vote-type="like"
                       >
-                        <i class="fas fa-thumbs-up"></i>
-                        Like
+                        <i class="fas fa-thumbs-up me-1"></i>
                         <span class="like-count">({{ comment.likes }})</span>
                       </button>
                       <button
-                        class="btn btn-sm btn-outline-danger me-2 vote-btn"
+                        class="btn btn-sm btn-outline-danger vote-btn"
                         data-comment-id="{{ comment.id }}"
                         data-vote-type="dislike"
                       >
-                        <i class="fas fa-thumbs-down"></i>
-                        Dislike
+                        <i class="fas fa-thumbs-down me-1"></i>
                         <span class="dislike-count"
                           >({{ comment.dislikes }})</span
                         >
                       </button>
                     </div>
+
                     {% if current_user.is_authenticated and (current_user.id ==
                     comment.user_id or current_user.is_admin) %}
-                    <form
-                      action="{{ url_for('main.delete_comment', comment_id=comment.id) }}"
-                      method="POST"
-                      class="d-inline"
-                    >
-                      {{ form.hidden_tag() }}
-                      <button
-                        type="submit"
-                        class="btn btn-sm btn-danger"
-                        onclick="return confirm('Are you sure you want to delete this comment?');"
+                    <div class="comment-actions">
+                      <form
+                        action="{{ url_for('main.delete_comment', comment_id=comment.id) }}"
+                        method="POST"
+                        class="d-inline delete-comment-form"
                       >
-                        <i class="fas fa-trash-alt"></i> Delete
-                      </button>
-                    </form>
+                        {{ form.hidden_tag() }}
+                        <button
+                          type="submit"
+                          class="btn btn-sm btn-danger"
+                          data-bs-toggle="tooltip"
+                          data-bs-placement="top"
+                          title="Delete comment"
+                        >
+                          <i class="fas fa-trash-alt"></i>
+                        </button>
+                      </form>
+                    </div>
                     {% endif %}
                   </div>
                 </div>
@@ -114,50 +149,76 @@ Finder{% endblock %} {% block content %}
               {% endfor %}
             </div>
             {% else %}
-            <p class="text-muted">No comments yet. Be the first to comment!</p>
+            <div class="text-center py-5">
+              <i class="fas fa-comments text-muted fa-3x mb-3"></i>
+              <p class="text-muted mb-0">
+                No comments yet. Be the first to start the conversation!
+              </p>
+            </div>
             {% endif %}
           </div>
         </div>
       </div>
     </div>
+
     <!-- Contact Form Section -->
-    <div class="col-12 col-md-6 mb-4 order-2">
-      <div class="card shadow-sm">
-        <div class="card-header bg-secondary text-white">
+    <div class="col-lg-5">
+      <div class="card shadow-hover h-100">
+        <div class="card-header bg-gradient">
           <h2 class="h5 mb-0">
-            <i class="fas fa-envelope me-2"></i>Contact Form
+            <i class="fas fa-envelope me-2 text-primary"></i>Contact Us
           </h2>
         </div>
         <div class="card-body">
-          <form action="{{ url_for('main.contact') }}" method="POST" novalidate>
+          <form
+            action="{{ url_for('main.contact') }}"
+            method="POST"
+            class="needs-validation contact-form"
+            novalidate
+          >
             {{ form.hidden_tag() }}
-            <div class="mb-3">
-              {{ form.name.label(class="form-label") }} {{
-              form.name(class="form-control", placeholder="Enter your full
-              name", required=true) }}
+
+            <div class="form-floating mb-3">
+              {{ form.name(class="form-control", placeholder="Enter your name",
+              id="floatingName") }}
+              <label for="floatingName">
+                <i class="fas fa-user me-2"></i>Your Name
+              </label>
               <div class="invalid-feedback">Please enter your name.</div>
             </div>
-            <div class="mb-3">
-              {{ form.email.label(class="form-label") }} {{
-              form.email(class="form-control", placeholder="Enter your email",
-              required=true) }}
+
+            <div class="form-floating mb-3">
+              {{ form.email(class="form-control", placeholder="Enter your
+              email", id="floatingEmail") }}
+              <label for="floatingEmail">
+                <i class="fas fa-envelope me-2"></i>Email Address
+              </label>
               <div class="invalid-feedback">
                 Please enter a valid email address.
               </div>
             </div>
-            <div class="mb-3">
-              {{ form.subject.label(class="form-label") }} {{
-              form.subject(class="form-control", placeholder="Subject of your
-              message", required=true) }}
+
+            <div class="form-floating mb-3">
+              {{ form.subject(class="form-control", placeholder="Enter subject",
+              id="floatingSubject") }}
+              <label for="floatingSubject">
+                <i class="fas fa-heading me-2"></i>Subject
+              </label>
               <div class="invalid-feedback">Please enter a subject.</div>
             </div>
-            <div class="mb-3">
-              {{ form.message.label(class="form-label") }} {{
-              form.message(class="form-control", rows="5", placeholder="Write
-              your message here...", required=true) }}
+
+            <div class="form-floating mb-3">
+              {{ form.message(class="form-control", style="height: 150px",
+              placeholder="Enter your message", id="floatingMessage") }}
+              <label for="floatingMessage">
+                <i class="fas fa-comment me-2"></i>Your Message
+              </label>
               <div class="invalid-feedback">Please enter your message.</div>
             </div>
-            {{ form.submit(class="btn btn-primary w-100") }}
+
+            <button type="submit" class="btn btn-primary w-100 btn-lg">
+              <i class="fas fa-paper-plane me-2"></i>Send Message
+            </button>
           </form>
         </div>
       </div>
@@ -174,9 +235,14 @@ Finder{% endblock %} {% block content %}
   aria-labelledby="addCommentModalLabel"
   aria-hidden="true"
 >
-  <div class="modal-dialog">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      <form action="{{ url_for('main.add_comment') }}" method="POST" novalidate>
+      <form
+        action="{{ url_for('main.add_comment') }}"
+        method="POST"
+        class="comment-form"
+        novalidate
+      >
         {{ form.hidden_tag() }}
         <div class="modal-header">
           <h5 class="modal-title" id="addCommentModalLabel">
@@ -190,19 +256,24 @@ Finder{% endblock %} {% block content %}
           ></button>
         </div>
         <div class="modal-body">
-          <div class="mb-3">
-            <label for="comment" class="form-label">Your Comment</label>
+          <div class="form-floating mb-3">
             <textarea
               class="form-control"
               id="comment"
               name="comment"
-              rows="4"
+              style="height: 150px"
               maxlength="200"
-              placeholder="Write your comment here..."
+              placeholder="Write your comment"
               required
             ></textarea>
-            <div class="form-text text-end" id="charCount">
-              200 characters remaining
+            <label for="comment">Your Comment</label>
+            <div
+              class="form-text d-flex justify-content-between align-items-center mt-2"
+            >
+              <span class="text-muted">Maximum 200 characters</span>
+              <span id="charCount" class="badge bg-secondary"
+                >200 remaining</span
+              >
             </div>
           </div>
         </div>
@@ -212,10 +283,10 @@ Finder{% endblock %} {% block content %}
             class="btn btn-secondary"
             data-bs-dismiss="modal"
           >
-            <i class="fas fa-times me-1"></i> Close
+            <i class="fas fa-times me-2"></i>Cancel
           </button>
           <button type="submit" class="btn btn-primary">
-            <i class="fas fa-paper-plane me-1"></i> Post Comment
+            <i class="fas fa-paper-plane me-2"></i>Post Comment
           </button>
         </div>
       </form>
@@ -232,228 +303,7 @@ Finder{% endblock %} {% block content %}
 
 {% endblock %} {% block extra_scripts %} {{ super() }}
 <script>
-  window.isAuthenticated =
-    "{{ 'true' if current_user.is_authenticated else 'false' }}";
-  const csrfToken = "{{ csrf_token() }}";
-</script>
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(
-      document.querySelectorAll('[data-bs-toggle="tooltip"]')
-    );
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
-    // Character count for comment textarea
-    const commentTextarea = document.getElementById("comment");
-    const charCount = document.getElementById("charCount");
-    if (commentTextarea && charCount) {
-      commentTextarea.addEventListener("input", function () {
-        const remaining = 200 - this.value.length;
-        charCount.textContent = `${remaining} characters remaining`;
-        charCount.classList.toggle("text-danger", remaining < 20);
-      });
-    }
-
-    // Vote button handlers
-    document.querySelectorAll(".vote-btn").forEach((button) => {
-      button.addEventListener("click", function (event) {
-        event.preventDefault();
-
-        if (window.isAuthenticated !== "true") {
-          window.location.href = "/auth/login";
-          return;
-        }
-
-        const commentId = this.getAttribute("data-comment-id");
-        const voteType = this.getAttribute("data-vote-type");
-        const isLike = voteType === "like";
-
-        // Store the current count
-        const countSpan = this.querySelector(
-          isLike ? ".like-count" : ".dislike-count"
-        );
-        const currentCount = countSpan.textContent;
-
-        // Create loading state content
-        const loadingSpinner =
-          '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>';
-        const loadingText = isLike ? "Liking..." : "Disliking...";
-
-        // Store original content structure
-        const originalIcon = isLike
-          ? '<i class="fas fa-thumbs-up"></i>'
-          : '<i class="fas fa-thumbs-down"></i>';
-        const originalText = isLike ? "Like" : "Dislike";
-
-        // Show loading state
-        this.innerHTML = `${loadingSpinner}${loadingText}${currentCount}`;
-        this.disabled = true;
-
-        // Fetch URL
-        const fetchUrl = `/api/vote/${commentId}/${voteType}`;
-        console.log(`Fetching URL: ${fetchUrl}`);
-
-        fetch(fetchUrl, {
-          method: "POST",
-          headers: {
-            "X-CSRFToken": csrfToken,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          credentials: "same-origin",
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Network response was not OK");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            if (data.success) {
-              const comment = this.closest(".list-group-item");
-              const likeButton = comment.querySelector(
-                '[data-vote-type="like"]'
-              );
-              const dislikeButton = comment.querySelector(
-                '[data-vote-type="dislike"]'
-              );
-
-              // Update vote counts
-              likeButton.querySelector(
-                ".like-count"
-              ).textContent = `(${data.likes})`;
-              dislikeButton.querySelector(
-                ".dislike-count"
-              ).textContent = `(${data.dislikes})`;
-
-              // Update button states
-              if (data.user_vote === "like") {
-                likeButton.classList.add("active");
-                dislikeButton.classList.remove("active");
-              } else if (data.user_vote === "dislike") {
-                dislikeButton.classList.add("active");
-                likeButton.classList.remove("active");
-              } else {
-                likeButton.classList.remove("active");
-                dislikeButton.classList.remove("active");
-              }
-
-              // Update user score
-              if (data.user_id && typeof data.user_score === "number") {
-                const userScoreBadges =
-                  document.querySelectorAll(`.user-score`);
-                userScoreBadges.forEach((badge) => {
-                  if (
-                    badge
-                      .closest(".list-group-item")
-                      .querySelector(".mb-1")
-                      .textContent.includes(comment.author.username)
-                  ) {
-                    badge.textContent = data.user_score;
-                  }
-                });
-              }
-
-              showToast("Vote recorded successfully", "success");
-            } else {
-              showToast(data.message || "Failed to process vote", "danger");
-            }
-          })
-          .catch((error) => {
-            console.error("Error:", error);
-            showToast("An error occurred while processing your vote", "danger");
-          })
-          .finally(() => {
-            // Restore button to original state
-            this.innerHTML = `${originalIcon} ${originalText} <span class="${
-              isLike ? "like" : "dislike"
-            }-count">${currentCount}</span>`;
-            this.disabled = false;
-          });
-      });
-    });
-
-    // Function to update vote button states
-    function updateVoteButtonStates() {
-      if (window.isAuthenticated !== "true") return;
-
-      fetch("/api/user_votes")
-        .then((response) => {
-          if (!response.ok) throw new Error("Failed to fetch vote states");
-          return response.json();
-        })
-        .then((votes) => {
-          document.querySelectorAll(".vote-btn").forEach((button) => {
-            const commentId = button.getAttribute("data-comment-id");
-            const voteType = button.getAttribute("data-vote-type");
-
-            if (
-              votes[voteType === "like" ? "liked" : "disliked"].includes(
-                parseInt(commentId)
-              )
-            ) {
-              button.classList.add("active");
-            } else {
-              button.classList.remove("active");
-            }
-          });
-        })
-        .catch((error) => {
-          console.error("Error fetching vote states:", error);
-        });
-    }
-
-    // Function to show toast notifications
-    function showToast(message, type = "info") {
-      const toastContainer = document.getElementById("toastContainer");
-      const toastHTML = `
-      <div class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-          <div class="d-flex">
-              <div class="toast-body">
-                  ${message}
-              </div>
-              <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-          </div>
-      </div>
-    `;
-
-      const toastElement = document.createElement("div");
-      toastElement.innerHTML = toastHTML;
-      toastContainer.appendChild(toastElement.firstChild);
-
-      const toast = new bootstrap.Toast(toastContainer.lastChild, {
-        autohide: true,
-        delay: 3000,
-      });
-      toast.show();
-
-      // Remove toast from DOM after it's hidden
-      toastContainer.lastChild.addEventListener("hidden.bs.toast", function () {
-        this.remove();
-      });
-    }
-
-    // Bootstrap form validation
-    const forms = document.querySelectorAll("form[novalidate]");
-    Array.from(forms).forEach((form) => {
-      form.addEventListener(
-        "submit",
-        function (event) {
-          if (!form.checkValidity()) {
-            event.preventDefault();
-            event.stopPropagation();
-          }
-          form.classList.add("was-validated");
-        },
-        false
-      );
-    });
-
-    // Initialize vote states on page load
-    updateVoteButtonStates();
-  });
+  window.isAuthenticated = {{ current_user.is_authenticated|tojson }};
+  window.csrfToken = "{{ csrf_token() }}";
 </script>
 {% endblock %}

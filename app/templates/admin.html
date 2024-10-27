@@ -91,7 +91,7 @@ Institutions Finder{% endblock %} {% block content %}
             <td>{{ comment.date_posted.strftime('%Y-%m-%d %H:%M') }}</td>
             <td>{{ comment.likes }}</td>
             <td>{{ comment.dislikes }}</td>
-            <td>{{ comment.score }}</td>
+            <td>{{ comment.author.score }}</td>
             <td>
               <form
                 action="{{ url_for('admin.delete_comment', comment_id=comment.id) }}"

@@ -1,7 +1,8 @@
-<!-- templates/recommend.html -->
+<!-- app/templates/recommend.html -->
 {% extends "base.html" %} {% block title %}Recommended Institutions - Nigerian
 Institutions Finder{% endblock %} {% block content %}
 <div class="container my-5">
+  <!-- Flash Messages -->
   {% with messages = get_flashed_messages(with_categories=true) %} {% if
   messages %} {% for category, message in messages %}
   <div
@@ -18,6 +19,7 @@ Institutions Finder{% endblock %} {% block content %}
   </div>
   {% endfor %} {% endif %} {% endwith %}
 
+  <!-- Breadcrumb -->
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
@@ -31,38 +33,51 @@ Institutions Finder{% endblock %} {% block content %}
 
   <h1 class="mb-4">Recommended Institutions</h1>
 
+  <!-- Search Criteria -->
   {% if location or course %}
-  <div class="search-criteria mb-4 p-3 bg-light rounded">
+  <div class="search-criteria mb-4">
     <h5 class="mb-3">Search Criteria:</h5>
-    <div>
+    <div class="criteria-badges">
       {% if location %}
       <span class="badge bg-primary me-2">
-        <i class="fas fa-map-marker-alt me-1"></i> Location: {{ location }}
+        <i class="fas fa-map-marker-alt me-1"></i>
+        Location: {{ location }}
       </span>
       {% endif %} {% if course %}
       <span class="badge bg-warning text-dark me-2">
-        <i class="fas fa-book me-1"></i> Course: {{ course }}
+        <i class="fas fa-book me-1"></i>
+        Course: {{ course }}
       </span>
       {% endif %}
     </div>
   </div>
-  {% endif %} {% if recommendations %}
+  {% endif %}
+
+  <!-- Recommendations Grid -->
+  {% if recommendations %}
   <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
     {% for uni in recommendations %}
     <div class="col">
-      <div class="card h-100 shadow-sm recommendation-card">
+      <div class="card h-100 recommendation-card">
         <div class="card-body d-flex flex-column">
-          <h5 class="card-title">{{ uni.university_name }}</h5>
-          <div class="card-text mb-3">
+          <div class="institution-header mb-3">
+            <h5 class="card-title">{{ uni.university_name }}</h5>
+            {% if uni.program_type == 'PRIVATE' %}
+            <span class="badge bg-purple">Private Institution</span>
+            {% endif %}
+          </div>
+
+          <div class="institution-info mb-3">
             <p class="mb-2">
-              <i class="fas fa-map-marker-alt me-2 text-muted"></i>{{ uni.state
-              }}
+              <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+              {{ uni.state }}
             </p>
             <p class="mb-0">
-              <i class="fas fa-graduation-cap me-2 text-muted"></i>{{
-              uni.program_type }}
+              <i class="fas fa-graduation-cap me-2 text-success"></i>
+              {{ uni.program_type }}
             </p>
           </div>
+
           <div class="mt-auto">
             <button
               class="btn btn-primary w-100 mb-2 view-details-btn"
@@ -71,8 +86,10 @@ Institutions Finder{% endblock %} {% block content %}
               data-uni-id="{{ uni.id }}"
               data-selected-course="{{ course }}"
             >
-              <i class="fas fa-info-circle me-2"></i> View Details
+              <i class="fas fa-info-circle me-2"></i>
+              View Details
             </button>
+
             {% if current_user.is_authenticated %}
             <button
               class="btn btn-outline-secondary w-100 bookmark-btn"
@@ -90,7 +107,8 @@ Institutions Finder{% endblock %} {% block content %}
               href="{{ url_for('auth.login', next=request.url) }}"
               class="btn btn-outline-secondary w-100"
             >
-              <i class="fas fa-bookmark me-1"></i> Login to Bookmark
+              <i class="fas fa-bookmark me-1"></i>
+              Login to Bookmark
             </a>
             {% endif %}
           </div>
@@ -100,15 +118,18 @@ Institutions Finder{% endblock %} {% block content %}
     {% endfor %}
   </div>
   {% else %}
-  <div class="alert alert-info" role="alert">
-    <i class="fas fa-info-circle me-2"></i>
-    No matching institutions found. Please try different search criteria.
+  <div class="alert alert-info d-flex align-items-center" role="alert">
+    <i class="fas fa-info-circle me-3 fa-lg"></i>
+    <div>
+      No matching institutions found. Please try different search criteria.
+    </div>
   </div>
   {% endif %}
 
   <div class="text-center mt-4">
     <a href="/" class="btn btn-secondary btn-lg">
-      <i class="fas fa-search me-2"></i> New Search
+      <i class="fas fa-search me-2"></i>
+      New Search
     </a>
   </div>
 </div>
@@ -123,10 +144,14 @@ Institutions Finder{% endblock %} {% block content %}
 >
   <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="institutionModalLabel">
-          <i class="fas fa-university me-2"></i> Institution Details
-        </h5>
+      <!-- Modal Header -->
+      <div class="modal-header institution-header">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-university me-2"></i>
+          <h5 class="modal-title" id="institutionModalLabel">
+            Institution Details
+          </h5>
+        </div>
         <button
           type="button"
           class="btn-close"
@@ -134,67 +159,65 @@ Institutions Finder{% endblock %} {% block content %}
           aria-label="Close"
         ></button>
       </div>
+
+      <!-- Modal Body -->
       <div class="modal-body">
-        <div
-          id="loadingIndicator"
-          class="text-center py-4"
-          style="display: none"
-        >
+        <!-- Loading State -->
+        <div id="loadingIndicator" class="text-center py-4" aria-hidden="true">
           <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading...</span>
           </div>
           <p class="mt-2">Loading institution details...</p>
         </div>
 
+        <!-- Error Message -->
         <div
           id="modalErrorMessage"
           class="alert alert-danger"
+          role="alert"
           style="display: none"
         ></div>
 
+        <!-- Institution Details Content -->
         <div id="institutionDetails" style="display: none">
-          <!-- Institution Info Section -->
-          <div class="row">
-            <div class="col-12">
-              <h3 id="institutionName" class="mb-4"></h3>
-              <div class="institution-info">
-                <div class="row g-3">
-                  <div class="col-md-6">
-                    <div class="d-flex align-items-center">
-                      <i class="fas fa-map-marker-alt me-2 text-primary"></i>
-                      <div>
-                        <strong>State:</strong>
-                        <span id="institutionState" class="ms-2"></span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="d-flex align-items-center">
-                      <i class="fas fa-graduation-cap me-2 text-primary"></i>
-                      <div>
-                        <strong>Program Type:</strong>
-                        <span id="institutionProgramType" class="ms-2"></span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="d-flex align-items-center">
-                      <i class="fas fa-globe me-2 text-primary"></i>
-                      <div>
-                        <strong>Website:</strong>
-                        <span id="institutionWebsite" class="ms-2"></span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="d-flex align-items-center">
-                      <i class="fas fa-calendar-alt me-2 text-primary"></i>
-                      <div>
-                        <strong>Established:</strong>
-                        <span id="institutionEstablished" class="ms-2"></span>
-                      </div>
-                    </div>
-                  </div>
+          <!-- Institution Info Cards -->
+          <div class="institution-info-grid mb-4">
+            <div class="info-card location">
+              <div class="info-card-content">
+                <i class="fas fa-map-marker-alt"></i>
+                <div>
+                  <span class="info-label">State</span>
+                  <span id="institutionState" class="info-value">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-card program">
+              <div class="info-card-content">
+                <i class="fas fa-graduation-cap"></i>
+                <div>
+                  <span class="info-label">Program Type</span>
+                  <span id="institutionProgramType" class="info-value">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-card website">
+              <div class="info-card-content">
+                <i class="fas fa-globe"></i>
+                <div>
+                  <span class="info-label">Website</span>
+                  <span id="institutionWebsite" class="info-value">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-card established">
+              <div class="info-card-content">
+                <i class="fas fa-calendar-alt"></i>
+                <div>
+                  <span class="info-label">Established</span>
+                  <span id="institutionEstablished" class="info-value">-</span>
                 </div>
               </div>
             </div>
@@ -202,59 +225,43 @@ Institutions Finder{% endblock %} {% block content %}
 
           <!-- Selected Course Section -->
           <div id="selectedCourseSection" class="mt-4" style="display: none">
-            <div class="card border-primary">
+            <div class="card border-success">
               <div
-                class="card-header bg-primary text-white d-flex align-items-center"
+                class="card-header bg-success text-white d-flex align-items-center"
               >
                 <i class="fas fa-star me-2"></i>
                 <h5 class="mb-0">Selected Course</h5>
               </div>
-              <div class="card-body" id="selectedCourseDetails">
-                <!-- Content will be populated by JavaScript -->
-              </div>
+              <div class="card-body" id="selectedCourseDetails"></div>
             </div>
           </div>
 
-          <!-- All Courses Section -->
-          <div class="courses-section mt-4">
-            <ul class="nav nav-tabs" id="institutionTab" role="tablist">
-              <li class="nav-item" role="presentation">
-                <button
-                  class="nav-link active"
-                  id="courses-tab"
-                  data-bs-toggle="tab"
-                  data-bs-target="#courses"
-                  type="button"
-                  role="tab"
-                >
-                  <i class="fas fa-list me-1"></i> All Available Courses
-                </button>
-              </li>
-            </ul>
-
+          <!-- Course Search Section -->
+          <div class="course-search-section mt-4">
             <div
-              class="tab-content p-3 border border-top-0 rounded-bottom"
-              id="institutionTabContent"
+              class="search-header d-flex justify-content-between align-items-center"
             >
-              <div
-                class="tab-pane fade show active"
-                id="courses"
-                role="tabpanel"
-              >
-                <div class="mb-3">
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="courseSearch"
-                    placeholder="Search courses..."
-                  />
-                </div>
-                <div id="coursesList" class="accordion"></div>
-              </div>
+              <h6 class="mb-0">Available Courses</h6>
+              <span id="courseCount" class="badge bg-secondary">0 courses</span>
+            </div>
+            <div class="course-search-wrapper">
+              <input
+                type="text"
+                id="courseSearch"
+                class="form-control"
+                placeholder="Search courses..."
+                aria-label="Search courses"
+              />
+              <i class="fas fa-search search-icon"></i>
+            </div>
+            <div id="coursesList" class="accordion custom-accordion">
+              <!-- Courses will be populated here -->
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Modal Footer -->
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
           <i class="fas fa-times me-2"></i>Close

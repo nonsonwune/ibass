@@ -82,33 +82,53 @@ def get_universities():
 @bp.route('/api/courses', methods=['GET'])
 def get_courses():
     state = request.args.get('state')
-    programme_type = request.args.get('programme_type')
+    programme_types = request.args.get('programme_type', '').split(',')
     university = request.args.get('university')
     
-    query = db.session.query(Course).join(University)
-    if state:
-        query = query.filter(University.state == state)
-    if programme_type:
-        if programme_type in Config.PROGRAMME_GROUPS:
-            programme_types = Config.PROGRAMME_GROUPS[programme_type]
-            query = query.filter(University.program_type.in_(programme_types))
-        elif programme_type == "ALL_INSTITUTION_TYPES":
-            pass
-        else:
-            query = query.filter(University.program_type == programme_type)
-    if university:
-        query = query.filter(University.university_name == university)
+    try:
+        # Start with base query
+        query = db.session.query(Course).join(University)
         
-    courses = query.order_by(Course.course_name).all()
-    return jsonify([{
-        "id": course.id,
-        "course_name": course.course_name,
-        "university_name": course.university_name,
-        "abbrv": course.abbrv,
-        "direct_entry_requirements": course.direct_entry_requirements,
-        "utme_requirements": course.utme_requirements,
-        "subjects": course.subjects,
-    } for course in courses])
+        # Always filter by state
+        if state:
+            query = query.filter(University.state == state)
+        
+        # Handle multiple programme types
+        if programme_types and programme_types[0]:  # Check if not empty string
+            expanded_types = []
+            for ptype in programme_types:
+                if ptype in Config.PROGRAMME_GROUPS:
+                    expanded_types.extend(Config.PROGRAMME_GROUPS[ptype])
+                else:
+                    expanded_types.append(ptype)
+            
+            query = query.filter(University.program_type.in_(expanded_types))
+        
+        if university:
+            query = query.filter(University.university_name == university)
+            
+        courses = query.order_by(Course.course_name).all()
+        
+        current_app.logger.info(f"Found {len(courses)} courses for state: {state}, types: {programme_types}")
+        
+        return jsonify([{
+            "id": course.id,
+            "course_name": course.course_name,
+            "university_name": course.university.university_name,
+            "state": course.university.state,
+            "program_type": course.university.program_type,
+            "abbrv": course.abbrv,
+            "direct_entry_requirements": course.direct_entry_requirements,
+            "utme_requirements": course.utme_requirements,
+            "subjects": course.subjects,
+        } for course in courses])
+        
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving courses: {str(e)}")
+        return jsonify({
+            "error": "Failed to retrieve courses",
+            "message": str(e)
+        }), 500
 
 @bp.route('/api/institution/<int:uni_id>')
 def get_institution_details(uni_id):
@@ -178,6 +198,35 @@ def get_user_bookmarks():
     bookmarks = [bookmark.university_id for bookmark in current_user.bookmarks]
     return jsonify(bookmarks)
 
+@bp.route('/university/remove_bookmark/<int:university_id>', methods=['POST'])
+@login_required
+def remove_bookmark(university_id):
+    try:
+        bookmark = Bookmark.query.filter_by(
+            user_id=current_user.id,
+            university_id=university_id
+        ).first()
+        
+        if bookmark:
+            db.session.delete(bookmark)
+            db.session.commit()
+            return jsonify({
+                "success": True,
+                "message": "Bookmark removed successfully."
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Bookmark not found."
+            }), 404
+            
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error removing bookmark: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": "An error occurred while removing the bookmark."
+        }), 500
 
 @contextmanager
 def atomic_transaction():
@@ -334,3 +383,33 @@ def search():
         return jsonify({
             "error": "An error occurred while processing your search. Please try again."
         }), 500
+        
+
+@bp.route('/api/delete_comment/<int:comment_id>', methods=['POST'])
+@login_required
+def delete_comment(comment_id):
+    try:
+        comment = Comment.query.get_or_404(comment_id)
+        
+        # Check if user has permission to delete
+        if not (current_user.id == comment.user_id or current_user.is_admin):
+            return jsonify({
+                'success': False,
+                'message': 'You do not have permission to delete this comment.'
+            }), 403
+            
+        db.session.delete(comment)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Comment deleted successfully'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting comment: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'An error occurred while deleting the comment'
+        }), 400

@@ -2,210 +2,386 @@
 {% extends "base.html" %} {% block title %}Home - Nigerian Institutions Finder{%
 endblock %} {% block extra_head %}
 <style>
+  .hero-section {
+    min-height: 100vh;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+      url("/static/images/hero.png");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-content {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 1s ease forwards;
+  }
+
+  @keyframes fadeInUp {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .wizard-step {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.5s ease;
     display: none;
-    background-color: rgba(0, 0, 0, 0.7);
-    padding: 30px;
-    border-radius: 10px;
   }
 
   .wizard-step.active {
+    transform: translateY(0);
+    opacity: 1;
     display: block;
   }
 
-  .hero h3 {
-    color: white;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  .institution-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
   }
 
-  .hero-with-bg {
-    position: relative;
-    background-size: cover;
-    background-position: center;
-    padding: 100px 0;
-    color: white;
-    min-height: 600px;
-    display: flex;
-    align-items: center;
+  .institution-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    text-align: center;
   }
 
-  .hero-with-bg::before {
-    content: "";
+  .institution-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    border-color: #3498db;
+  }
+
+  .institution-card.selected {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+  }
+
+  .institution-card.selected .text-muted {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+
+  .scroll-prompt {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    opacity: 0.8;
+    animation: bounce 2s infinite;
   }
 
-  .hero-with-bg > * {
-    position: relative;
-    z-index: 2;
-  }
-
-  .spinner-border {
-    width: 3rem;
-    height: 3rem;
+  @keyframes bounce {
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-10px);
+    }
+    60% {
+      transform: translateY(-5px);
+    }
   }
 
   .form-select {
-    background-color: rgba(255, 255, 255, 0.9);
-    border: none;
-    font-size: 1.1rem;
+    background-color: white;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
   }
 
   .form-select:focus {
-    box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25);
+    border-color: #3498db;
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
   }
 
-  optgroup {
-    font-weight: bold;
-    color: #2c3e50;
-    background-color: #f8f9fa;
-    padding: 8px 0;
+  .course-search {
+    position: relative;
   }
 
-  .form-select option {
-    padding: 8px;
-    font-size: 1rem;
+  .course-search .form-control {
+    padding-left: 2.5rem;
+    border: 2px solid #e2e8f0;
+  }
+
+  .course-search .search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #718096;
   }
 
   .feature-card {
-    transition: transform 0.3s ease;
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    height: 100%;
+    transition: all 0.3s ease;
     border: none;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
 
   .feature-card:hover {
     transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
   }
 
   .btn-primary {
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    background-color: #3498db;
+    border-color: #3498db;
+    padding: 0.8rem 1.5rem;
+    transition: all 0.3s ease;
+  }
+
+  .btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   .btn-secondary {
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    background-color: #95a5a6;
+    border-color: #95a5a6;
+    padding: 0.8rem 1.5rem;
+    transition: all 0.3s ease;
+  }
+
+  .btn-secondary:hover {
+    background-color: #7f8c8d;
+    border-color: #7f8c8d;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  #loadingSpinner {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    margin: 2rem 0;
+  }
+
+  @media (max-width: 768px) {
+    .hero-section {
+      min-height: auto;
+      padding: 4rem 0;
+    }
+
+    .institution-type-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .feature-card {
+      margin-bottom: 1rem;
+    }
+  }
+  .institution-card.selected {
+    background: rgba(52, 152, 219, 0.1);
+    border-color: #3498db;
+    color: #2c3e50;
+  }
+
+  .institution-card.selected i {
+    color: #3498db;
+  }
+
+  .institution-card.selected::after {
+    content: "\f00c";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #3498db;
+  }
+
+  .selected-types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    min-height: 2.5rem;
+  }
+
+  .selected-type-badge {
+    background: #3498db;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .selected-type-badge button {
+    background: none;
+    border: none;
+    color: white;
+    padding: 0;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+  }
+
+  .selected-type-badge button:hover {
+    opacity: 1;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .institution-card {
+    position: relative;
   }
 </style>
 {% endblock %} {% block content %}
-<section class="hero hero-with-bg text-center" id="hero-section">
+<section class="hero-section d-flex align-items-center">
   <div class="container">
-    <h1 class="display-4 mb-4">Find A Nigerian Institution</h1>
-    <p class="lead mb-5">
-      Discover top Nigerian universities and courses tailored to your
-      preferences.
-    </p>
+    <div class="hero-content text-center text-white mb-5">
+      <h1 class="display-3 mb-4 fw-bold">Find Your Perfect Institution</h1>
+      <p class="lead mb-5">
+        Discover top Nigerian universities and courses tailored to your future.
+      </p>
+    </div>
 
-    <div id="wizard-container" class="mx-auto" style="max-width: 500px">
+    <div id="wizard-container" class="mx-auto" style="max-width: 800px">
+      <!-- Step 1 -->
       <div class="wizard-step active" id="step1">
-        <h3 class="text-white mb-4">
-          Step 1: Select Your Preferred State and Institution Type
-        </h3>
+        <h3 class="text-center mb-4">Choose Your Preferred Location</h3>
         <select
           id="location"
-          name="location"
-          class="form-select form-select-lg mb-3"
+          class="form-select form-select-lg mb-4"
+          style="font-size: 1.1rem"
         >
           <option value="">Select a State</option>
         </select>
-        <select
-          id="programmeType"
-          name="programmeType"
-          class="form-select form-select-lg mb-3"
+
+        <h4 class="text-center mb-3">Select Institution Type</h4>
+        <div class="institution-type-grid" id="institutionTypes">
+          <!-- Institution type cards will be inserted here via JavaScript -->
+        </div>
+
+        <button
+          id="nextStep"
+          class="btn btn-primary btn-lg w-100 mt-4"
           disabled
         >
-          <option value="">Select Institution Type</option>
-        </select>
-        <button id="nextStep" class="btn btn-primary btn-lg w-100">
-          <span class="d-flex align-items-center justify-content-center">
-            Next <i class="fas fa-arrow-right ms-2"></i>
-          </span>
+          Continue <i class="fas fa-arrow-right ms-2"></i>
         </button>
       </div>
 
+      <!-- Step 2 -->
       <div class="wizard-step" id="step2">
-        <h3 class="text-white mb-4">Step 2: Select Your Preferred Course</h3>
-        <div
-          id="loading-spinner"
-          class="text-center text-white mb-3"
-          style="display: none"
-        >
-          <div class="spinner-border" role="status">
-            <span class="visually-hidden">Loading...</span>
+        <h3 class="text-center mb-4">Choose Your Course</h3>
+
+        <div id="loadingSpinner" class="text-center">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading courses...</span>
           </div>
-          <p class="mt-2">Loading courses...</p>
+          <p class="mt-2">Loading available courses...</p>
         </div>
+
+        <div class="course-search mb-4">
+          <i class="fas fa-search search-icon"></i>
+          <input
+            type="text"
+            id="courseSearch"
+            class="form-control form-control-lg"
+            placeholder="Search courses..."
+            style="display: none"
+          />
+        </div>
+
         <select
           id="course"
-          name="course"
-          class="form-select form-select-lg mb-3"
+          class="form-select form-select-lg mb-4"
           style="display: none"
         >
           <option value="">Select a Course</option>
         </select>
-        <button
-          id="findInstitution"
-          class="btn btn-primary btn-lg w-100"
-          style="display: none"
-        >
-          <span class="d-flex align-items-center justify-content-center">
+
+        <div class="d-grid gap-3">
+          <button
+            id="findInstitution"
+            class="btn btn-primary btn-lg"
+            style="display: none"
+          >
             Find Institution <i class="fas fa-search ms-2"></i>
-          </span>
-        </button>
-        <button id="prevStep" class="btn btn-secondary btn-lg w-100 mt-2">
-          <span class="d-flex align-items-center justify-content-center">
+          </button>
+          <button id="prevStep" class="btn btn-secondary btn-lg">
             <i class="fas fa-arrow-left me-2"></i> Back
-          </span>
-        </button>
+          </button>
+        </div>
       </div>
+    </div>
+
+    <div class="scroll-prompt">
+      <i class="fas fa-chevron-down fa-2x"></i>
     </div>
   </div>
 </section>
 
-<section class="py-5">
+<section class="features-section py-5 bg-light">
   <div class="container">
     <h2 class="text-center mb-5">Why Choose Us?</h2>
-    <div class="row">
-      <div class="col-md-4 mb-4">
-        <div class="card h-100 feature-card">
-          <div class="card-body text-center">
-            <i class="fas fa-search fa-3x mb-3 text-primary"></i>
-            <h5 class="card-title">Comprehensive Database</h5>
-            <p class="card-text">
-              Access information on all accredited Nigerian institutions and
-              courses.
-            </p>
-          </div>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="feature-card text-center">
+          <i class="fas fa-database fa-3x mb-4 text-primary"></i>
+          <h3 class="h4 mb-3">Comprehensive Database</h3>
+          <p class="text-muted mb-0">
+            Access detailed information about all accredited Nigerian
+            institutions and courses.
+          </p>
         </div>
       </div>
-      <div class="col-md-4 mb-4">
-        <div class="card h-100 feature-card">
-          <div class="card-body text-center">
-            <i class="fas fa-filter fa-3x mb-3 text-primary"></i>
-            <h5 class="card-title">Personalized Recommendations</h5>
-            <p class="card-text">
-              Get tailored suggestions based on your preferences and
-              requirements.
-            </p>
-          </div>
+      <div class="col-md-4">
+        <div class="feature-card text-center">
+          <i class="fas fa-bullseye fa-3x mb-4 text-primary"></i>
+          <h3 class="h4 mb-3">Smart Recommendations</h3>
+          <p class="text-muted mb-0">
+            Get personalized institution suggestions based on your preferences
+            and requirements.
+          </p>
         </div>
       </div>
-      <div class="col-md-4 mb-4">
-        <div class="card h-100 feature-card">
-          <div class="card-body text-center">
-            <i class="fas fa-chart-bar fa-3x mb-3 text-primary"></i>
-            <h5 class="card-title">Detailed Insights</h5>
-            <p class="card-text">
-              View comprehensive information about each institution and course.
-            </p>
-          </div>
+      <div class="col-md-4">
+        <div class="feature-card text-center">
+          <i class="fas fa-chart-line fa-3x mb-4 text-primary"></i>
+          <h3 class="h4 mb-3">Detailed Analysis</h3>
+          <p class="text-muted mb-0">
+            Compare institutions and make informed decisions with our
+            comprehensive insights.
+          </p>
         </div>
       </div>
     </div>
@@ -213,8 +389,8 @@ endblock %} {% block extra_head %}
 </section>
 {% endblock %} {% block extra_scripts %}
 <script>
-  $(document).ready(function () {
-    // Programme type groupings
+  document.addEventListener("DOMContentLoaded", function () {
+    // Constants for program groups
     const programmeGroups = {
       "ALL DEGREE AWARDING INSTITUTIONS": [
         "E-LEARNING UNIVERSITIES OF NIGERIA",
@@ -238,178 +414,408 @@ endblock %} {% block extra_head %}
       ],
     };
 
-    // Load background image
-    const heroSection = $("#hero-section");
-    const img = new Image();
-    img.src = "/static/images/hero.png";
-    img.onload = function () {
-      heroSection.css(
-        "background-image",
-        `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('${img.src}')`
-      );
-      heroSection.addClass("loaded");
-    };
+    // Initialize elements
+    // Initialize elements
+    const locationSelect = document.getElementById("location");
+    const institutionTypesGrid = document.getElementById("institutionTypes");
+    const nextStepBtn = document.getElementById("nextStep");
+    const prevStepBtn = document.getElementById("prevStep");
+    const findInstitutionBtn = document.getElementById("findInstitution");
+    const courseSelect = document.getElementById("course");
+    const courseSearch = document.getElementById("courseSearch");
+    const loadingSpinner = document.getElementById("loadingSpinner");
+    const step1 = document.getElementById("step1");
+    const step2 = document.getElementById("step2");
 
-    // Load locations (states)
-    $.getJSON("/api/locations", function (data) {
-      const locationSelect = $("#location");
-      data.sort().forEach((value) => {
-        locationSelect.append(
-          $("<option></option>").attr("value", value).text(value)
-        );
-      });
-    });
+    let selectedTypes = new Set();
+    let currentCourses = [];
 
-    // When state is selected, load programme types
-    $("#location").change(function () {
-      const selectedState = $(this).val();
-      const programmeTypeSelect = $("#programmeType");
+    // Load locations
+    fetch("/api/locations")
+      .then((response) => response.json())
+      .then((data) => {
+        data.sort().forEach((location) => {
+          const option = document.createElement("option");
+          option.value = location;
+          option.textContent = location;
+          locationSelect.appendChild(option);
+        });
+      })
+      .catch((error) => console.error("Error loading locations:", error));
+
+    // Handle location selection
+    locationSelect.addEventListener("change", function () {
+      const selectedState = this.value;
+      selectedTypes.clear();
+      currentCourses = [];
 
       if (selectedState) {
-        programmeTypeSelect
-          .empty()
-          .append(
-            $("<option></option>")
-              .attr("value", "")
-              .text("Select Institution Type")
-          )
-          .append(
-            $("<option></option>")
-              .attr("value", "ALL_INSTITUTION_TYPES")
-              .text("ALL INSTITUTION TYPES")
-          )
-          .prop("disabled", true);
-
-        $.getJSON(
-          "/api/programme_types",
-          { state: selectedState },
-          function (data) {
-            // Create optgroups
-            const degreeGroup = $("<optgroup>").attr(
-              "label",
-              "DEGREE AWARDING INSTITUTIONS"
-            );
-            const nceGroup = $("<optgroup>").attr("label", "NCE");
-
-            // Sort programs into groups
-            data.forEach((type) => {
-              if (type === "ALL_INSTITUTION_TYPES") return; // Skip if already added
-
-              const option = $("<option></option>")
-                .attr("value", type)
-                .text(type);
-
-              // Check if type belongs to DEGREE group
-              if (
-                type === "ALL DEGREE AWARDING INSTITUTIONS" ||
-                type.includes("UNIVERSITIES") ||
-                type.includes("DEGREE") ||
-                type.includes("SANDWICH") ||
-                type === "OPEN AND DISTANCE LEARNING PROGRAMMES" ||
-                type === "OTHER DEGREE AWARDING INSTITUTIONS"
-              ) {
-                degreeGroup.append(option);
-              }
-              // Check if type belongs to NCE group
-              else if (
-                type === "ALL NCE" ||
-                type.includes("COLLEGES OF EDUCATION")
-              ) {
-                nceGroup.append(option);
-              }
-            });
-
-            // Add groups to select
-            programmeTypeSelect
-              .append(degreeGroup)
-              .append(nceGroup)
-              .prop("disabled", false);
-          }
-        );
+        fetch(`/api/programme_types?state=${selectedState}`)
+          .then((response) => response.json())
+          .then((data) => {
+            createInstitutionTypeCards(data);
+            updateSelectedTypesDisplay();
+          })
+          .catch((error) =>
+            console.error("Error loading programme types:", error)
+          );
       } else {
-        programmeTypeSelect
-          .empty()
-          .append(
-            $("<option></option>")
-              .attr("value", "")
-              .text("Select Institution Type")
-          )
-          .prop("disabled", true);
+        institutionTypesGrid.innerHTML = "";
+        nextStepBtn.disabled = true;
+        updateSelectedTypesDisplay();
       }
     });
 
-    // Next step button click handler
-    $("#nextStep").click(function () {
-      const selectedState = $("#location").val();
-      const selectedProgrammeType = $("#programmeType").val();
+    function createInstitutionTypeCards(types) {
+      // Filter out ALL_INSTITUTION_TYPES and sort alphabetically
+      const sortedTypes = types
+        .filter((type) => type !== "ALL_INSTITUTION_TYPES")
+        .sort((a, b) => a.localeCompare(b));
 
-      if (!selectedState || !selectedProgrammeType) {
-        alert("Please select both state and institution type.");
-        return;
+      institutionTypesGrid.innerHTML = sortedTypes
+        .map(
+          (type) => `
+        <div class="institution-card" data-type="${type}">
+          <i class="fas ${getInstitutionIcon(type)} mb-3 fa-2x"></i>
+          <h5 class="mb-2">${formatInstitutionType(type)}</h5>
+          <p class="mb-0 small text-muted">Click to select</p>
+        </div>
+      `
+        )
+        .join("");
+
+      // Create selected types container if not exists
+      if (!document.querySelector(".selected-types")) {
+        const selectedTypesContainer = document.createElement("div");
+        selectedTypesContainer.className = "selected-types";
+        institutionTypesGrid.insertAdjacentElement(
+          "beforebegin",
+          selectedTypesContainer
+        );
       }
 
-      $("#step1").removeClass("active");
-      $("#step2").addClass("active");
-      $("#loading-spinner").show();
-      $("#course").hide();
-      $("#findInstitution").hide();
+      // Add click handlers
+      document.querySelectorAll(".institution-card").forEach((card) => {
+        card.addEventListener("click", function () {
+          const type = this.dataset.type;
 
-      $.getJSON("/api/courses", {
-        state: selectedState,
-        programme_type: selectedProgrammeType,
-      })
-        .done(function (data) {
-          const courseSelect = $("#course");
-          courseSelect
-            .empty()
-            .append(
-              $("<option></option>").attr("value", "").text("Select a Course")
-            );
+          if (selectedTypes.has(type)) {
+            selectedTypes.delete(type);
+            this.classList.remove("selected");
+            removeSelectedTypeBadge(type);
+          } else {
+            selectedTypes.add(type);
+            this.classList.add("selected");
+            addSelectedTypeBadge(type);
+          }
 
-          const uniqueCourses = new Set();
-          data.forEach((course) => {
-            if (!uniqueCourses.has(course.course_name)) {
-              uniqueCourses.add(course.course_name);
-              courseSelect.append(
-                $("<option></option>")
-                  .attr("value", course.course_name)
-                  .text(course.course_name)
-              );
+          nextStepBtn.disabled = selectedTypes.size === 0;
+        });
+      });
+    }
+
+    function updateSelectedTypesDisplay() {
+      const container = document.querySelector(".selected-types");
+      if (!container) return;
+
+      container.innerHTML = "";
+      Array.from(selectedTypes)
+        .sort()
+        .forEach((type) => addSelectedTypeBadge(type));
+    }
+
+    function addSelectedTypeBadge(type) {
+      const selectedTypesContainer = document.querySelector(".selected-types");
+      const badge = document.createElement("div");
+      badge.className = "selected-type-badge";
+      badge.dataset.type = type;
+      badge.innerHTML = `
+      ${formatInstitutionType(type)}
+      <button onclick="event.stopPropagation(); removeInstitutionType('${type}')">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+      selectedTypesContainer.appendChild(badge);
+    }
+
+    function removeSelectedTypeBadge(type) {
+      const badge = document.querySelector(
+        `.selected-type-badge[data-type="${type}"]`
+      );
+      if (badge) {
+        badge.style.animation = "fadeOut 0.3s ease";
+        setTimeout(() => badge.remove(), 300);
+      }
+    }
+
+    window.removeInstitutionType = function (type) {
+      selectedTypes.delete(type);
+      const card = document.querySelector(
+        `.institution-card[data-type="${type}"]`
+      );
+      if (card) card.classList.remove("selected");
+      removeSelectedTypeBadge(type);
+      nextStepBtn.disabled = selectedTypes.size === 0;
+    };
+
+    function formatInstitutionType(type) {
+      return type
+        .split(/[ _]/g)
+        .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+        .join(" ");
+    }
+
+    function getInstitutionIcon(type) {
+      const typeUpper = type.toUpperCase();
+
+      // Combined types
+      if (typeUpper.includes("EDUCATION") && typeUpper.includes("TECHNICAL")) {
+        return "fa-cog";
+      }
+
+      // Specific types
+      if (typeUpper.includes("POLYTECHNIC")) return "fa-industry";
+      if (typeUpper.includes("UNIVERSITIES")) return "fa-university";
+      if (typeUpper.includes("EDUCATION")) return "fa-chalkboard-teacher";
+      if (typeUpper.includes("HEALTH") || typeUpper.includes("MEDICAL"))
+        return "fa-hospital";
+      if (typeUpper.includes("TECHNOLOGY") || typeUpper.includes("TECHNICAL"))
+        return "fa-microchip";
+      if (typeUpper.includes("AGRICULTURE")) return "fa-leaf";
+      if (typeUpper.includes("DISTANCE") || typeUpper.includes("E-LEARNING"))
+        return "fa-laptop";
+      if (typeUpper.includes("COLLEGES")) return "fa-school";
+
+      return "fa-graduation-cap";
+    }
+
+    // Navigation handlers
+    nextStepBtn.addEventListener("click", function () {
+      if (locationSelect.value && selectedTypes.size > 0) {
+        step1.classList.remove("active");
+        step2.classList.add("active");
+        loadCourses(locationSelect.value, selectedTypes);
+      }
+    });
+
+    prevStepBtn.addEventListener("click", function () {
+      step2.classList.remove("active");
+      step1.classList.add("active");
+    });
+
+    async function loadCourses(state, programTypes) {
+      loadingSpinner.style.display = "flex";
+      courseSelect.style.display = "none";
+      courseSearch.style.display = "none";
+      findInstitutionBtn.style.display = "none";
+
+      try {
+        // Convert programTypes Set to comma-separated string
+        const programTypesString = Array.from(programTypes).join(",");
+
+        // Log the request parameters for debugging
+        console.log(
+          `Loading courses for state: ${state}, types: ${programTypesString}`
+        );
+
+        const response = await fetch(
+          `/api/courses?state=${encodeURIComponent(
+            state
+          )}&programme_type=${encodeURIComponent(programTypesString)}`
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || `HTTP error! status: ${response.status}`
+          );
+        }
+
+        const courses = await response.json();
+
+        if (Array.isArray(courses)) {
+          // Create a map to deduplicate courses and track institutions
+          const coursesMap = new Map();
+
+          courses.forEach((course) => {
+            const courseKey = course.course_name.toUpperCase(); // Normalize course names
+            if (!coursesMap.has(courseKey)) {
+              coursesMap.set(courseKey, {
+                name: course.course_name,
+                institutions: new Set([
+                  {
+                    name: course.university_name,
+                    state: course.state,
+                    type: course.program_type,
+                  },
+                ]),
+                details: {
+                  utme: course.utme_requirements,
+                  subjects: course.subjects,
+                  directEntry: course.direct_entry_requirements,
+                  abbreviation: course.abbrv,
+                },
+              });
+            } else {
+              coursesMap.get(courseKey).institutions.add({
+                name: course.university_name,
+                state: course.state,
+                type: course.program_type,
+              });
             }
           });
 
-          $("#loading-spinner").hide();
-          $("#course").show();
-          $("#findInstitution").show();
-        })
-        .fail(function (jqXHR, textStatus, errorThrown) {
-          $("#loading-spinner").hide();
-          alert("Error loading courses. Please try again.");
-          console.error("Error loading courses:", textStatus, errorThrown);
-        });
-    });
+          // Convert to array and sort
+          currentCourses = Array.from(coursesMap.values()).sort((a, b) =>
+            a.name.localeCompare(b.name)
+          );
 
-    // Previous step button click handler
-    $("#prevStep").click(function () {
-      $("#step2").removeClass("active");
-      $("#step1").addClass("active");
-    });
+          // Update UI
+          populateCourseSelect(currentCourses);
 
-    // Find Institution button click handler
-    $("#findInstitution").click(function () {
-      const selectedCourse = $("#course").val();
-      if (!selectedCourse) {
-        alert("Please select a course.");
-        return;
+          // Show info message based on results
+          if (currentCourses.length === 0) {
+            showInfo(
+              "No courses available for the selected location and institution types."
+            );
+          } else {
+            console.log(`Found ${currentCourses.length} unique courses`);
+          }
+        } else {
+          throw new Error("Invalid response format from server");
+        }
+      } catch (error) {
+        console.error("Error loading courses:", error);
+        showError(`Failed to load courses: ${error.message}`);
+      } finally {
+        loadingSpinner.style.display = "none";
+        courseSelect.style.display = "block";
+        courseSearch.style.display = "block";
+        findInstitutionBtn.style.display = "block";
+        findInstitutionBtn.disabled = true;
       }
+    }
+    function showInfo(message) {
+      const infoDiv = document.createElement("div");
+      infoDiv.className = "alert alert-info mt-3";
+      infoDiv.role = "alert";
+      infoDiv.textContent = message;
+      step2.appendChild(infoDiv);
+      setTimeout(() => infoDiv.remove(), 5000);
+    }
 
+    function populateCourseSelect(courses, filterTerm = "") {
+      courseSelect.innerHTML = '<option value="">Select a Course</option>';
+
+      const filteredCourses = filterTerm
+        ? courses.filter((course) =>
+            course.name.toLowerCase().includes(filterTerm.toLowerCase())
+          )
+        : courses;
+
+      if (filteredCourses.length === 0) {
+        const option = document.createElement("option");
+        option.disabled = true;
+        option.textContent = filterTerm
+          ? "No matching courses found"
+          : "No courses available";
+        courseSelect.appendChild(option);
+      } else {
+        filteredCourses.forEach((course) => {
+          const option = document.createElement("option");
+          option.value = course.name;
+          // Store full institution data as a data attribute
+          option.dataset.institutions = JSON.stringify(
+            Array.from(course.institutions)
+          );
+          option.textContent = `${course.name} (${course.institutions.size} ${
+            course.institutions.size === 1 ? "institution" : "institutions"
+          })`;
+          courseSelect.appendChild(option);
+        });
+      }
+    }
+
+    // Update the find institution handler to include institution data
+    findInstitutionBtn.addEventListener("click", function () {
+      const selectedOption = courseSelect.options[courseSelect.selectedIndex];
       const params = {
-        location: $("#location").val(),
-        programme_type: $("#programmeType").val(),
-        course: selectedCourse,
+        location: locationSelect.value,
+        programme_type: Array.from(selectedTypes).join(","),
+        course: selectedOption.value,
+        // Include institutions data for the recommendation page
+        institutions: selectedOption.dataset.institutions,
       };
+      window.location.href = `/recommend?${new URLSearchParams(params)}`;
+    });
 
-      window.location.href = "/recommend?" + $.param(params);
+    function initializeCourseSearch() {
+      const searchHandler = debounce(function () {
+        populateCourseSelect(currentCourses, this.value);
+      }, 300);
+
+      courseSearch.value = "";
+      courseSearch.addEventListener("input", searchHandler);
+    }
+
+    courseSelect.addEventListener("change", function () {
+      findInstitutionBtn.disabled = !this.value;
+    });
+
+    findInstitutionBtn.addEventListener("click", function () {
+      const params = {
+        location: locationSelect.value,
+        programme_type: Array.from(selectedTypes).join(","),
+        course: courseSelect.value,
+      };
+      window.location.href = `/recommend?${new URLSearchParams(params)}`;
+    });
+
+    function showError(message) {
+      const errorDiv = document.createElement("div");
+      errorDiv.className = "alert alert-danger mt-3";
+      errorDiv.role = "alert";
+      errorDiv.textContent = message;
+      step2.appendChild(errorDiv);
+      setTimeout(() => errorDiv.remove(), 5000);
+    }
+
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func.apply(this, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // Scroll prompt
+    const scrollPrompt = document.querySelector(".scroll-prompt");
+    window.addEventListener("scroll", () => {
+      scrollPrompt.style.opacity = window.scrollY > 100 ? "0" : "0.8";
+    });
+
+    // Hero background
+    const heroSection = document.querySelector(".hero-section");
+    const img = new Image();
+    img.src = "/static/images/hero.png";
+    img.onload = function () {
+      heroSection.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('${img.src}')`;
+      heroSection.classList.add("loaded");
+    };
+
+    // Keyboard navigation
+    document.addEventListener("keydown", function (e) {
+      if (step2.classList.contains("active")) {
+        if (e.key === "Escape") {
+          prevStepBtn.click();
+        } else if (e.key === "Enter" && !findInstitutionBtn.disabled) {
+          findInstitutionBtn.click();
+        }
+      }
     });
   });
 </script>

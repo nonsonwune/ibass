@@ -9,6 +9,7 @@ from ..models.university import University, Course
 from ..models.user import User
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload
 
 bp = Blueprint('main', __name__)
 
@@ -82,7 +83,10 @@ def contact():
 
         return redirect(url_for('main.contact'))
 
-    comments = Comment.query.order_by(Comment.date_posted.desc()).all()
+    # Updated query with joinedload to eagerly load author with score
+    comments = Comment.query.options(
+        joinedload(Comment.author)
+    ).order_by(Comment.date_posted.desc()).all()
     return render_template('contact.html', form=form, comments=comments)
 
 @bp.route("/add_comment", methods=["POST"])

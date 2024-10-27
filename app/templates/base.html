@@ -4,21 +4,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <meta
+      name="description"
+      content="Find the perfect educational institution in Nigeria - Compare universities, courses, and admission requirements"
+    />
+    <meta name="theme-color" content="#2c3e50" />
+
     <title>{% block title %}Nigerian Institutions Finder{% endblock %}</title>
+
+    <!-- Preload Critical Resources -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+
+    <!-- Core Stylesheets -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
+      crossorigin="anonymous"
     />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+      crossorigin="anonymous"
     />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
     />
+
+    <!-- Custom Head Block -->
     {% block extra_head %}{% endblock %}
+
+    <!-- Google Adsense -->
     <script
       async
       src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1794093128763042"
@@ -27,11 +46,17 @@
     <meta name="google-adsense-account" content="ca-pub-1794093128763042" />
   </head>
   <body>
+    <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container">
-        <a class="navbar-brand" href="{{ url_for('main.home') }}"
-          >Nigerian Institutions Finder</a
+        <a
+          class="navbar-brand d-flex align-items-center"
+          href="{{ url_for('main.home') }}"
         >
+          <i class="fas fa-university me-2"></i>
+          Nigerian Institutions Finder
+        </a>
+
         <button
           class="navbar-toggler"
           type="button"
@@ -43,71 +68,112 @@
         >
           <span class="navbar-toggler-icon"></span>
         </button>
+
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav me-auto">
             <li class="nav-item">
               <a
                 class="nav-link {% if request.endpoint == 'main.home' %}active{% endif %}"
                 href="{{ url_for('main.home') }}"
-                >Home</a
               >
+                <i class="fas fa-home me-1"></i>Home
+              </a>
             </li>
             <li class="nav-item">
               <a
                 class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}"
                 href="{{ url_for('main.about') }}"
-                >About</a
               >
+                <i class="fas fa-info-circle me-1"></i>About
+              </a>
             </li>
             <li class="nav-item position-relative">
               <a
                 class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}"
                 href="{{ url_for('main.contact') }}"
-                >Contact <span class="notification-badge"></span
-              ></a>
+              >
+                <i class="fas fa-envelope me-1"></i>Contact
+                <span class="notification-badge"></span>
+              </a>
             </li>
           </ul>
+
+          <!-- Global Search -->
           <form
             class="d-flex me-2"
             action="{{ url_for('main.search_results') }}"
             method="GET"
           >
-            <input
-              class="form-control me-2"
-              type="search"
-              placeholder="Institutions/Courses"
-              name="q"
-              aria-label="Search"
-            />
-            <button class="btn btn-outline-light" type="submit">Search</button>
+            <div class="input-group">
+              <input
+                class="form-control"
+                type="search"
+                placeholder="Search institutions or courses..."
+                name="q"
+                aria-label="Search"
+                autocomplete="off"
+              />
+              <button class="btn btn-outline-light" type="submit">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
           </form>
+
+          <!-- Authentication Navigation -->
           <ul class="navbar-nav">
             {% if current_user.is_authenticated %}
-            <li class="nav-item">
+            <li class="nav-item dropdown">
               <a
-                class="nav-link"
-                href="{{ url_for('main.profile', username=current_user.username) }}"
-                >Profile</a
+                class="nav-link dropdown-toggle"
+                href="#"
+                id="userDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
               >
-            </li>
-            {% if current_user.is_admin %}
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('admin.admin_dashboard') }}"
-                >Admin</a
+                <i class="fas fa-user-circle me-1"></i>
+                {{ current_user.username }}
+              </a>
+              <ul
+                class="dropdown-menu dropdown-menu-end"
+                aria-labelledby="userDropdown"
               >
-            </li>
-            {% endif %}
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('auth.logout') }}">Logout</a>
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{{ url_for('main.profile', username=current_user.username) }}"
+                  >
+                    <i class="fas fa-user me-2"></i>Profile
+                  </a>
+                </li>
+                {% if current_user.is_admin %}
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="{{ url_for('admin.admin_dashboard') }}"
+                  >
+                    <i class="fas fa-cog me-2"></i>Admin
+                  </a>
+                </li>
+                {% endif %}
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                  </a>
+                </li>
+              </ul>
             </li>
             {% else %}
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+              <a class="nav-link" href="{{ url_for('auth.login') }}">
+                <i class="fas fa-sign-in-alt me-1"></i>Login
+              </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('auth.signup') }}"
-                >Sign Up</a
-              >
+              <a class="nav-link" href="{{ url_for('auth.signup') }}">
+                <i class="fas fa-user-plus me-1"></i>Sign Up
+              </a>
             </li>
             {% endif %}
           </ul>
@@ -115,6 +181,7 @@
       </div>
     </nav>
 
+    <!-- Main Content -->
     <div class="container mt-4">
       {% with messages = get_flashed_messages(with_categories=true) %} {% if
       messages %} {% for category, message in messages %}
@@ -122,7 +189,12 @@
         class="alert alert-{{ category }} alert-dismissible fade show"
         role="alert"
       >
-        {{ message }}
+        <div class="d-flex align-items-center">
+          <i
+            class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"
+          ></i>
+          <div>{{ message }}</div>
+        </div>
         <button
           type="button"
           class="btn-close"
@@ -133,12 +205,13 @@
       {% endfor %} {% endif %} {% endwith %} {% block content %}{% endblock %}
     </div>
 
+    <!-- Footer -->
     <footer class="footer py-4 mt-5 bg-dark text-white">
       <div class="container">
         <div class="row">
           <div class="col-md-6">
             <h5>Nigerian Institutions Finder</h5>
-            <p>
+            <p class="mb-0">
               Helping students find their perfect educational path in Nigeria.
             </p>
           </div>
@@ -146,33 +219,43 @@
             <h5>Quick Links</h5>
             <ul class="list-unstyled">
               <li>
-                <a href="{{ url_for('main.home') }}" class="text-white">Home</a>
+                <a href="{{ url_for('main.home') }}" class="text-white"
+                  ><i class="fas fa-home me-2"></i>Home</a
+                >
               </li>
               <li>
                 <a href="{{ url_for('main.about') }}" class="text-white"
-                  >About</a
+                  ><i class="fas fa-info-circle me-2"></i>About</a
                 >
               </li>
               <li>
                 <a href="{{ url_for('main.contact') }}" class="text-white"
-                  >Contact</a
+                  ><i class="fas fa-envelope me-2"></i>Contact</a
                 >
               </li>
             </ul>
           </div>
           <div class="col-md-3">
             <h5>Follow Us</h5>
-            <a href="https://www.facebook.com/9jaSL" class="text-white me-2"
-              ><i class="fab fa-facebook-f"></i
-            ></a>
-            <a href="#" class="text-white me-2"
-              ><i class="fab fa-twitter"></i
-            ></a>
-            <a
-              href="https://www.instagram.com/9jastudentlife"
-              class="text-white me-2"
-              ><i class="fab fa-instagram"></i
-            ></a>
+            <div class="social-links">
+              <a
+                href="https://www.facebook.com/9jaSL"
+                class="text-white me-3"
+                aria-label="Facebook"
+              >
+                <i class="fab fa-facebook-f"></i>
+              </a>
+              <a href="#" class="text-white me-3" aria-label="Twitter">
+                <i class="fab fa-twitter"></i>
+              </a>
+              <a
+                href="https://www.instagram.com/9jastudentlife"
+                class="text-white me-3"
+                aria-label="Instagram"
+              >
+                <i class="fab fa-instagram"></i>
+              </a>
+            </div>
           </div>
         </div>
         <hr class="mt-4 mb-3" />
@@ -182,48 +265,37 @@
       </div>
     </footer>
 
-    <script>
-      window.csrfToken = "{{ csrf_token() }}";
-      window.isAuthenticated = {{ current_user.is_authenticated|tojson }};
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
-    {% block extra_scripts %}{% endblock %}
-
+    <!-- Toast Container -->
     <div
-      id="consent-banner"
-      style="
-        display: none;
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background-color: #f1f1f1;
-        padding: 20px;
-        text-align: center;
-        z-index: 1000;
-        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-      "
-    >
-      <p>
-        We use cookies and similar technologies to improve your browsing
-        experience, personalize content and ads, and analyze our traffic. By
-        clicking "Accept All", you consent to our use of cookies. Click "Manage
-        Preferences" to set your preferences.
-      </p>
-      <button onclick="acceptAllConsent()" class="btn btn-primary">
-        Accept All
-      </button>
-      <button onclick="rejectAllConsent()" class="btn btn-secondary">
-        Reject All
-      </button>
-      <button onclick="managePreferences()" class="btn btn-link">
-        Manage Preferences
-      </button>
+      id="toastContainer"
+      class="toast-container position-fixed top-0 end-0 p-3"
+    ></div>
+
+    <!-- Cookie Consent -->
+    <div id="consent-banner" class="cookie-consent-banner">
+      <div class="container">
+        <div class="cookie-content">
+          <p class="mb-3">
+            We use cookies and similar technologies to improve your browsing
+            experience, personalize content and ads, and analyze our traffic. By
+            clicking "Accept All", you consent to our use of cookies.
+          </p>
+          <div class="cookie-buttons">
+            <button onclick="acceptAllConsent()" class="btn btn-primary">
+              <i class="fas fa-check me-2"></i>Accept All
+            </button>
+            <button onclick="rejectAllConsent()" class="btn btn-secondary">
+              <i class="fas fa-times me-2"></i>Reject All
+            </button>
+            <button onclick="managePreferences()" class="btn btn-link">
+              <i class="fas fa-cog me-2"></i>Manage Preferences
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
+    <!-- Cookie Preferences Modal -->
     <div
       id="preferences-modal"
       class="modal fade"
@@ -235,7 +307,7 @@
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="preferencesModalLabel">
-              Cookie Preferences
+              <i class="fas fa-cookie-bite me-2"></i>Cookie Preferences
             </h5>
             <button
               type="button"
@@ -245,7 +317,7 @@
             ></button>
           </div>
           <div class="modal-body">
-            <div class="form-check form-switch">
+            <div class="form-check form-switch mb-3">
               <input
                 class="form-check-input"
                 type="checkbox"
@@ -255,11 +327,11 @@
               <label class="form-check-label" for="personalizedAdsConsent"
                 >Personalized Ads</label
               >
+              <small class="form-text text-muted d-block">
+                When enabled, we use cookies to personalize ads based on your
+                interests and browsing activity.
+              </small>
             </div>
-            <small class="form-text text-muted">
-              When enabled, we use cookies to personalize ads based on your
-              interests and browsing activity.
-            </small>
           </div>
           <div class="modal-footer">
             <button
@@ -267,20 +339,36 @@
               class="btn btn-secondary"
               data-bs-dismiss="modal"
             >
-              Close
+              <i class="fas fa-times me-2"></i>Close
             </button>
             <button
               type="button"
               class="btn btn-primary"
               onclick="savePreferences()"
             >
-              Save changes
+              <i class="fas fa-save me-2"></i>Save changes
             </button>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- Core Scripts -->
+    <script>
+      window.csrfToken = "{{ csrf_token() }}";
+      window.isAuthenticated = {{ current_user.is_authenticated|tojson }};
+    </script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://code.jquery.com/jquery-3.6.0.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+
+    <!-- Cookie Consent Script -->
     <script>
       (function () {
         window.googletag = window.googletag || { cmd: [] };
@@ -308,18 +396,18 @@
         }
 
         function managePreferences() {
-          var myModal = new bootstrap.Modal(
+          const modal = new bootstrap.Modal(
             document.getElementById("preferences-modal")
           );
-          var personalizedAdsConsent =
+          const personalizedAdsConsent =
             localStorage.getItem("personalizedAdsConsent") !== "false";
           document.getElementById("personalizedAdsConsent").checked =
             personalizedAdsConsent;
-          myModal.show();
+          modal.show();
         }
 
         function savePreferences() {
-          var personalizedAdsConsent = document.getElementById(
+          const personalizedAdsConsent = document.getElementById(
             "personalizedAdsConsent"
           ).checked;
           localStorage.setItem("cookieConsent", "custom");
@@ -328,33 +416,33 @@
             personalizedAdsConsent
           );
           document.getElementById("consent-banner").style.display = "none";
+
           if (personalizedAdsConsent) {
             enablePersonalizedAds();
           } else {
             disablePersonalizedAds();
           }
-          var myModal = bootstrap.Modal.getInstance(
+
+          const modal = bootstrap.Modal.getInstance(
             document.getElementById("preferences-modal")
           );
-          myModal.hide();
+          modal.hide();
         }
 
         function enablePersonalizedAds() {
           googletag.cmd.push(function () {
             googletag.pubads().setRequestNonPersonalizedAds(0);
           });
-          console.log("Personalized ads enabled");
         }
 
         function disablePersonalizedAds() {
           googletag.cmd.push(function () {
             googletag.pubads().setRequestNonPersonalizedAds(1);
           });
-          console.log("Personalized ads disabled");
         }
 
         function applyStoredPreferences() {
-          var personalizedAdsConsent =
+          const personalizedAdsConsent =
             localStorage.getItem("personalizedAdsConsent") !== "false";
           if (personalizedAdsConsent) {
             enablePersonalizedAds();
@@ -365,15 +453,143 @@
 
         window.addEventListener("load", showConsentBanner);
 
+        // Expose functions to global scope
         window.acceptAllConsent = acceptAllConsent;
         window.rejectAllConsent = rejectAllConsent;
         window.managePreferences = managePreferences;
         window.savePreferences = savePreferences;
       })();
     </script>
-    <div
-      id="toastContainer"
-      class="toast-container position-fixed top-0 end-0 p-3"
-    ></div>
+
+    <!-- Utility Scripts -->
+    <script>
+      // Initialize Bootstrap tooltips
+      document.addEventListener("DOMContentLoaded", function () {
+        var tooltipTriggerList = [].slice.call(
+          document.querySelectorAll('[data-bs-toggle="tooltip"]')
+        );
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+          new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+      });
+
+      // Handle navigation active states
+      document.addEventListener("DOMContentLoaded", function () {
+        const currentPath = window.location.pathname;
+        document.querySelectorAll(".nav-link").forEach((link) => {
+          if (link.getAttribute("href") === currentPath) {
+            link.classList.add("active");
+          }
+        });
+      });
+
+      // Smooth scroll behavior
+      document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+          anchor.addEventListener("click", function (e) {
+            const href = this.getAttribute("href");
+            if (href === "#" || href === "") {
+              // Prevent default action for href="#" or empty href
+              e.preventDefault();
+            } else {
+              e.preventDefault();
+              try {
+                const target = document.querySelector(href);
+                if (target) {
+                  target.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
+                }
+              } catch (error) {
+                console.error(`Invalid selector '${href}'`, error);
+              }
+            }
+          });
+        });
+      });
+
+      // Handle mobile navigation
+      document.addEventListener("DOMContentLoaded", function () {
+        const navbarToggler = document.querySelector(".navbar-toggler");
+        const navbarCollapse = document.querySelector(".navbar-collapse");
+
+        if (navbarToggler && navbarCollapse) {
+          document.addEventListener("click", function (e) {
+            if (
+              !navbarCollapse.contains(e.target) &&
+              !navbarToggler.contains(e.target)
+            ) {
+              if (navbarCollapse.classList.contains("show")) {
+                navbarToggler.click();
+              }
+            }
+          });
+
+          // Close mobile menu when link is clicked
+          navbarCollapse.querySelectorAll(".nav-link").forEach((link) => {
+            link.addEventListener("click", () => {
+              if (navbarCollapse.classList.contains("show")) {
+                navbarToggler.click();
+              }
+            });
+          });
+        }
+      });
+
+      // Handle scroll to top
+      document.addEventListener("DOMContentLoaded", function () {
+        const scrollTopBtn = document.createElement("button");
+        scrollTopBtn.className = "scroll-top-btn";
+        scrollTopBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        document.body.appendChild(scrollTopBtn);
+
+        window.addEventListener("scroll", function () {
+          if (window.pageYOffset > 100) {
+            scrollTopBtn.classList.add("show");
+          } else {
+            scrollTopBtn.classList.remove("show");
+          }
+        });
+
+        scrollTopBtn.addEventListener("click", function () {
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+          });
+        });
+      });
+
+      // Enhanced form validation
+      document.addEventListener("DOMContentLoaded", function () {
+        const forms = document.querySelectorAll("form");
+        forms.forEach((form) => {
+          if (form.classList.contains("needs-validation")) {
+            form.addEventListener(
+              "submit",
+              function (event) {
+                if (!form.checkValidity()) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }
+                form.classList.add("was-validated");
+              },
+              false
+            );
+          }
+        });
+      });
+
+      // Handle dynamic year in footer
+      document.addEventListener("DOMContentLoaded", function () {
+        const yearElement = document.querySelector(".copyright-year");
+        if (yearElement) {
+          yearElement.textContent = new Date().getFullYear();
+        }
+      });
+    </script>
+
+    <!-- Custom Scripts Block -->
+    {% block extra_scripts %}{% endblock %}
   </body>
 </html>

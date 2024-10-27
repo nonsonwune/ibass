@@ -91,6 +91,8 @@ def create_app(config_class=Config):
     setup_logging(app)
     register_error_handlers(app)
     register_shell_context(app)
+    
+    # Ensure the user score listeners are set up
     setup_user_score_listeners()
 
     return app
