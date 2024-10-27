@@ -386,7 +386,17 @@
       src="https://code.jquery.com/jquery-3.6.0.min.js"
       crossorigin="anonymous"
     ></script>
-    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+
+    <!-- Refactored Custom Scripts -->
+    <script src="{{ url_for('static', filename='js/state.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/comments.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/voting.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/bookmarks.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/institutionModal.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/courseSearch.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
     <!-- Cookie Consent Script -->
     <script>
