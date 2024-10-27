@@ -20,8 +20,8 @@ Finder{% endblock %} {% block content %}
                 <span class="input-group-text">
                   <i class="fas fa-user"></i>
                 </span>
-                {{ form.username(class="form-control", placeholder="Enter your
-                username") }}
+                {# formatter-disable #} {{ form.username(class="form-control",
+                placeholder="Enter your username") }} {# formatter-disable #}
               </div>
               {% for error in form.username.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
@@ -33,8 +33,8 @@ Finder{% endblock %} {% block content %}
                 <span class="input-group-text">
                   <i class="fas fa-lock"></i>
                 </span>
-                {{ form.password(class="form-control", placeholder="Enter your
-                password") }}
+                {# formatter-disable #} {{ form.password(class="form-control",
+                placeholder="Enter your password") }} {# formatter-enable #}
               </div>
               {% for error in form.password.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
