@@ -10,7 +10,7 @@
       name="description"
       content="Find the perfect educational institution in Nigeria - Compare universities, courses, and admission requirements"
     />
-    <meta name="theme-color" content="#2c3e50" />
+    <meta name="theme-color" content="var(--primary-color)" />
 
     <title>{% block title %}Nigerian Institutions Finder{% endblock %}</title>
 
@@ -33,6 +33,20 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
     />
+    <script>
+      // Add this right after your CSS link
+      document.addEventListener("DOMContentLoaded", function () {
+        const style = getComputedStyle(document.querySelector(".navbar"));
+        if (
+          style.backgroundColor === "rgba(0, 0, 0, 0)" ||
+          style.backgroundColor === "transparent"
+        ) {
+          console.error("Navbar styles not loading properly");
+          // Fallback styles
+          document.querySelector(".navbar").style.backgroundColor = "#2c3e50";
+        }
+      });
+    </script>
 
     <!-- Custom Head Block -->
     {% block extra_head %}{% endblock %}
@@ -281,14 +295,20 @@
             clicking "Accept All", you consent to our use of cookies.
           </p>
           <div class="cookie-buttons">
-            <button onclick="acceptAllConsent()" class="btn btn-primary">
-              <i class="fas fa-check me-2"></i>Accept All
+            <button class="btn btn-primary" onclick="acceptAllConsent()">
+              <i class="fas fa-check"></i>
+              Accept All
             </button>
-            <button onclick="rejectAllConsent()" class="btn btn-secondary">
-              <i class="fas fa-times me-2"></i>Reject All
+            <button
+              class="btn btn-outline-secondary"
+              onclick="rejectAllConsent()"
+            >
+              <i class="fas fa-times"></i>
+              Reject All
             </button>
-            <button onclick="managePreferences()" class="btn btn-link">
-              <i class="fas fa-cog me-2"></i>Manage Preferences
+            <button class="btn btn-link" onclick="managePreferences()">
+              <i class="fas fa-cog"></i>
+              Manage Preferences
             </button>
           </div>
         </div>
@@ -370,95 +390,152 @@
 
     <!-- Cookie Consent Script -->
     <script>
-      (function () {
-        window.googletag = window.googletag || { cmd: [] };
-
-        function showConsentBanner() {
-          if (!localStorage.getItem("cookieConsent")) {
-            document.getElementById("consent-banner").style.display = "block";
-          } else {
-            applyStoredPreferences();
+      // Cookie Consent Management
+      const CookieConsent = {
+        init() {
+          // Only show banner if consent hasn't been given
+          if (!this.hasConsent()) {
+            this.showBanner();
           }
-        }
+          this.attachEventListeners();
+        },
 
-        function acceptAllConsent() {
-          localStorage.setItem("cookieConsent", "accepted");
-          localStorage.setItem("personalizedAdsConsent", "true");
-          document.getElementById("consent-banner").style.display = "none";
-          enablePersonalizedAds();
-        }
+        hasConsent() {
+          return localStorage.getItem("cookieConsent") !== null;
+        },
 
-        function rejectAllConsent() {
-          localStorage.setItem("cookieConsent", "rejected");
-          localStorage.setItem("personalizedAdsConsent", "false");
-          document.getElementById("consent-banner").style.display = "none";
-          disablePersonalizedAds();
-        }
+        showBanner() {
+          const banner = document.getElementById("consent-banner");
+          if (banner) {
+            banner.style.display = "block";
+          }
+        },
 
-        function managePreferences() {
+        hideBanner() {
+          const banner = document.getElementById("consent-banner");
+          if (banner) {
+            banner.style.display = "none";
+          }
+        },
+
+        saveConsent(type, preferences = {}) {
+          localStorage.setItem("cookieConsent", type);
+          localStorage.setItem(
+            "cookiePreferences",
+            JSON.stringify(preferences)
+          );
+          localStorage.setItem("consentTimestamp", new Date().toISOString());
+          this.hideBanner();
+        },
+
+        attachEventListeners() {
+          // Accept All
+          const acceptBtn = document.querySelector(
+            '[onclick="acceptAllConsent()"]'
+          );
+          if (acceptBtn) {
+            acceptBtn.addEventListener("click", (e) => {
+              e.preventDefault();
+              this.saveConsent("full", { analytics: true, advertising: true });
+              this.applyPreferences({ analytics: true, advertising: true });
+            });
+          }
+
+          // Reject All
+          const rejectBtn = document.querySelector(
+            '[onclick="rejectAllConsent()"]'
+          );
+          if (rejectBtn) {
+            rejectBtn.addEventListener("click", (e) => {
+              e.preventDefault();
+              this.saveConsent("minimal", {
+                analytics: false,
+                advertising: false,
+              });
+              this.applyPreferences({ analytics: false, advertising: false });
+            });
+          }
+
+          // Manage Preferences
+          const manageBtn = document.querySelector(
+            '[onclick="managePreferences()"]'
+          );
+          if (manageBtn) {
+            manageBtn.addEventListener("click", (e) => {
+              e.preventDefault();
+              this.showPreferencesModal();
+            });
+          }
+        },
+
+        applyPreferences(preferences) {
+          if (preferences.advertising) {
+            // Enable personalized ads
+            window.googletag = window.googletag || { cmd: [] };
+            googletag.cmd.push(() => {
+              googletag.pubads().setRequestNonPersonalizedAds(0);
+            });
+          } else {
+            // Disable personalized ads
+            window.googletag = window.googletag || { cmd: [] };
+            googletag.cmd.push(() => {
+              googletag.pubads().setRequestNonPersonalizedAds(1);
+            });
+          }
+
+          // Apply other preferences as needed
+        },
+
+        showPreferencesModal() {
           const modal = new bootstrap.Modal(
             document.getElementById("preferences-modal")
           );
-          const personalizedAdsConsent =
-            localStorage.getItem("personalizedAdsConsent") !== "false";
-          document.getElementById("personalizedAdsConsent").checked =
-            personalizedAdsConsent;
+          const savedPreferences = JSON.parse(
+            localStorage.getItem("cookiePreferences") || "{}"
+          );
+
+          // Update checkbox states
+          const checkboxes = document.querySelectorAll(
+            '#preferences-modal input[type="checkbox"]'
+          );
+          checkboxes.forEach((checkbox) => {
+            checkbox.checked = savedPreferences[checkbox.id] || false;
+          });
+
           modal.show();
-        }
+        },
+      };
 
-        function savePreferences() {
-          const personalizedAdsConsent = document.getElementById(
-            "personalizedAdsConsent"
-          ).checked;
-          localStorage.setItem("cookieConsent", "custom");
-          localStorage.setItem(
-            "personalizedAdsConsent",
-            personalizedAdsConsent
-          );
-          document.getElementById("consent-banner").style.display = "none";
+      // Initialize on DOM load
+      document.addEventListener("DOMContentLoaded", () => {
+        CookieConsent.init();
+      });
 
-          if (personalizedAdsConsent) {
-            enablePersonalizedAds();
-          } else {
-            disablePersonalizedAds();
-          }
-
-          const modal = bootstrap.Modal.getInstance(
-            document.getElementById("preferences-modal")
-          );
-          modal.hide();
-        }
-
-        function enablePersonalizedAds() {
-          googletag.cmd.push(function () {
-            googletag.pubads().setRequestNonPersonalizedAds(0);
-          });
-        }
-
-        function disablePersonalizedAds() {
-          googletag.cmd.push(function () {
-            googletag.pubads().setRequestNonPersonalizedAds(1);
-          });
-        }
-
-        function applyStoredPreferences() {
-          const personalizedAdsConsent =
-            localStorage.getItem("personalizedAdsConsent") !== "false";
-          if (personalizedAdsConsent) {
-            enablePersonalizedAds();
-          } else {
-            disablePersonalizedAds();
-          }
-        }
-
-        window.addEventListener("load", showConsentBanner);
-
-        // Expose functions to global scope
-        window.acceptAllConsent = acceptAllConsent;
-        window.rejectAllConsent = rejectAllConsent;
-        window.managePreferences = managePreferences;
-        window.savePreferences = savePreferences;
-      })();
+      // Make functions available globally
+      window.acceptAllConsent = () =>
+        CookieConsent.saveConsent("full", {
+          analytics: true,
+          advertising: true,
+        });
+      window.rejectAllConsent = () =>
+        CookieConsent.saveConsent("minimal", {
+          analytics: false,
+          advertising: false,
+        });
+      window.managePreferences = () => CookieConsent.showPreferencesModal();
+      window.savePreferences = () => {
+        const preferences = {
+          analytics:
+            document.getElementById("analyticsConsent")?.checked || false,
+          advertising:
+            document.getElementById("personalizedAdsConsent")?.checked || false,
+        };
+        CookieConsent.saveConsent("custom", preferences);
+        CookieConsent.applyPreferences(preferences);
+        bootstrap.Modal.getInstance(
+          document.getElementById("preferences-modal")
+        ).hide();
+      };
     </script>
 
     <!-- Utility Scripts -->
