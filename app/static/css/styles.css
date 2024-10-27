@@ -1074,3 +1074,86 @@ body {
   transform: translateY(0);
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
+/* Auth Pages Styles */
+.auth-card {
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.auth-card .card-body {
+  padding: 2.5rem;
+}
+
+.auth-card .card-title {
+  margin-bottom: 0.5rem;
+}
+
+.auth-icon {
+  font-size: 3rem;
+  color: #3498db;
+  margin-bottom: 1rem;
+}
+
+.auth-input-group {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.auth-input-group .input-group-text {
+  background-color: #f8f9fa;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  border-color: #e2e8f0;
+}
+
+.auth-input-group .form-control {
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  height: 48px;
+  border-color: #e2e8f0;
+}
+
+.auth-input-group .form-control:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.auth-input-group .input-group-text i {
+  color: #3498db;
+}
+
+.auth-btn {
+  height: 48px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.auth-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+}
+
+.auth-links {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.auth-links a {
+  color: #3498db;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.auth-links a:hover {
+  color: #2980b9;
+  text-decoration: underline;
+}
+
+.form-check-input:checked {
+  background-color: #3498db;
+  border-color: #3498db;
+}
