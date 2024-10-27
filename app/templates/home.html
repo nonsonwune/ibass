@@ -872,8 +872,9 @@
       const findInstitutionBtn = document.getElementById("findInstitution");
       let selectedIndex = -1;
 
-      // Show the search input
+      // Show both the search input and course select
       searchInput.style.display = "block";
+      courseSelect.style.display = "block";
 
       function showSuggestions(suggestions) {
         if (suggestions.length === 0) {
@@ -909,8 +910,7 @@
 
       function highlightMatch(text, query) {
         if (!query) return text;
-
-        const cleanQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // Escape regex special characters
+        const cleanQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const regex = new RegExp(`(${cleanQuery})`, "gi");
         return text.replace(regex, "<strong>$1</strong>");
       }
@@ -922,17 +922,8 @@
         searchInput.value = courseName;
         suggestionsContainer.classList.remove("show");
 
-        // Update the hidden select element
-        const option = document.createElement("option");
-        option.value = courseName;
-        option.selected = true;
-        option.dataset.institutions = JSON.stringify(institutions);
-        option.textContent = `${courseName} (${institutions.length} ${
-          institutions.length === 1 ? "institution" : "institutions"
-        })`;
-
-        courseSelect.innerHTML = "";
-        courseSelect.appendChild(option);
+        // Update the select element
+        courseSelect.value = courseName;
 
         // Enable the find institution button
         findInstitutionBtn.disabled = false;
@@ -941,12 +932,29 @@
         selectedIndex = -1;
       }
 
+      // Populate course select dropdown
+      function populateCourseSelect(courses) {
+        courseSelect.innerHTML = '<option value="">Select a Course</option>';
+
+        courses.forEach((course) => {
+          const option = document.createElement("option");
+          option.value = course.name;
+          option.dataset.institutions = JSON.stringify(
+            Array.from(course.institutions)
+          );
+          option.textContent = `${course.name} (${course.institutions.size} ${
+            course.institutions.size === 1 ? "institution" : "institutions"
+          })`;
+          courseSelect.appendChild(option);
+        });
+      }
+
       // Search handler with debounce
       const searchHandler = debounce(function () {
         const query = this.value.toLowerCase();
         if (!query) {
           suggestionsContainer.classList.remove("show");
-          findInstitutionBtn.disabled = true;
+          findInstitutionBtn.disabled = !courseSelect.value;
           return;
         }
 
@@ -956,6 +964,9 @@
 
         showSuggestions(filteredCourses);
         selectedIndex = -1;
+
+        // Also update the dropdown to match the search
+        populateCourseSelect(filteredCourses);
       }, 300);
 
       // Event Listeners
@@ -1011,6 +1022,19 @@
         }
       });
 
+      // Handle course select changes
+      courseSelect.addEventListener("change", function () {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.value) {
+          searchInput.value = selectedOption.value;
+          findInstitutionBtn.disabled = false;
+        } else {
+          searchInput.value = "";
+          findInstitutionBtn.disabled = true;
+        }
+        suggestionsContainer.classList.remove("show");
+      });
+
       // Close suggestions when clicking outside
       document.addEventListener("click", function (e) {
         if (
@@ -1021,12 +1045,15 @@
         }
       });
 
+      // Initial population of course select
+      populateCourseSelect(currentCourses);
+
       // Reset search on load
       searchInput.value = "";
       findInstitutionBtn.disabled = true;
     }
 
-    // Modify your existing loadCourses function to include the initialization
+    // Modified loadCourses function
     async function loadCourses(state, programTypes) {
       loadingSpinner.style.display = "flex";
       courseSelect.style.display = "none";
@@ -1099,6 +1126,7 @@
       } finally {
         loadingSpinner.style.display = "none";
         courseSearch.style.display = "block";
+        courseSelect.style.display = "block";
         findInstitutionBtn.style.display = "block";
         findInstitutionBtn.disabled = true;
 
