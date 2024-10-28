@@ -138,6 +138,7 @@ PROGRAMME_GROUPS = {
     ],
 }
 
+
 # Database Models
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -147,10 +148,18 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Integer, default=0)  # Changed from Boolean to Integer
     is_verified = db.Column(db.Integer, default=0)  # Changed from Boolean to Integer
     score = db.Column(db.Integer, default=0, nullable=False, index=True)
-    comments = db.relationship("Comment", backref="author", lazy=True, cascade="all, delete-orphan")
-    votes = db.relationship("Vote", backref="voter", lazy=True, cascade="all, delete-orphan")
-    feedback = db.relationship("Feedback", backref="user", lazy=True, cascade="all, delete-orphan")
-    bookmarks = db.relationship("Bookmark", backref="user", lazy=True, cascade="all, delete-orphan")
+    comments = db.relationship(
+        "Comment", backref="author", lazy=True, cascade="all, delete-orphan"
+    )
+    votes = db.relationship(
+        "Vote", backref="voter", lazy=True, cascade="all, delete-orphan"
+    )
+    feedback = db.relationship(
+        "Feedback", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
+    bookmarks = db.relationship(
+        "Bookmark", backref="user", lazy=True, cascade="all, delete-orphan"
+    )
 
     @staticmethod
     def normalize_username(username):
@@ -159,15 +168,15 @@ class User(UserMixin, db.Model):
 
     def __init__(self, **kwargs):
         # Convert boolean values to integers for is_admin and is_verified
-        if 'is_admin' in kwargs:
-            kwargs['is_admin'] = 1 if kwargs['is_admin'] else 0
-        if 'is_verified' in kwargs:
-            kwargs['is_verified'] = 1 if kwargs['is_verified'] else 0
-        
+        if "is_admin" in kwargs:
+            kwargs["is_admin"] = 1 if kwargs["is_admin"] else 0
+        if "is_verified" in kwargs:
+            kwargs["is_verified"] = 1 if kwargs["is_verified"] else 0
+
         # Normalize username before saving
-        if 'username' in kwargs:
-            kwargs['username'] = self.normalize_username(kwargs['username'])
-        
+        if "username" in kwargs:
+            kwargs["username"] = self.normalize_username(kwargs["username"])
+
         super(User, self).__init__(**kwargs)
 
     def calculate_score(self):
@@ -432,7 +441,7 @@ def get_courses():
     state = request.args.get("state")
     programme_type = request.args.get("programme_type")
     university = request.args.get("university")
-    
+
     query = db.session.query(Course).join(University)
     if state:
         query = query.filter(University.state == state)
@@ -461,6 +470,7 @@ def get_courses():
             for course in courses
         ]
     )
+
 
 @app.route("/api/programme_types", methods=["GET"])
 def get_programme_types():
@@ -491,7 +501,9 @@ def get_programme_types():
 
         # Sort programme types alphabetically, keeping "ALL_INSTITUTION_TYPES" at the top
         if "ALL_INSTITUTION_TYPES" in programme_types_list:
-            all_institution = programme_types_list.pop(programme_types_list.index("ALL_INSTITUTION_TYPES"))
+            all_institution = programme_types_list.pop(
+                programme_types_list.index("ALL_INSTITUTION_TYPES")
+            )
             programme_types_list.sort()
             programme_types_list.insert(0, all_institution)
         else:
@@ -500,10 +512,10 @@ def get_programme_types():
         return jsonify(programme_types_list)
     except Exception as e:
         app.logger.error(f"Error in get_programme_types: {str(e)}")
-        return jsonify({"error": "An error occurred while fetching programme types."}), 500
-
-
-
+        return (
+            jsonify({"error": "An error occurred while fetching programme types."}),
+            500,
+        )
 
 
 @app.route("/recommend", methods=["GET", "POST"])
@@ -574,10 +586,6 @@ def recommend():
         course=preferred_course,
         user_bookmarks=user_bookmarks,
     )
-
-
-
-
 
 
 @app.route("/course/<int:course_id>")
@@ -707,8 +715,8 @@ def signup():
             username=username,
             email=email,
             password=hashed_password,
-            is_admin=0,      # Explicitly set as integer
-            is_verified=0    # Explicitly set as integer
+            is_admin=0,  # Explicitly set as integer
+            is_verified=0,  # Explicitly set as integer
         )
         db.session.add(new_user)
         db.session.commit()
@@ -717,7 +725,10 @@ def signup():
         token = generate_verification_token(new_user.email)
         send_verification_email(new_user.email, token)
 
-        flash("Account created successfully. A verification email has been sent to your email address (Check Spam Folder).", "success")
+        flash(
+            "Account created successfully. A verification email has been sent to your email address (Check Spam Folder).",
+            "success",
+        )
         return redirect(url_for("login"))
 
     return render_template("signup.html", form=form)
@@ -747,7 +758,6 @@ def login():
         else:
             flash("Login unsuccessful. Please check username and password.", "danger")
     return render_template("login.html", form=form)
-
 
 
 @app.route("/logout")
@@ -1023,15 +1033,18 @@ def add_comment():
 
     return redirect(url_for("contact"))
 
+
 @app.route("/api/institution/<int:uni_id>")
 def get_institution_details(uni_id):
     try:
-        selected_course = request.args.get('selected_course')
+        selected_course = request.args.get("selected_course")
         university = db.session.get(University, uni_id)
         if not university:
             return jsonify({"error": "Institution not found."}), 404
 
-        courses = Course.query.filter_by(university_name=university.university_name).all()
+        courses = Course.query.filter_by(
+            university_name=university.university_name
+        ).all()
 
         # Format the response data
         response_data = {
@@ -1048,17 +1061,21 @@ def get_institution_details(uni_id):
                     "course_name": course.course_name,
                     "utme_requirements": course.utme_requirements or "N/A",
                     "subjects": course.subjects or "N/A",
-                    "direct_entry_requirements": course.direct_entry_requirements or "N/A",
+                    "direct_entry_requirements": course.direct_entry_requirements
+                    or "N/A",
                     "abbrv": course.abbrv or "N/A",
                 }
                 for course in courses
-            ]
+            ],
         }
 
         return jsonify(response_data), 200
     except Exception as e:
         app.logger.error(f"Error in get_institution_details: {str(e)}", exc_info=True)
-        return jsonify({"error": "An error occurred while fetching institution details."}), 500
+        return (
+            jsonify({"error": "An error occurred while fetching institution details."}),
+            500,
+        )
 
 
 @app.route("/admin")
@@ -1252,9 +1269,9 @@ def init_db():
                 username="admin",
                 email="admin@example.com",
                 password=generate_password_hash("adminpassword"),
-                is_admin=1,      # Using integer instead of boolean
-                is_verified=1,   # Using integer instead of boolean
-                score=0
+                is_admin=1,  # Using integer instead of boolean
+                is_verified=1,  # Using integer instead of boolean
+                score=0,
             )
             db.session.add(admin)
             db.session.commit()
@@ -1276,7 +1293,7 @@ if __name__ == "__main__":
         init_db()
     app.run(host="0.0.0.0", port=5001)
 elif "gunicorn" in sys.modules:
-    # If using Gunicorn, you can choose to initialize the DB or assume it's already initialized
+    # If using Gunicorn, you can choose to initialize the db or assume it's already initialized
     with app.app_context():
         init_db()
 else:
