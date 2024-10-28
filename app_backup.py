@@ -1293,7 +1293,7 @@ if __name__ == "__main__":
         init_db()
     app.run(host="0.0.0.0", port=5001)
 elif "gunicorn" in sys.modules:
-    # If using Gunicorn, you can choose to initialize the DB or assume it's already initialized
+    # If using Gunicorn, you can choose to initialize the db or assume it's already initialized
     with app.app_context():
         init_db()
 else:
