@@ -1,3 +1,4 @@
+# app/views/university.py
 from flask import Blueprint, render_template, request, jsonify, current_app
 from flask_login import current_user
 from sqlalchemy.exc import SQLAlchemyError
@@ -120,3 +121,19 @@ def get_course(course_id):
         "direct_entry_requirements": course.direct_entry_requirements,
         "abbrv": course.abbrv,
     })
+    
+@bp.route('/institution/<int:id>')
+def institution_details(id):
+    try:
+        # Fetch the university by ID
+        university = University.query.get_or_404(id)
+        
+        # Optionally, fetch related courses
+        courses = Course.query.filter_by(university_name=university.university_name).all()
+        
+        current_app.logger.info(f"Rendering details for University ID: {id}")
+        
+        return render_template('institution_details.html', university=university, courses=courses)
+    except Exception as e:
+        current_app.logger.error(f"Error rendering institution details: {str(e)}")
+        abort(500)

@@ -1,13 +1,15 @@
 # app/views/main.py
-from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify,current_app
+
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify, current_app
 from flask_login import login_required, current_user
 from ..models.feedback import Feedback
 from ..forms.feedback import ContactForm
-from ..extensions import db
+from ..extensions import db, cache
 from ..models.interaction import Comment
 from ..models.university import University, Course
 from ..models.user import User
-from sqlalchemy import or_
+from ..utils.search import perform_search
+from sqlalchemy import or_, func, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 
@@ -23,35 +25,86 @@ def about():
 
 @bp.route('/search')
 def search_results():
-    query_text = request.args.get('q', '')
+    query_text = request.args.get('q', '').strip()
+    state = request.args.get('state')
+    program_type = request.args.get('program_type')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    
     try:
+        # Universities query
         universities_query = University.query.filter(
-            University.university_name.ilike(f"%{query_text}%")
-        )
-        universities = universities_query.all()
-
-        courses_query = Course.query.filter(
             or_(
-                Course.course_name.ilike(f"%{query_text}%"),
-                Course.abbrv.ilike(f"%{query_text}%")
+                University.university_name.ilike(f"%{query_text}%"),
+                text("university.search_vector @@ plainto_tsquery('english', :query)")
+                .bindparams(query=query_text)
             )
         )
-        courses = courses_query.all()
+        
+        if state:
+            universities_query = universities_query.filter(University.state == state)
+        if program_type:
+            universities_query = universities_query.filter(University.program_type == program_type)
+            
+        # Get total counts before pagination
+        universities_count = universities_query.count()
+        universities = universities_query.all()  # Changed from paginate to all()
+        
+        # Courses query
+        courses_query = Course.query.join(
+            University,
+            University.university_name == Course.university_name
+        ).filter(
+            or_(
+                Course.course_name.ilike(f"%{query_text}%"),
+                Course.abbrv.ilike(f"%{query_text}%"),
+                text("course.search_vector @@ plainto_tsquery('english', :query)")
+                .bindparams(query=query_text)
+            )
+        )
+        
+        if state:
+            courses_query = courses_query.filter(University.state == state)
+        if program_type:
+            courses_query = courses_query.filter(University.program_type == program_type)
+            
+        # Get total counts before pagination
+        courses_count = courses_query.count()
+        courses = courses_query.all()  # Changed from paginate to all()
 
+        states = University.get_all_states()
+        program_types = db.session.query(University.program_type)\
+            .distinct()\
+            .order_by(University.program_type)\
+            .all()
+
+        total_results = universities_count + courses_count
+        
         return render_template(
             'search_results.html',
             query=query_text,
-            universities=universities,
-            courses=courses
+            universities=universities,  # Now a list
+            courses=courses,            # Now a list
+            universities_count=universities_count,
+            courses_count=courses_count,
+            states=states,
+            program_types=[t[0] for t in program_types],
+            selected_state=state,
+            selected_program_type=program_type,
+            selected_types=[program_type] if program_type else [],
+            selected_levels=[],
+            total_results=total_results,
+            program_levels=[],
+            institution_types=[t[0] for t in program_types]
         )
+    except SQLAlchemyError as e:
+        current_app.logger.error(f"Database error in search: {str(e)}")
+        flash("An error occurred while performing the search. Please try again.", "danger")
+        return redirect(url_for('main.home'))
     except Exception as e:
-        return render_template(
-            'search_results.html',
-            query=query_text,
-            universities=[],
-            courses=[],
-            error="An error occurred while processing your search. Please try again."
-        )
+        current_app.logger.error(f"Unexpected error in search: {str(e)}")
+        flash("An unexpected error occurred. Please try again.", "danger")
+        return redirect(url_for('main.home'))
 
 @bp.route('/profile/<username>')
 @login_required

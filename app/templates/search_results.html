@@ -1,257 +1,470 @@
 <!-- app/templates/search_results.html -->
-{% extends "base.html" %} {% block title %}Search Results - Nigerian
-Institutions Finder{% endblock %} {% block extra_head %}
+{% extends "base.html" %}
+{% block title %}Search Results - Naija! Find Uni{% endblock %}
+
+{% block extra_head %}
 <style>
-  body {
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f8f9fa;
+  .hero-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('/static/images/hero.png');
+    background-size: cover;
+    background-position: center;
+    padding: 4rem 0;
+    color: white;
+    margin-bottom: 3rem;
   }
+
   .result-card {
-    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   }
+
   .result-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .filter-section {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 2rem;
+  }
+
+  .filter-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .filter-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .custom-checkbox {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+  }
+
+  .custom-checkbox input {
+    margin-right: 0.5rem;
+  }
+
+  .nav-tabs {
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 2rem;
+  }
+
+  .nav-tabs .nav-link {
+    border: none;
+    color: #64748b;
+    padding: 0.75rem 1rem;
+    margin-right: 1rem;
+    font-weight: 500;
+    position: relative;
+    background: transparent;
+  }
+
+  .nav-tabs .nav-link:hover {
+    color: #3498db;
+  }
+
+  .nav-tabs .nav-link.active {
+    color: #3498db;
+    background: transparent;
+  }
+
+  .nav-tabs .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #3498db;
+  }
+
+  .results-count {
+    color: #64748b;
+    margin-bottom: 1.5rem;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+  }
+
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .institution-type {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .type-federal { background: #e3f2fd; color: #1976d2; }
+  .type-state { background: #e8f5e9; color: #388e3c; }
+  .type-private { background: #fff3e0; color: #f57c00; }
+
+  .modal-content {
+    border-radius: 15px;
+    border: none;
+  }
+
+  .modal-header {
+    background: linear-gradient(to right, #3498db, #2980b9);
+    color: white;
+    border-radius: 15px 15px 0 0;
+  }
+
+  .course-requirements {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 991.98px) {
+    .filter-section {
+      position: static;
+      margin-bottom: 1.5rem;
+    }
+  }
+
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .no-results {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .no-results i {
+    font-size: 3rem;
+    color: #3498db;
+    margin-bottom: 1rem;
   }
 </style>
-{% endblock %} {% block content %}
-<div class="container mt-5">
-  <nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="/">Home</a></li>
-      <li class="breadcrumb-item active" aria-current="page">Search Results</li>
-    </ol>
-  </nav>
+{% endblock %}
 
-  <h1 class="mb-4">
-    Search Results for "<span id="search-query">{{ query }}</span>"
-  </h1>
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 text-center">
+        <h1 class="mb-4">Search Results</h1>
+        <form class="d-flex justify-content-center" action="{{ url_for('main.search_results') }}" method="GET">
+          <div class="input-group input-group-lg" style="max-width: 600px;">
+            <input type="text" class="form-control" name="q" value="{{ query }}" placeholder="Search institutions or courses...">
+            <button class="btn btn-primary" type="submit">
+              <i class="fas fa-search me-2"></i>Search
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
 
-  {% if error %}
-  <div class="alert alert-danger" role="alert">{{ error }}</div>
-  {% endif %}
+<div class="container">
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="text-center">
+      <div class="spinner-border text-primary mb-3" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mb-0">Loading results...</p>
+    </div>
+  </div>
 
   <div class="row">
-    <div class="col-md-3 mb-4">
-      <h4>Filters</h4>
-      <form id="filter-form">
-        <div class="mb-3">
-          <label for="state-filter" class="form-label">State</label>
-          <select id="state-filter" class="form-select">
-            <option value="">All States</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label for="program-type-filter" class="form-label"
-            >Program Type</label
-          >
-          <select id="program-type-filter" class="form-select">
-            <option value="">All Types</option>
-          </select>
-        </div>
-        <button type="submit" class="btn btn-primary">Apply Filters</button>
-      </form>
+    <!-- Filters Sidebar -->
+    <div class="col-lg-3 mb-4">
+      <div class="filter-section">
+        <h4 class="mb-4">Filters</h4>
+        <form id="filterForm">
+          <!-- State Filter -->
+          <div class="filter-group">
+            <label class="fw-bold mb-2">State</label>
+            <select class="form-select" id="stateFilter" name="state">
+              <option value="">All States</option>
+              {% for state in states %}
+              <option value="{{ state }}" {% if selected_state == state %}selected{% endif %}>
+                {{ state }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Institution Type Filter -->
+          <div class="filter-group">
+            <label class="fw-bold mb-2">Institution Type</label>
+            <div class="custom-checkboxes">
+              {% for type in institution_types %}
+              <label class="custom-checkbox">
+                <input type="checkbox" name="type" value="{{ type }}" 
+                       {% if type in selected_types %}checked{% endif %}>
+                {{ type|title }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Program Level Filter -->
+          <div class="filter-group">
+            <label class="fw-bold mb-2">Program Level</label>
+            <div class="custom-checkboxes">
+              {% for level in program_levels %}
+              <label class="custom-checkbox">
+                <input type="checkbox" name="level" value="{{ level }}"
+                       {% if level in selected_levels %}checked{% endif %}>
+                {{ level|title }}
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-filter me-2"></i>Apply Filters
+          </button>
+        </form>
+      </div>
     </div>
-    <div class="col-md-9">
-      <ul class="nav nav-tabs mb-4" id="resultTabs" role="tablist">
+
+    <!-- Results Section -->
+    <div class="col-lg-9">
+      <!-- Results Count -->
+      <div class="results-count">
+        Found {{ total_results }} results for "{{ query }}"
+      </div>
+
+      <!-- Results Tabs -->
+      <ul class="nav nav-tabs" id="resultTabs" role="tablist">
         <li class="nav-item" role="presentation">
-          <button
-            class="nav-link active"
-            id="universities-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#universities"
-            type="button"
-            role="tab"
-          >
-            Universities
+          <button class="nav-link active" id="institutions-tab" data-bs-toggle="tab" 
+                  data-bs-target="#institutions" type="button" role="tab">
+              <i class="fas fa-university me-2"></i>Institutions ({{ universities_count }})
           </button>
         </li>
         <li class="nav-item" role="presentation">
-          <button
-            class="nav-link"
-            id="courses-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#courses"
-            type="button"
-            role="tab"
-          >
-            Courses
+          <button class="nav-link" id="courses-tab" data-bs-toggle="tab" 
+                  data-bs-target="#courses" type="button" role="tab">
+              <i class="fas fa-book me-2"></i>Courses ({{ courses_count }})
           </button>
         </li>
       </ul>
+
+      <!-- Tab Content -->
       <div class="tab-content" id="resultTabsContent">
-        <div
-          class="tab-pane fade show active"
-          id="universities"
-          role="tabpanel"
-        >
-          <div
-            id="universities-results"
-            class="row row-cols-1 row-cols-md-2 g-4"
-          ></div>
+      <!-- Institutions Tab -->
+      <div class="tab-pane fade show active" id="institutions" role="tabpanel">
+        {% if universities %}
+        <div class="row g-4">
+          {% for university in universities %}
+          <div class="col-md-6">
+            <div class="result-card">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                  <h5 class="card-title mb-0">{{ university.university_name }}</h5>
+                  <span class="institution-type type-{{ university.program_type|lower }}">
+                    {{ university.program_type }}
+                  </span>
+                </div>
+                <p class="card-text">
+                  <i class="fas fa-map-marker-alt me-2 text-primary"></i>{{ university.state }}
+                </p>
+                <div class="mt-3">
+                  <a href="{{ url_for('university.institution_details', id=university.id) }}" 
+                    class="btn btn-primary w-100">
+                    <i class="fas fa-info-circle me-2"></i>View Details
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
         </div>
-        <div class="tab-pane fade" id="courses" role="tabpanel">
-          <div
-            id="courses-results"
-            class="row row-cols-1 row-cols-md-2 g-4"
-          ></div>
+        {% else %}
+        <div class="no-results">
+          <i class="fas fa-university mb-3"></i>
+          <h3>No Institutions Found</h3>
+          <p class="text-muted">Try adjusting your search criteria or filters</p>
         </div>
+        {% endif %}
       </div>
-      <div id="no-results" class="alert alert-info mt-4" style="display: none">
-        No results found. Please try a different search term.
+
+
+        <!-- Courses Tab -->
+        <div class="tab-pane fade" id="courses" role="tabpanel">
+          {% if courses %}
+          <div class="row g-4">
+            {% for course in courses %}
+            <div class="col-md-6">
+              <div class="result-card">
+                <div class="card-body">
+                  <h5 class="card-title mb-3">{{ course.course_name }}</h5>
+                  <p class="card-text mb-2">
+                    <i class="fas fa-university me-2 text-primary"></i>{{ course.university_name }}
+                  </p>
+                  <p class="card-text mb-3">
+                    <i class="fas fa-graduation-cap me-2 text-success"></i>{{ course.abbrv }}
+                  </p>
+                  <button class="btn btn-primary w-100" data-bs-toggle="modal" 
+                          data-bs-target="#courseModal{{ course.id }}">
+                    <i class="fas fa-info-circle me-2"></i>View Requirements
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Course Modal -->
+            <div class="modal fade" id="courseModal{{ course.id }}" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">{{ course.course_name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <h6 class="mb-3">
+                      <i class="fas fa-university me-2 text-primary"></i>{{ course.university_name }}
+                    </h6>
+                    <div class="course-requirements">
+                      <h6 class="mb-3">Entry Requirements</h6>
+                      <div class="mb-3">
+                        <strong>UTME Requirements:</strong>
+                        <p class="mb-2">{{ course.utme_requirements }}</p>
+                      </div>
+                      <div class="mb-3">
+                        <strong>Required Subjects:</strong>
+                        <p class="mb-2">{{ course.subjects }}</p>
+                      </div>
+                      <div>
+                        <strong>Direct Entry Requirements:</strong>
+                        <p class="mb-0">{{ course.direct_entry_requirements }}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <a href="{{ url_for('university.institution_details', id=course.university.id) }}" 
+                       class="btn btn-primary">
+                      <i class="fas fa-university me-2"></i>View Institution
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="no-results">
+            <i class="fas fa-book mb-3"></i>
+            <h3>No Courses Found</h3>
+            <p class="text-muted">Try adjusting your search criteria or filters</p>
+          </div>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
 </div>
-{% endblock %} {% block extra_scripts %}
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const searchQuery = document.getElementById("search-query");
-    const universitiesResults = document.getElementById("universities-results");
-    const coursesResults = document.getElementById("courses-results");
-    const noResults = document.getElementById("no-results");
-    const stateFilter = document.getElementById("state-filter");
-    const programTypeFilter = document.getElementById("program-type-filter");
-    const filterForm = document.getElementById("filter-form");
-
-    function performSearch(query, state = "", programType = "") {
-      fetch(
-        `/api/search?q=${encodeURIComponent(query)}&state=${encodeURIComponent(
-          state
-        )}&program_type=${encodeURIComponent(programType)}`
-      )
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.error) {
-            showError(data.error);
-          } else {
-            updateResults(data);
-            if (state === "" && programType === "") {
-              updateFilters(data);
-            }
-          }
-        })
-        .catch((error) => {
-          showError("An error occurred while searching. Please try again.");
-          console.error("Search error:", error);
-        });
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize loading overlay
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  
+  // Handle filter form submission
+  const filterForm = document.getElementById('filterForm');
+  filterForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    loadingOverlay.style.display = 'flex';
+    
+    const formData = new FormData(this);
+    const searchParams = new URLSearchParams(formData);
+    
+    // Add current search query to params
+    const currentQuery = new URLSearchParams(window.location.search).get('q');
+    if (currentQuery) {
+      searchParams.append('q', currentQuery);
     }
+    
+    window.location.href = `${window.location.pathname}?${searchParams.toString()}`;
+  });
 
-    function showError(message) {
-      noResults.innerHTML = `<div class="alert alert-danger" role="alert">${message}</div>`;
-      noResults.style.display = "block";
-      universitiesResults.innerHTML = "";
-      coursesResults.innerHTML = "";
-    }
-
-    function updateResults(data) {
-      universitiesResults.innerHTML = "";
-      coursesResults.innerHTML = "";
-      noResults.style.display = "none";
-
-      if (data.universities.length === 0 && data.courses.length === 0) {
-        noResults.style.display = "block";
-      } else {
-        // Populate Universities
-        data.universities.forEach(function (uni) {
-          universitiesResults.innerHTML += `
-            <div class="col">
-              <div class="card h-100 result-card">
-                <div class="card-body">
-                  <h5 class="card-title">${uni.university_name}</h5>
-                  <p class="card-text">
-                    <strong>State:</strong> ${uni.state}<br>
-                    <strong>Program Type:</strong> ${uni.program_type}
-                  </p>
-                  <a href="/recommend?university=${encodeURIComponent(
-                    uni.university_name
-                  )}" class="btn btn-primary">View Details</a>
-                </div>
-              </div>
-            </div>
-          `;
-        });
-
-        // Populate Courses
-        data.courses.forEach(function (course, index) {
-          const modalId = `courseModal${index}`;
-          coursesResults.innerHTML += `
-            <div class="col">
-              <div class="card h-100 result-card">
-                <div class="card-body">
-                  <h5 class="card-title">${course.course_name}</h5>
-                  <p class="card-text">
-                    <strong>University:</strong> ${course.university_name}<br>
-                    <strong>Abbreviation:</strong> ${course.abbrv}
-                  </p>
-                  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#${modalId}">View Details</button>
-                </div>
-              </div>
-            </div>
-          `;
-
-          // Append Modal
-          document.body.insertAdjacentHTML(
-            "beforeend",
-            `
-            <div class="modal fade" id="${modalId}" tabindex="-1" aria-hidden="true">
-              <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                  <div class="modal-header">
-                    <h5 class="modal-title">${course.course_name}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                  </div>
-                  <div class="modal-body">
-                    <p><strong>University:</strong> ${course.university_name}</p>
-                    <p><strong>Abbreviation:</strong> ${course.abbrv}</p>
-                    <p><strong>Direct Entry Requirements:</strong> ${course.direct_entry_requirements}</p>
-                    <p><strong>UTME Requirements:</strong> ${course.utme_requirements}</p>
-                    <p><strong>Subjects:</strong> ${course.subjects}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `
-          );
-        });
-      }
-    }
-
-    function updateFilters(data) {
-      const states = [...new Set(data.universities.map((uni) => uni.state))];
-      const programTypes = [
-        ...new Set(data.universities.map((uni) => uni.program_type)),
-      ];
-
-      stateFilter.innerHTML =
-        '<option value="">All States</option>' +
-        states
-          .map((state) => `<option value="${state}">${state}</option>`)
-          .join("");
-
-      programTypeFilter.innerHTML =
-        '<option value="">All Types</option>' +
-        programTypes
-          .map((type) => `<option value="${type}">${type}</option>`)
-          .join("");
-    }
-
-    filterForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      const query = searchQuery.textContent.trim();
-      const state = stateFilter.value;
-      const programType = programTypeFilter.value;
-
-      if (query) {
-        performSearch(query, state, programType);
-      }
+  // Handle tab transitions
+  const tabLinks = document.querySelectorAll('.nav-link');
+  tabLinks.forEach(link => {
+    link.addEventListener('click', function() {
+      // Remove active class from all tabs
+      tabLinks.forEach(tab => tab.classList.remove('active'));
+      // Add active class to clicked tab
+      this.classList.add('active');
     });
+  });
 
-    // Initial search on page load
-    const initialQuery = searchQuery.textContent.trim();
-    if (initialQuery) {
-      performSearch(initialQuery);
+  // Initialize tooltips
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+
+  // Handle course modal dynamic content loading
+  const courseModals = document.querySelectorAll('[data-bs-target^="#courseModal"]');
+  courseModals.forEach(modal => {
+    modal.addEventListener('click', function() {
+      // Add any dynamic content loading logic here
+    });
+  });
+
+  // Save filter state
+  const filterInputs = document.querySelectorAll('#filterForm input, #filterForm select');
+  filterInputs.forEach(input => {
+    input.addEventListener('change', function() {
+      localStorage.setItem(`filter_${input.name}`, input.value);
+    });
+  });
+
+  // Restore filter state
+  filterInputs.forEach(input => {
+    const savedValue = localStorage.getItem(`filter_${input.name}`);
+    if (savedValue) {
+      if (input.type === 'checkbox') {
+        input.checked = savedValue === 'true';
+      } else {
+        input.value = savedValue;
+      }
     }
   });
+});
 </script>
 {% endblock %}

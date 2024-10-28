@@ -1,4 +1,5 @@
 # app/views/api.py
+
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
 from contextlib import contextmanager
@@ -13,7 +14,7 @@ from ..config import Config
 
 bp = Blueprint('api', __name__)
 
-@bp.route('/api/locations')
+@bp.route('/locations')
 def get_locations():
     try:
         locations = University.get_all_states()
@@ -23,7 +24,7 @@ def get_locations():
         current_app.logger.error(f"Error retrieving locations: {str(e)}")
         return jsonify({"error": "Failed to retrieve locations"}), 500
 
-@bp.route('/api/programme_types', methods=['GET'])
+@bp.route('/programme_types', methods=['GET'])
 def get_programme_types():
     state = request.args.get('state')
     try:
@@ -66,7 +67,7 @@ def get_programme_types():
         current_app.logger.error(f"Error in get_programme_types: {str(e)}")
         return jsonify({"error": "An error occurred while fetching programme types."}), 500
 
-@bp.route('/api/universities', methods=['GET'])
+@bp.route('/universities', methods=['GET'])
 def get_universities():
     state = request.args.get('state')
     if state:
@@ -79,7 +80,7 @@ def get_universities():
         "program_type": uni.program_type,
     } for uni in universities])
 
-@bp.route('/api/courses', methods=['GET'])
+@bp.route('/courses', methods=['GET'])
 def get_courses():
     state = request.args.get('state')
     programme_types = request.args.get('programme_type', '').split(',')
@@ -130,7 +131,7 @@ def get_courses():
             "message": str(e)
         }), 500
 
-@bp.route('/api/institution/<int:uni_id>')
+@bp.route('/institution/<int:uni_id>')
 def get_institution_details(uni_id):
     try:
         selected_course = request.args.get('selected_course')
@@ -160,7 +161,7 @@ def get_institution_details(uni_id):
         current_app.logger.error(f"Error in get_institution_details: {str(e)}")
         return jsonify({"error": "An error occurred while fetching institution details."}), 500
 
-@bp.route('/api/bookmark', methods=['POST'])
+@bp.route('/bookmark', methods=['POST'])
 @login_required
 def add_bookmark():
     data = request.get_json()
@@ -192,13 +193,20 @@ def add_bookmark():
             "message": "An error occurred while bookmarking. Please try again."
         }), 500
 
-@bp.route('/api/user_bookmarks', methods=['GET'])
+@bp.route('/user_bookmarks', methods=['GET'])
 @login_required
 def get_user_bookmarks():
-    bookmarks = [bookmark.university_id for bookmark in current_user.bookmarks]
-    return jsonify(bookmarks)
+    try:
+        bookmarks = [bookmark.university_id for bookmark in current_user.bookmarks]
+        return jsonify(bookmarks)
+    except SQLAlchemyError as e:
+        current_app.logger.error(f"Error fetching user bookmarks: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Error retrieving bookmark data'
+        }), 500
 
-@bp.route('/university/remove_bookmark/<int:university_id>', methods=['POST'])
+@bp.route('/remove_bookmark/<int:university_id>', methods=['POST'])
 @login_required
 def remove_bookmark(university_id):
     try:
@@ -241,7 +249,7 @@ def atomic_transaction():
     finally:
         db.session.close()
 
-@bp.route('/api/vote/<int:comment_id>/<vote_type>', methods=['POST'])
+@bp.route('/vote/<int:comment_id>/<vote_type>', methods=['POST'])
 @login_required
 def vote(comment_id, vote_type):
     if vote_type not in ['like', 'dislike']:
@@ -313,8 +321,8 @@ def vote(comment_id, vote_type):
             'success': False,
             'message': f'Error processing vote: {str(e)}'
         }), 500
-    
-@bp.route('/api/user_votes', methods=['GET'])
+
+@bp.route('/user_votes', methods=['GET'])
 @login_required
 def get_user_votes():
     try:
@@ -329,8 +337,8 @@ def get_user_votes():
             'success': False,
             'message': 'Error retrieving vote data'
         }), 500
-        
-@bp.route("/api/search", methods=["GET"])
+
+@bp.route('/search', methods=['GET'])
 def search():
     query_text = request.args.get("q", "").lower()
     state = request.args.get("state")
@@ -383,9 +391,8 @@ def search():
         return jsonify({
             "error": "An error occurred while processing your search. Please try again."
         }), 500
-        
 
-@bp.route('/api/delete_comment/<int:comment_id>', methods=['POST'])
+@bp.route('/delete_comment/<int:comment_id>', methods=['POST'])
 @login_required
 def delete_comment(comment_id):
     try:

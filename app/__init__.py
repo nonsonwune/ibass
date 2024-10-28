@@ -1,6 +1,7 @@
 # app/__init__.py
+
 from flask import Flask, render_template
-from .extensions import db, login_manager, mail, migrate, csrf
+from .extensions import db, login_manager, mail, migrate, csrf, cache
 from .config import Config
 import logging
 from logging.handlers import RotatingFileHandler
@@ -17,15 +18,20 @@ def register_extensions(app):
     mail.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+    cache.init_app(app, config={
+        'CACHE_TYPE': 'simple',
+        'CACHE_DEFAULT_TIMEOUT': 300
+    })
 
 def register_blueprints(app):
     from .views import main_bp, auth_bp, admin_bp, university_bp, api_bp
+    # Removed search_api_bp to centralize API routes within api_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(university_bp)
-    app.register_blueprint(api_bp)
+    app.register_blueprint(api_bp, url_prefix='/api')  # api_bp handles all /api routes
 
 def setup_logging(app):
     if not app.debug and not app.testing:
@@ -91,8 +97,10 @@ def create_app(config_class=Config):
     setup_logging(app)
     register_error_handlers(app)
     register_shell_context(app)
-    
-    # Ensure the user score listeners are set up
     setup_user_score_listeners()
+    
+    # Register CLI commands
+    from .cli import init_app as init_cli
+    init_cli(app)
 
     return app

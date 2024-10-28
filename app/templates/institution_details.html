@@ -1,0 +1,125 @@
+<!-- app/templates/institution_details.html -->
+{% extends "base.html" %} {% block title %}{{ university.university_name }} -
+Details{% endblock %} {% block content %}
+<div class="container py-5">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h1 class="card-title mb-4">{{ university.university_name }}</h1>
+
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <p class="mb-2">
+            <strong
+              ><i class="fas fa-map-marker-alt text-primary me-2"></i
+              >State:</strong
+            >
+            {{ university.state }}
+          </p>
+          <p class="mb-2">
+            <strong
+              ><i class="fas fa-university text-primary me-2"></i>Program
+              Type:</strong
+            >
+            {{ university.program_type }}
+          </p>
+          {% if university.website %}
+          <p class="mb-2">
+            <strong
+              ><i class="fas fa-globe text-primary me-2"></i>Website:</strong
+            >
+            <a href="{{ university.website }}" target="_blank"
+              >{{ university.website }}</a
+            >
+          </p>
+          {% endif %} {% if university.established %}
+          <p class="mb-2">
+            <strong
+              ><i class="fas fa-calendar text-primary me-2"></i
+              >Established:</strong
+            >
+            {{ university.established }}
+          </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <h2 class="h4 mb-3">Available Courses</h2>
+      {% if courses %}
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead>
+            <tr>
+              <th>Course Name</th>
+              <th>Abbreviation</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for course in courses %}
+            <tr>
+              <td>{{ course.course_name }}</td>
+              <td>{{ course.abbrv }}</td>
+              <td>
+                <button
+                  class="btn btn-primary btn-sm"
+                  data-bs-toggle="modal"
+                  data-bs-target="#courseModal{{ course.id }}"
+                >
+                  View Details
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted">No courses available.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Course Modals -->
+{% for course in courses %}
+<div class="modal fade" id="courseModal{{ course.id }}" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ course.course_name }}</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="course-requirements">
+          <h6 class="mb-3">Entry Requirements</h6>
+          {% if course.utme_requirements %}
+          <div class="mb-3">
+            <strong>UTME Requirements:</strong>
+            <p class="mb-2">{{ course.utme_requirements }}</p>
+          </div>
+          {% endif %} {% if course.subjects %}
+          <div class="mb-3">
+            <strong>Required Subjects:</strong>
+            <p class="mb-2">{{ course.subjects }}</p>
+          </div>
+          {% endif %} {% if course.direct_entry_requirements %}
+          <div>
+            <strong>Direct Entry Requirements:</strong>
+            <p class="mb-0">{{ course.direct_entry_requirements }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %} {% endblock %}
