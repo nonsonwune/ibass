@@ -1,5 +1,4 @@
 # app/__init__.py
-
 from flask import Flask, render_template
 from .extensions import db, login_manager, mail, migrate, csrf, cache
 from .config import Config
@@ -11,6 +10,7 @@ from .models.interaction import Comment
 from .models.user import User
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select
+from .utils.startup import verify_database_setup  # Add this import
 
 def register_extensions(app):
     db.init_app(app)
@@ -22,6 +22,16 @@ def register_extensions(app):
         'CACHE_TYPE': 'simple',
         'CACHE_DEFAULT_TIMEOUT': 300
     })
+
+    # Add database verification after extensions are initialized
+    with app.app_context():
+        try:
+            verify_database_setup()
+            app.logger.info("Database verification successful")
+        except Exception as e:
+            app.logger.error(f"Database verification failed: {str(e)}")
+            # Don't raise the exception - allow the app to start with degraded search functionality
+            app.logger.warning("Application starting with degraded search functionality")
 
 def register_blueprints(app):
     from .views import main_bp, auth_bp, admin_bp, university_bp, api_bp
@@ -54,7 +64,7 @@ def register_error_handlers(app):
     @app.errorhandler(404)
     def not_found_error(error):
         return render_template('404.html'), 404
-
+    
     @app.errorhandler(500)
     def internal_error(error):
         db.session.rollback()
@@ -92,9 +102,9 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    register_extensions(app)
+    setup_logging(app)  # Move logging setup before extensions
+    register_extensions(app)  # Database verification happens here
     register_blueprints(app)
-    setup_logging(app)
     register_error_handlers(app)
     register_shell_context(app)
     setup_user_score_listeners()
