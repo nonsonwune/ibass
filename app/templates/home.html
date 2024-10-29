@@ -319,6 +319,17 @@
     margin: 2rem 0;
     opacity: 0;
     transition: opacity 0.3s ease;
+    width: 100%; /* Add this to ensure full width */
+  }
+
+  #loadingSpinner.spinner-border {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  #loadingSpinner p {
+    margin-bottom: 0;
+    color: #3498db;
   }
 
   #loadingSpinner.show {
@@ -456,10 +467,12 @@
           role="status"
           aria-live="polite"
         >
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading courses...</span>
+          <div class="d-flex flex-column align-items-center">
+            <div class="spinner-border text-primary mb-2" role="status">
+              <span class="visually-hidden">Loading courses...</span>
+            </div>
+            <p>Loading available courses...</p>
           </div>
-          <p class="mt-2">Loading available courses...</p>
         </div>
 
         <div class="course-search-container">
@@ -568,19 +581,21 @@
 </section>
 {% endblock %} {% block extra_scripts %} {{ super() }}
 <script>
-  document.addEventListener("DOMContentLoaded", function() {
+  document.addEventListener("DOMContentLoaded", function () {
     // Constants and State Management
     const STATE = {
       selectedTypes: new Set(),
       currentCourses: [],
       isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
-      prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-      isMobile: window.innerWidth <= 768
+      prefersReducedMotion: window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches,
+      isMobile: window.innerWidth <= 768,
     };
 
     // DOM Elements
     const DOM = {
-      heroSection: document.getElementById('heroSection'),
+      heroSection: document.getElementById("heroSection"),
       locationSelect: document.getElementById("location"),
       institutionTypesGrid: document.getElementById("institutionTypes"),
       nextStepBtn: document.getElementById("nextStep"),
@@ -592,7 +607,7 @@
       step1: document.getElementById("step1"),
       step2: document.getElementById("step2"),
       courseSuggestions: document.getElementById("courseSuggestions"),
-      scrollPrompt: document.querySelector(".scroll-prompt")
+      scrollPrompt: document.querySelector(".scroll-prompt"),
     };
 
     // Program Groups Configuration
@@ -616,7 +631,7 @@
         "FEDERAL COLLEGES OF EDUCATION",
         "STATE COLLEGES OF EDUCATION",
         "PRIVATE COLLEGES OF EDUCATION",
-      ]
+      ],
     };
 
     // Optimized Parallax Implementation
@@ -624,35 +639,46 @@
       init() {
         // Check if parallax should be disabled
         if (STATE.isIOS || STATE.prefersReducedMotion) {
-          DOM.heroSection.style.backgroundAttachment = 'scroll';
+          DOM.heroSection.style.backgroundAttachment = "scroll";
           return;
         }
 
         // Add smooth scroll listener
-        window.addEventListener('scroll', () => {
-          // Only request animation frame if element is in viewport
-          const rect = DOM.heroSection.getBoundingClientRect();
-          if (rect.bottom > 0 && rect.top < window.innerHeight) {
-            requestAnimationFrame(this.updatePosition);
-          }
-        }, { passive: true });
+        window.addEventListener(
+          "scroll",
+          () => {
+            // Only request animation frame if element is in viewport
+            const rect = DOM.heroSection.getBoundingClientRect();
+            if (rect.bottom > 0 && rect.top < window.innerHeight) {
+              requestAnimationFrame(this.updatePosition);
+            }
+          },
+          { passive: true }
+        );
 
         // Handle reduced motion preference changes
-        window.matchMedia('(prefers-reduced-motion: reduce)')
-          .addEventListener('change', (e) => {
+        window
+          .matchMedia("(prefers-reduced-motion: reduce)")
+          .addEventListener("change", (e) => {
             STATE.prefersReducedMotion = e.matches;
-            DOM.heroSection.style.backgroundAttachment = e.matches ? 'scroll' : 'fixed';
+            DOM.heroSection.style.backgroundAttachment = e.matches
+              ? "scroll"
+              : "fixed";
           });
 
         // Handle resize events
-        window.addEventListener('resize', () => {
-          STATE.isMobile = window.innerWidth <= 768;
-          if (STATE.isMobile) {
-            DOM.heroSection.style.backgroundAttachment = 'scroll';
-          } else if (!STATE.isIOS && !STATE.prefersReducedMotion) {
-            DOM.heroSection.style.backgroundAttachment = 'fixed';
-          }
-        }, { passive: true });
+        window.addEventListener(
+          "resize",
+          () => {
+            STATE.isMobile = window.innerWidth <= 768;
+            if (STATE.isMobile) {
+              DOM.heroSection.style.backgroundAttachment = "scroll";
+            } else if (!STATE.isIOS && !STATE.prefersReducedMotion) {
+              DOM.heroSection.style.backgroundAttachment = "fixed";
+            }
+          },
+          { passive: true }
+        );
       },
 
       updatePosition() {
@@ -663,7 +689,7 @@
         const yPos = -(scrolled * factor);
 
         DOM.heroSection.style.backgroundPositionY = `${yPos}px`;
-      }
+      },
     };
 
     // Initialize background image loading
@@ -671,8 +697,7 @@
       const img = new Image();
       img.src = "/static/images/hero.png";
       img.onload = () => {
-        DOM.heroSection.style.backgroundImage =
-          `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('${img.src}')`;
+        DOM.heroSection.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('${img.src}')`;
         DOM.heroSection.classList.add("loaded");
       };
     };
@@ -684,91 +709,98 @@
       });
     };
     // Location Handler Implementation
-  const LOCATION_HANDLER = {
-    async loadLocations() {
-      try {
-        const response = await fetch("/api/locations");
-        if (!response.ok) throw new Error('Failed to load locations');
-        
-        const locations = await response.json();
-        this.populateLocations(locations);
-      } catch (error) {
-        console.error("Error loading locations:", error);
-        this.showError("Failed to load locations. Please refresh the page.");
-      }
-    },
+    const LOCATION_HANDLER = {
+      async loadLocations() {
+        try {
+          const response = await fetch("/api/locations");
+          if (!response.ok) throw new Error("Failed to load locations");
 
-    populateLocations(locations) {
-      // Sort locations alphabetically
-      locations.sort().forEach(location => {
-        const option = document.createElement("option");
-        option.value = location;
-        option.textContent = location;
-        DOM.locationSelect.appendChild(option);
-      });
-    },
+          const locations = await response.json();
+          this.populateLocations(locations);
+        } catch (error) {
+          console.error("Error loading locations:", error);
+          this.showError("Failed to load locations. Please refresh the page.");
+        }
+      },
 
-    async handleLocationChange(selectedState) {
-      // Reset state
-      STATE.selectedTypes.clear();
-      STATE.currentCourses = [];
-      DOM.nextStepBtn.disabled = true;
-      DOM.institutionTypesGrid.innerHTML = '';
-      
-      if (!selectedState) return;
+      populateLocations(locations) {
+        // Sort locations alphabetically
+        locations.sort().forEach((location) => {
+          const option = document.createElement("option");
+          option.value = location;
+          option.textContent = location;
+          DOM.locationSelect.appendChild(option);
+        });
+      },
 
-      try {
-        const response = await fetch(
-          `/api/programme_types?state=${encodeURIComponent(selectedState)}`
-        );
-        
-        if (!response.ok) throw new Error('Failed to load programme types');
-        
-        const types = await response.json();
-        INSTITUTION_HANDLER.createTypeCards(types);
-        INSTITUTION_HANDLER.updateSelectedTypesDisplay();
-      } catch (error) {
-        console.error("Error loading programme types:", error);
-        this.showError("Failed to load institution types. Please try again.");
-      }
-    },
+      async handleLocationChange(selectedState) {
+        // Reset state
+        STATE.selectedTypes.clear();
+        STATE.currentCourses = [];
+        DOM.nextStepBtn.disabled = true;
+        DOM.institutionTypesGrid.innerHTML = "";
 
-    showError(message) {
-      const errorDiv = document.createElement("div");
-      errorDiv.className = "alert alert-danger mt-3";
-      errorDiv.role = "alert";
-      errorDiv.textContent = message;
-      DOM.institutionTypesGrid.insertAdjacentElement('beforebegin', errorDiv);
-      setTimeout(() => errorDiv.remove(), 5000);
-    }
-  };
+        if (!selectedState) return;
 
-  // Institution Handler Implementation
-  const INSTITUTION_HANDLER = {
-    createTypeCards(types) {
-      const sortedTypes = types
-        .filter(type => type !== "ALL_INSTITUTION_TYPES")
-        .sort((a, b) => a.localeCompare(b));
+        try {
+          const response = await fetch(
+            `/api/programme_types?state=${encodeURIComponent(selectedState)}`
+          );
 
-      this.createSelectedTypesContainer();
-      this.renderTypeCards(sortedTypes);
-      this.addCardEventListeners();
-    },
+          if (!response.ok) throw new Error("Failed to load programme types");
 
-    createSelectedTypesContainer() {
-      if (!document.querySelector(".selected-types")) {
-        const selectedTypesContainer = document.createElement("div");
-        selectedTypesContainer.className = "selected-types";
-        selectedTypesContainer.setAttribute('aria-label', 'Selected institution types');
-        selectedTypesContainer.setAttribute('role', 'region');
-        selectedTypesContainer.setAttribute('aria-live', 'polite');
-        DOM.institutionTypesGrid.insertAdjacentElement("beforebegin", selectedTypesContainer);
-      }
-    },
+          const types = await response.json();
+          INSTITUTION_HANDLER.createTypeCards(types);
+          INSTITUTION_HANDLER.updateSelectedTypesDisplay();
+        } catch (error) {
+          console.error("Error loading programme types:", error);
+          this.showError("Failed to load institution types. Please try again.");
+        }
+      },
 
-    renderTypeCards(types) {
-      DOM.institutionTypesGrid.innerHTML = types
-        .map(type => `
+      showError(message) {
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "alert alert-danger mt-3";
+        errorDiv.role = "alert";
+        errorDiv.textContent = message;
+        DOM.institutionTypesGrid.insertAdjacentElement("beforebegin", errorDiv);
+        setTimeout(() => errorDiv.remove(), 5000);
+      },
+    };
+
+    // Institution Handler Implementation
+    const INSTITUTION_HANDLER = {
+      createTypeCards(types) {
+        const sortedTypes = types
+          .filter((type) => type !== "ALL_INSTITUTION_TYPES")
+          .sort((a, b) => a.localeCompare(b));
+
+        this.createSelectedTypesContainer();
+        this.renderTypeCards(sortedTypes);
+        this.addCardEventListeners();
+      },
+
+      createSelectedTypesContainer() {
+        if (!document.querySelector(".selected-types")) {
+          const selectedTypesContainer = document.createElement("div");
+          selectedTypesContainer.className = "selected-types";
+          selectedTypesContainer.setAttribute(
+            "aria-label",
+            "Selected institution types"
+          );
+          selectedTypesContainer.setAttribute("role", "region");
+          selectedTypesContainer.setAttribute("aria-live", "polite");
+          DOM.institutionTypesGrid.insertAdjacentElement(
+            "beforebegin",
+            selectedTypesContainer
+          );
+        }
+      },
+
+      renderTypeCards(types) {
+        DOM.institutionTypesGrid.innerHTML = types
+          .map(
+            (type) => `
           <div 
             class="institution-card" 
             data-type="${type}"
@@ -777,76 +809,83 @@
             aria-pressed="false"
             aria-label="${this.formatInstitutionType(type)}"
           >
-            <i class="fas ${this.getInstitutionIcon(type)} mb-3 fa-2x" aria-hidden="true"></i>
+            <i class="fas ${this.getInstitutionIcon(
+              type
+            )} mb-3 fa-2x" aria-hidden="true"></i>
             <h5 class="mb-2">${this.formatInstitutionType(type)}</h5>
             <p class="mb-0 small text-muted">Click to select</p>
           </div>
-        `)
-        .join("");
-    },
+        `
+          )
+          .join("");
+      },
 
-    addCardEventListeners() {
-      document.querySelectorAll(".institution-card").forEach(card => {
-        const handleSelection = () => {
-          const type = card.dataset.type;
-          if (STATE.selectedTypes.has(type)) {
-            this.removeInstitutionType(type);
-          } else {
-            this.addInstitutionType(type);
-          }
-          DOM.nextStepBtn.disabled = STATE.selectedTypes.size === 0;
-        };
+      addCardEventListeners() {
+        document.querySelectorAll(".institution-card").forEach((card) => {
+          const handleSelection = () => {
+            const type = card.dataset.type;
+            if (STATE.selectedTypes.has(type)) {
+              this.removeInstitutionType(type);
+            } else {
+              this.addInstitutionType(type);
+            }
+            DOM.nextStepBtn.disabled = STATE.selectedTypes.size === 0;
+          };
 
-        // Click handler
-        card.addEventListener("click", handleSelection);
+          // Click handler
+          card.addEventListener("click", handleSelection);
 
-        // Keyboard handler
-        card.addEventListener("keydown", (e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            handleSelection();
-          }
+          // Keyboard handler
+          card.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleSelection();
+            }
+          });
         });
-      });
-    },
+      },
 
-    addInstitutionType(type) {
-      STATE.selectedTypes.add(type);
-      const card = document.querySelector(`.institution-card[data-type="${type}"]`);
-      if (card) {
-        card.classList.add("selected");
-        card.setAttribute('aria-pressed', 'true');
-      }
-      this.addSelectedTypeBadge(type);
-    },
+      addInstitutionType(type) {
+        STATE.selectedTypes.add(type);
+        const card = document.querySelector(
+          `.institution-card[data-type="${type}"]`
+        );
+        if (card) {
+          card.classList.add("selected");
+          card.setAttribute("aria-pressed", "true");
+        }
+        this.addSelectedTypeBadge(type);
+      },
 
-    removeInstitutionType(type) {
-      STATE.selectedTypes.delete(type);
-      const card = document.querySelector(`.institution-card[data-type="${type}"]`);
-      if (card) {
-        card.classList.remove("selected");
-        card.setAttribute('aria-pressed', 'false');
-      }
-      this.removeSelectedTypeBadge(type);
-    },
+      removeInstitutionType(type) {
+        STATE.selectedTypes.delete(type);
+        const card = document.querySelector(
+          `.institution-card[data-type="${type}"]`
+        );
+        if (card) {
+          card.classList.remove("selected");
+          card.setAttribute("aria-pressed", "false");
+        }
+        this.removeSelectedTypeBadge(type);
+      },
 
-    updateSelectedTypesDisplay() {
-      const container = document.querySelector(".selected-types");
-      if (!container) return;
+      updateSelectedTypesDisplay() {
+        const container = document.querySelector(".selected-types");
+        if (!container) return;
 
-      container.innerHTML = "";
-      Array.from(STATE.selectedTypes)
-        .sort()
-        .forEach(type => this.addSelectedTypeBadge(type));
-    },
+        container.innerHTML = "";
+        Array.from(STATE.selectedTypes)
+          .sort()
+          .forEach((type) => this.addSelectedTypeBadge(type));
+      },
 
-    addSelectedTypeBadge(type) {
-      const container = document.querySelector(".selected-types");
-      const badge = document.createElement("div");
-      badge.className = "selected-type-badge";
-      badge.dataset.type = type;
-      badge.setAttribute('role', 'status');
-      badge.innerHTML = `
+      addSelectedTypeBadge(type) {
+        const container = document.querySelector(".selected-types");
+        const badge = document.createElement("div");
+        badge.className = "selected-type-badge";
+        badge.dataset.type = type;
+        badge.setAttribute("role", "status");
+        badge.innerHTML = `
         ${this.formatInstitutionType(type)}
         <button 
           onclick="removeInstitutionType('${type}')"
@@ -855,219 +894,254 @@
           <i class="fas fa-times" aria-hidden="true"></i>
         </button>
       `;
-      container.appendChild(badge);
-    },
+        container.appendChild(badge);
+      },
 
-    removeSelectedTypeBadge(type) {
-      const badge = document.querySelector(`.selected-type-badge[data-type="${type}"]`);
-      if (badge) {
-        badge.style.animation = "fadeOut 0.3s ease";
-        setTimeout(() => badge.remove(), 300);
-      }
-    },
-
-    formatInstitutionType(type) {
-      return type
-        .split(/[ _]/g)
-        .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-        .join(" ");
-    },
-
-    getInstitutionIcon(type) {
-      const typeUpper = type.toUpperCase();
-      
-      if (typeUpper.includes("EDUCATION") && typeUpper.includes("TECHNICAL")) {
-        return "fa-cog";
-      }
-      if (typeUpper.includes("POLYTECHNIC")) return "fa-industry";
-      if (typeUpper.includes("UNIVERSITIES")) return "fa-university";
-      if (typeUpper.includes("EDUCATION")) return "fa-chalkboard-teacher";
-      if (typeUpper.includes("HEALTH") || typeUpper.includes("MEDICAL")) {
-        return "fa-hospital";
-      }
-      if (typeUpper.includes("TECHNOLOGY") || typeUpper.includes("TECHNICAL")) {
-        return "fa-microchip";
-      }
-      if (typeUpper.includes("AGRICULTURE")) return "fa-leaf";
-      if (typeUpper.includes("DISTANCE") || typeUpper.includes("E-LEARNING")) {
-        return "fa-laptop";
-      }
-      if (typeUpper.includes("COLLEGES")) return "fa-school";
-      
-      return "fa-graduation-cap";
-    }
-  };
-  // Course Handler Implementation
-  const COURSE_HANDLER = {
-    async loadCourses(state, programTypes) {
-      this.showLoading(true);
-
-      try {
-        const courses = await this.fetchCourses(state, programTypes);
-        STATE.currentCourses = this.processCourses(courses);
-        
-        this.initializeSearchInterface();
-
-        if (STATE.currentCourses.length === 0) {
-          this.showInfo("No courses available for the selected location and institution types.");
+      removeSelectedTypeBadge(type) {
+        const badge = document.querySelector(
+          `.selected-type-badge[data-type="${type}"]`
+        );
+        if (badge) {
+          badge.style.animation = "fadeOut 0.3s ease";
+          setTimeout(() => badge.remove(), 300);
         }
-      } catch (error) {
-        console.error("Error loading courses:", error);
-        this.showError(`Failed to load courses: ${error.message}`);
-      } finally {
-        this.showLoading(false);
-      }
-    },
+      },
 
-    async fetchCourses(state, programTypes) {
-      const programTypesString = Array.from(programTypes).join(",");
-      const response = await fetch(
-        `/api/courses?state=${encodeURIComponent(state)}&programme_type=${encodeURIComponent(programTypesString)}`
-      );
+      formatInstitutionType(type) {
+        return type
+          .split(/[ _]/g)
+          .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+          .join(" ");
+      },
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-      }
+      getInstitutionIcon(type) {
+        const typeUpper = type.toUpperCase();
 
-      return response.json();
-    },
+        if (
+          typeUpper.includes("EDUCATION") &&
+          typeUpper.includes("TECHNICAL")
+        ) {
+          return "fa-cog";
+        }
+        if (typeUpper.includes("POLYTECHNIC")) return "fa-industry";
+        if (typeUpper.includes("UNIVERSITIES")) return "fa-university";
+        if (typeUpper.includes("EDUCATION")) return "fa-chalkboard-teacher";
+        if (typeUpper.includes("HEALTH") || typeUpper.includes("MEDICAL")) {
+          return "fa-hospital";
+        }
+        if (
+          typeUpper.includes("TECHNOLOGY") ||
+          typeUpper.includes("TECHNICAL")
+        ) {
+          return "fa-microchip";
+        }
+        if (typeUpper.includes("AGRICULTURE")) return "fa-leaf";
+        if (
+          typeUpper.includes("DISTANCE") ||
+          typeUpper.includes("E-LEARNING")
+        ) {
+          return "fa-laptop";
+        }
+        if (typeUpper.includes("COLLEGES")) return "fa-school";
 
-    processCourses(courses) {
-      if (!Array.isArray(courses)) throw new Error("Invalid response format from server");
+        return "fa-graduation-cap";
+      },
+    };
+    // Course Handler Implementation
+    const COURSE_HANDLER = {
+      async loadCourses(state, programTypes) {
+        this.showLoading(true);
 
-      const coursesMap = new Map();
+        try {
+          const courses = await this.fetchCourses(state, programTypes);
+          STATE.currentCourses = this.processCourses(courses);
 
-      courses.forEach(course => {
-        const courseKey = course.course_name.toUpperCase();
-        if (!coursesMap.has(courseKey)) {
-          coursesMap.set(courseKey, {
-            name: course.course_name,
-            institutions: new Set([{
+          this.initializeSearchInterface();
+
+          if (STATE.currentCourses.length === 0) {
+            this.showInfo(
+              "No courses available for the selected location and institution types."
+            );
+          }
+        } catch (error) {
+          console.error("Error loading courses:", error);
+          this.showError(`Failed to load courses: ${error.message}`);
+        } finally {
+          this.showLoading(false);
+        }
+      },
+
+      async fetchCourses(state, programTypes) {
+        const programTypesString = Array.from(programTypes).join(",");
+        const response = await fetch(
+          `/api/courses?state=${encodeURIComponent(
+            state
+          )}&programme_type=${encodeURIComponent(programTypesString)}`
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || `HTTP error! status: ${response.status}`
+          );
+        }
+
+        return response.json();
+      },
+
+      processCourses(courses) {
+        if (!Array.isArray(courses))
+          throw new Error("Invalid response format from server");
+
+        const coursesMap = new Map();
+
+        courses.forEach((course) => {
+          const courseKey = course.course_name.toUpperCase();
+          if (!coursesMap.has(courseKey)) {
+            coursesMap.set(courseKey, {
+              name: course.course_name,
+              institutions: new Set([
+                {
+                  name: course.university_name,
+                  state: course.state,
+                  type: course.program_type,
+                },
+              ]),
+              details: {
+                utme: course.utme_requirements,
+                subjects: course.subjects,
+                directEntry: course.direct_entry_requirements,
+                abbreviation: course.abbrv,
+              },
+            });
+          } else {
+            coursesMap.get(courseKey).institutions.add({
               name: course.university_name,
               state: course.state,
-              type: course.program_type
-            }]),
-            details: {
-              utme: course.utme_requirements,
-              subjects: course.subjects,
-              directEntry: course.direct_entry_requirements,
-              abbreviation: course.abbrv
-            }
-          });
-        } else {
-          coursesMap.get(courseKey).institutions.add({
-            name: course.university_name,
-            state: course.state,
-            type: course.program_type
-          });
-        }
-      });
+              type: course.program_type,
+            });
+          }
+        });
 
-      return Array.from(coursesMap.values())
-        .sort((a, b) => a.name.localeCompare(b.name));
-    },
+        return Array.from(coursesMap.values()).sort((a, b) =>
+          a.name.localeCompare(b.name)
+        );
+      },
 
-    initializeSearchInterface() {
-      const searchInput = DOM.courseSearch;
-      const suggestionsContainer = DOM.courseSuggestions;
-      let selectedIndex = -1;
+      initializeSearchInterface() {
+        const searchInput = DOM.courseSearch;
+        const suggestionsContainer = DOM.courseSuggestions;
+        let selectedIndex = -1;
 
-      this.showSearchInterface();
-      this.attachSearchHandlers(searchInput, suggestionsContainer, selectedIndex);
-      this.attachKeyboardNavigation(searchInput, suggestionsContainer);
-      this.attachClickHandlers(suggestionsContainer);
-      this.resetSearchState();
-    },
+        this.showSearchInterface();
+        this.attachSearchHandlers(
+          searchInput,
+          suggestionsContainer,
+          selectedIndex
+        );
+        this.attachKeyboardNavigation(searchInput, suggestionsContainer);
+        this.attachClickHandlers(suggestionsContainer);
+        this.resetSearchState();
+      },
 
-    showSearchInterface() {
-      DOM.courseSearch.style.display = "block";
-      DOM.courseSelect.style.display = "block";
-      this.populateCourseSelect(STATE.currentCourses);
-    },
+      showSearchInterface() {
+        DOM.courseSearch.style.display = "block";
+        DOM.courseSelect.style.display = "block";
+        this.populateCourseSelect(STATE.currentCourses);
+      },
 
-    attachSearchHandlers(searchInput, suggestionsContainer, selectedIndex) {
-      const searchHandler = this.debounce((event) => {
-        const query = event.target.value.toLowerCase().trim();
+      attachSearchHandlers(searchInput, suggestionsContainer, selectedIndex) {
+        const searchHandler = this.debounce((event) => {
+          const query = event.target.value.toLowerCase().trim();
 
-        if (!query) {
+          if (!query) {
+            suggestionsContainer.classList.remove("show");
+            DOM.findInstitutionBtn.disabled = !DOM.courseSelect.value;
+            this.populateCourseSelect(STATE.currentCourses);
+            return;
+          }
+
+          const filteredCourses = STATE.currentCourses.filter((course) =>
+            course.name.toLowerCase().includes(query)
+          );
+
+          this.showSuggestions(filteredCourses, query);
+          this.populateCourseSelect(filteredCourses);
+          selectedIndex = -1;
+        }, 300);
+
+        searchInput.addEventListener("input", searchHandler);
+      },
+
+      attachKeyboardNavigation(searchInput, suggestionsContainer) {
+        let selectedIndex = -1;
+
+        searchInput.addEventListener("keydown", (e) => {
+          const suggestions = document.querySelectorAll(
+            ".course-suggestion-item"
+          );
+
+          switch (e.key) {
+            case "ArrowDown":
+              e.preventDefault();
+              selectedIndex = Math.min(
+                selectedIndex + 1,
+                suggestions.length - 1
+              );
+              this.updateSelection(suggestions, selectedIndex);
+              break;
+
+            case "ArrowUp":
+              e.preventDefault();
+              selectedIndex = Math.max(selectedIndex - 1, -1);
+              this.updateSelection(suggestions, selectedIndex);
+              break;
+
+            case "Enter":
+              e.preventDefault();
+              if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+                this.selectSuggestion(suggestions[selectedIndex]);
+              }
+              break;
+
+            case "Escape":
+              suggestionsContainer.classList.remove("show");
+              selectedIndex = -1;
+              break;
+          }
+        });
+      },
+
+      attachClickHandlers(suggestionsContainer) {
+        suggestionsContainer.addEventListener("click", (e) => {
+          const suggestion = e.target.closest(".course-suggestion-item");
+          if (suggestion) {
+            this.selectSuggestion(suggestion);
+          }
+        });
+
+        // Close suggestions on outside click
+        document.addEventListener("click", (e) => {
+          if (
+            !DOM.courseSearch.contains(e.target) &&
+            !suggestionsContainer.contains(e.target)
+          ) {
+            suggestionsContainer.classList.remove("show");
+          }
+        });
+      },
+
+      showSuggestions(suggestions, query) {
+        const suggestionsContainer = DOM.courseSuggestions;
+
+        if (suggestions.length === 0) {
           suggestionsContainer.classList.remove("show");
-          DOM.findInstitutionBtn.disabled = !DOM.courseSelect.value;
-          this.populateCourseSelect(STATE.currentCourses);
           return;
         }
 
-        const filteredCourses = STATE.currentCourses.filter(course =>
-          course.name.toLowerCase().includes(query)
-        );
-
-        this.showSuggestions(filteredCourses, query);
-        this.populateCourseSelect(filteredCourses);
-        selectedIndex = -1;
-      }, 300);
-
-      searchInput.addEventListener("input", searchHandler);
-    },
-
-    attachKeyboardNavigation(searchInput, suggestionsContainer) {
-      let selectedIndex = -1;
-
-      searchInput.addEventListener("keydown", (e) => {
-        const suggestions = document.querySelectorAll(".course-suggestion-item");
-
-        switch (e.key) {
-          case "ArrowDown":
-            e.preventDefault();
-            selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
-            this.updateSelection(suggestions, selectedIndex);
-            break;
-
-          case "ArrowUp":
-            e.preventDefault();
-            selectedIndex = Math.max(selectedIndex - 1, -1);
-            this.updateSelection(suggestions, selectedIndex);
-            break;
-
-          case "Enter":
-            e.preventDefault();
-            if (selectedIndex >= 0 && suggestions[selectedIndex]) {
-              this.selectSuggestion(suggestions[selectedIndex]);
-            }
-            break;
-
-          case "Escape":
-            suggestionsContainer.classList.remove("show");
-            selectedIndex = -1;
-            break;
-        }
-      });
-    },
-
-    attachClickHandlers(suggestionsContainer) {
-      suggestionsContainer.addEventListener("click", (e) => {
-        const suggestion = e.target.closest(".course-suggestion-item");
-        if (suggestion) {
-          this.selectSuggestion(suggestion);
-        }
-      });
-
-      // Close suggestions on outside click
-      document.addEventListener("click", (e) => {
-        if (!DOM.courseSearch.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-          suggestionsContainer.classList.remove("show");
-        }
-      });
-    },
-
-    showSuggestions(suggestions, query) {
-      const suggestionsContainer = DOM.courseSuggestions;
-      
-      if (suggestions.length === 0) {
-        suggestionsContainer.classList.remove("show");
-        return;
-      }
-
-      const html = suggestions.map((course, index) => `
+        const html = suggestions
+          .map(
+            (course, index) => `
         <div 
           class="course-suggestion-item" 
           data-index="${index}" 
@@ -1080,283 +1154,306 @@
             ${this.highlightMatch(course.name, query)}
           </div>
           <div class="institution-count">
-            ${course.institutions.size} ${course.institutions.size === 1 ? "institution" : "institutions"} available
+            ${course.institutions.size} ${
+              course.institutions.size === 1 ? "institution" : "institutions"
+            } available
           </div>
         </div>
-      `).join("");
+      `
+          )
+          .join("");
 
-      suggestionsContainer.innerHTML = html;
-      suggestionsContainer.classList.add("show");
-    },
+        suggestionsContainer.innerHTML = html;
+        suggestionsContainer.classList.add("show");
+      },
 
-    updateSelection(suggestions, selectedIndex) {
-      suggestions.forEach((suggestion, index) => {
-        suggestion.classList.toggle("active", index === selectedIndex);
-        suggestion.setAttribute("aria-selected", index === selectedIndex);
-        if (index === selectedIndex) {
-          suggestion.scrollIntoView({ block: "nearest" });
-        }
-      });
-    },
+      updateSelection(suggestions, selectedIndex) {
+        suggestions.forEach((suggestion, index) => {
+          suggestion.classList.toggle("active", index === selectedIndex);
+          suggestion.setAttribute("aria-selected", index === selectedIndex);
+          if (index === selectedIndex) {
+            suggestion.scrollIntoView({ block: "nearest" });
+          }
+        });
+      },
 
-    selectSuggestion(suggestionElement) {
-      const courseName = suggestionElement.dataset.value;
-      const institutions = JSON.parse(suggestionElement.dataset.institutions);
+      selectSuggestion(suggestionElement) {
+        const courseName = suggestionElement.dataset.value;
+        const institutions = JSON.parse(suggestionElement.dataset.institutions);
 
-      DOM.courseSearch.value = courseName;
-      DOM.courseSuggestions.classList.remove("show");
-
-      DOM.courseSelect.value = courseName;
-      DOM.findInstitutionBtn.disabled = false;
-    },
-
-    populateCourseSelect(courses) {
-      DOM.courseSelect.innerHTML = '<option value="">Select a Course</option>';
-      
-      courses.forEach((course) => {
-        const option = document.createElement("option");
-        option.value = course.name;
-        option.dataset.institutions = JSON.stringify(Array.from(course.institutions));
-        option.textContent = `${course.name} (${course.institutions.size} ${
-          course.institutions.size === 1 ? "institution" : "institutions"
-        })`;
-        DOM.courseSelect.appendChild(option);
-      });
-    },
-
-    // Utility functions
-    showLoading(show) {
-      DOM.loadingSpinner.style.display = show ? "flex" : "none";
-      DOM.courseSelect.style.display = show ? "none" : "block";
-      DOM.courseSearch.style.display = show ? "none" : "block";
-      DOM.findInstitutionBtn.style.display = show ? "none" : "block";
-      if (!show) DOM.findInstitutionBtn.disabled = true;
-    },
-
-    debounce(func, wait) {
-      let timeout;
-      return function executedFunction(...args) {
-        const later = () => {
-          clearTimeout(timeout);
-          func.apply(this, args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-      };
-    },
-
-    highlightMatch(text, query) {
-      if (!query) return text;
-      const cleanQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(`(${cleanQuery})`, "gi");
-      return text.replace(regex, "<strong>$1</strong>");
-    },
-
-    resetSearchState() {
-      DOM.courseSearch.value = "";
-      DOM.findInstitutionBtn.disabled = true;
-    },
-
-    showInfo(message) {
-      this.showMessage(message, 'info');
-    },
-
-    showError(message) {
-      this.showMessage(message, 'danger');
-    },
-
-    showMessage(message, type) {
-      const div = document.createElement("div");
-      div.className = `alert alert-${type} mt-3`;
-      div.role = "alert";
-      div.textContent = message;
-      DOM.step2.appendChild(div);
-      setTimeout(() => div.remove(), 5000);
-    }
-  };
-  // Navigation Handler Implementation
-  const NAVIGATION_HANDLER = {
-    initialize() {
-      this.initializeStepNavigation();
-      this.initializeButtonHandlers();
-      this.initializeKeyboardNavigation();
-    },
-
-    initializeStepNavigation() {
-      DOM.nextStepBtn.addEventListener("click", () => {
-        if (DOM.locationSelect.value && STATE.selectedTypes.size > 0) {
-          this.moveToStep2();
-        }
-      });
-
-      DOM.prevStepBtn.addEventListener("click", () => {
-        this.moveToStep1();
-      });
-    },
-
-    initializeButtonHandlers() {
-      // Find institution button handler
-      DOM.findInstitutionBtn.addEventListener("click", () => {
-        this.handleFindInstitution();
-      });
-
-      // Course select change handler
-      DOM.courseSelect.addEventListener("change", (e) => {
-        const selectedOption = e.target.options[e.target.selectedIndex];
-        if (selectedOption.value) {
-          DOM.courseSearch.value = selectedOption.value;
-          DOM.findInstitutionBtn.disabled = false;
-        } else {
-          DOM.courseSearch.value = "";
-          DOM.findInstitutionBtn.disabled = true;
-        }
+        DOM.courseSearch.value = courseName;
         DOM.courseSuggestions.classList.remove("show");
-      });
-    },
 
-    initializeKeyboardNavigation() {
-      document.addEventListener("keydown", (e) => {
-        if (DOM.step2.classList.contains("active")) {
-          if (e.key === "Escape") {
-            this.moveToStep1();
-          } else if (e.key === "Enter" && !DOM.findInstitutionBtn.disabled) {
-            this.handleFindInstitution();
+        DOM.courseSelect.value = courseName;
+        DOM.findInstitutionBtn.disabled = false;
+      },
+
+      populateCourseSelect(courses) {
+        DOM.courseSelect.innerHTML =
+          '<option value="">Select a Course</option>';
+
+        courses.forEach((course) => {
+          const option = document.createElement("option");
+          option.value = course.name;
+          option.dataset.institutions = JSON.stringify(
+            Array.from(course.institutions)
+          );
+          option.textContent = `${course.name} (${course.institutions.size} ${
+            course.institutions.size === 1 ? "institution" : "institutions"
+          })`;
+          DOM.courseSelect.appendChild(option);
+        });
+      },
+
+      // Utility functions
+      showLoading(show) {
+        // Make spinner visible first
+        DOM.loadingSpinner.style.display = show ? "flex" : "none";
+        DOM.loadingSpinner.style.opacity = show ? "1" : "0";
+
+        // Hide/show other elements after a small delay to ensure smooth transition
+        requestAnimationFrame(() => {
+          DOM.courseSelect.style.display = show ? "none" : "block";
+          DOM.courseSearch.style.display = show ? "none" : "block";
+          DOM.findInstitutionBtn.style.display = show ? "none" : "block";
+
+          if (!show) {
+            DOM.findInstitutionBtn.disabled = true;
           }
-        }
-      });
-    },
+        });
+      },
 
-    moveToStep2() {
-      const wizardContainer = document.getElementById("wizard-container");
-      
-      // Smooth scroll to wizard container
-      wizardContainer.scrollIntoView({
-        behavior: STATE.prefersReducedMotion ? "auto" : "smooth",
-        block: "start"
-      });
+      debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func.apply(this, args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      },
 
-      // Switch steps with animation
-      setTimeout(() => {
-        DOM.step1.classList.remove("active");
-        DOM.step1.setAttribute("aria-hidden", "true");
-        DOM.step2.classList.add("active");
-        DOM.step2.setAttribute("aria-hidden", "false");
-        
-        // Load courses for selected location and types
-        COURSE_HANDLER.loadCourses(
-          DOM.locationSelect.value, 
-          STATE.selectedTypes
+      highlightMatch(text, query) {
+        if (!query) return text;
+        const cleanQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`(${cleanQuery})`, "gi");
+        return text.replace(regex, "<strong>$1</strong>");
+      },
+
+      resetSearchState() {
+        DOM.courseSearch.value = "";
+        DOM.findInstitutionBtn.disabled = true;
+      },
+
+      showInfo(message) {
+        this.showMessage(message, "info");
+      },
+
+      showError(message) {
+        this.showMessage(message, "danger");
+      },
+
+      showMessage(message, type) {
+        const div = document.createElement("div");
+        div.className = `alert alert-${type} mt-3`;
+        div.role = "alert";
+        div.textContent = message;
+        DOM.step2.appendChild(div);
+        setTimeout(() => div.remove(), 5000);
+      },
+    };
+    // Navigation Handler Implementation
+    const NAVIGATION_HANDLER = {
+      initialize() {
+        this.initializeStepNavigation();
+        this.initializeButtonHandlers();
+        this.initializeKeyboardNavigation();
+      },
+
+      initializeStepNavigation() {
+        DOM.nextStepBtn.addEventListener("click", () => {
+          if (DOM.locationSelect.value && STATE.selectedTypes.size > 0) {
+            this.moveToStep2();
+          }
+        });
+
+        DOM.prevStepBtn.addEventListener("click", () => {
+          this.moveToStep1();
+        });
+      },
+
+      initializeButtonHandlers() {
+        // Find institution button handler
+        DOM.findInstitutionBtn.addEventListener("click", () => {
+          this.handleFindInstitution();
+        });
+
+        // Course select change handler
+        DOM.courseSelect.addEventListener("change", (e) => {
+          const selectedOption = e.target.options[e.target.selectedIndex];
+          if (selectedOption.value) {
+            DOM.courseSearch.value = selectedOption.value;
+            DOM.findInstitutionBtn.disabled = false;
+          } else {
+            DOM.courseSearch.value = "";
+            DOM.findInstitutionBtn.disabled = true;
+          }
+          DOM.courseSuggestions.classList.remove("show");
+        });
+      },
+
+      initializeKeyboardNavigation() {
+        document.addEventListener("keydown", (e) => {
+          if (DOM.step2.classList.contains("active")) {
+            if (e.key === "Escape") {
+              this.moveToStep1();
+            } else if (e.key === "Enter" && !DOM.findInstitutionBtn.disabled) {
+              this.handleFindInstitution();
+            }
+          }
+        });
+      },
+
+      moveToStep2() {
+        const wizardContainer = document.getElementById("wizard-container");
+
+        // Smooth scroll to wizard container
+        wizardContainer.scrollIntoView({
+          behavior: STATE.prefersReducedMotion ? "auto" : "smooth",
+          block: "start",
+        });
+
+        // Switch steps with animation
+        setTimeout(
+          () => {
+            DOM.step1.classList.remove("active");
+            DOM.step1.setAttribute("aria-hidden", "true");
+            DOM.step2.classList.add("active");
+            DOM.step2.setAttribute("aria-hidden", "false");
+
+            // Load courses for selected location and types
+            COURSE_HANDLER.loadCourses(
+              DOM.locationSelect.value,
+              STATE.selectedTypes
+            );
+          },
+          STATE.prefersReducedMotion ? 0 : 500
         );
-      }, STATE.prefersReducedMotion ? 0 : 500);
-    },
+      },
 
-    moveToStep1() {
-      DOM.step2.classList.remove("active");
-      DOM.step2.setAttribute("aria-hidden", "true");
-      DOM.step1.classList.add("active");
-      DOM.step1.setAttribute("aria-hidden", "false");
-    },
+      moveToStep1() {
+        DOM.step2.classList.remove("active");
+        DOM.step2.setAttribute("aria-hidden", "true");
+        DOM.step1.classList.add("active");
+        DOM.step1.setAttribute("aria-hidden", "false");
+      },
 
-    handleFindInstitution() {
-      const selectedOption = DOM.courseSelect.options[DOM.courseSelect.selectedIndex];
-      
-      const params = new URLSearchParams({
-        location: DOM.locationSelect.value,
-        programme_type: Array.from(STATE.selectedTypes).join(","),
-        course: selectedOption.value,
-        institutions: selectedOption.dataset.institutions
-      });
+      handleFindInstitution() {
+        const selectedOption =
+          DOM.courseSelect.options[DOM.courseSelect.selectedIndex];
 
-      window.location.href = `/recommend?${params}`;
-    }
-  };
+        const params = new URLSearchParams({
+          location: DOM.locationSelect.value,
+          programme_type: Array.from(STATE.selectedTypes).join(","),
+          course: selectedOption.value,
+          institutions: selectedOption.dataset.institutions,
+        });
 
-  // Accessibility Handler Implementation
-  const ACCESSIBILITY_HANDLER = {
-    initialize() {
-      this.setupLiveRegion();
-      this.setupKeyboardNavigation();
-      this.setupFocusManagement();
-    },
+        window.location.href = `/recommend?${params}`;
+      },
+    };
 
-    setupLiveRegion() {
-      const liveRegion = document.createElement('div');
-      liveRegion.setAttribute('aria-live', 'polite');
-      liveRegion.setAttribute('aria-atomic', 'true');
-      liveRegion.className = 'visually-hidden';
-      document.body.appendChild(liveRegion);
-    },
+    // Accessibility Handler Implementation
+    const ACCESSIBILITY_HANDLER = {
+      initialize() {
+        this.setupLiveRegion();
+        this.setupKeyboardNavigation();
+        this.setupFocusManagement();
+      },
 
-    setupKeyboardNavigation() {
-      DOM.institutionTypesGrid.addEventListener('keydown', (e) => {
-        if (e.target.classList.contains('institution-card')) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            e.target.click();
+      setupLiveRegion() {
+        const liveRegion = document.createElement("div");
+        liveRegion.setAttribute("aria-live", "polite");
+        liveRegion.setAttribute("aria-atomic", "true");
+        liveRegion.className = "visually-hidden";
+        document.body.appendChild(liveRegion);
+      },
+
+      setupKeyboardNavigation() {
+        DOM.institutionTypesGrid.addEventListener("keydown", (e) => {
+          if (e.target.classList.contains("institution-card")) {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.target.click();
+            }
           }
-        }
-      });
-    },
+        });
+      },
 
-    setupFocusManagement() {
-      [DOM.step1, DOM.step2].forEach(step => {
-        this.trapFocus(step);
-      });
-    },
+      setupFocusManagement() {
+        [DOM.step1, DOM.step2].forEach((step) => {
+          this.trapFocus(step);
+        });
+      },
 
-    trapFocus(element) {
-      const focusableElements = element.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      trapFocus(element) {
+        const focusableElements = element.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        const firstFocusable = focusableElements[0];
+        const lastFocusable = focusableElements[focusableElements.length - 1];
+
+        element.addEventListener("keydown", (e) => {
+          if (e.key === "Tab") {
+            if (e.shiftKey && document.activeElement === firstFocusable) {
+              e.preventDefault();
+              lastFocusable.focus();
+            } else if (
+              !e.shiftKey &&
+              document.activeElement === lastFocusable
+            ) {
+              e.preventDefault();
+              firstFocusable.focus();
+            }
+          }
+        });
+      },
+    };
+
+    // Global remove institution type function
+    window.removeInstitutionType = function (type) {
+      INSTITUTION_HANDLER.removeInstitutionType(type);
+      DOM.nextStepBtn.disabled = STATE.selectedTypes.size === 0;
+    };
+
+    // Initialize Application
+    const initializeApp = () => {
+      // Initialize core features
+      PARALLAX.init();
+      preloadHeroImage();
+
+      // Add scroll event listener
+      window.addEventListener("scroll", handleScroll, { passive: true });
+
+      // Load initial data
+      LOCATION_HANDLER.loadLocations();
+
+      // Set up location change handler
+      DOM.locationSelect.addEventListener("change", (e) =>
+        LOCATION_HANDLER.handleLocationChange(e.target.value)
       );
-      const firstFocusable = focusableElements[0];
-      const lastFocusable = focusableElements[focusableElements.length - 1];
 
-      element.addEventListener('keydown', (e) => {
-        if (e.key === 'Tab') {
-          if (e.shiftKey && document.activeElement === firstFocusable) {
-            e.preventDefault();
-            lastFocusable.focus();
-          } else if (!e.shiftKey && document.activeElement === lastFocusable) {
-            e.preventDefault();
-            firstFocusable.focus();
-          }
-        }
-      });
-    }
-  };
+      // Initialize navigation
+      NAVIGATION_HANDLER.initialize();
 
-  // Global remove institution type function
-  window.removeInstitutionType = function(type) {
-    INSTITUTION_HANDLER.removeInstitutionType(type);
-    DOM.nextStepBtn.disabled = STATE.selectedTypes.size === 0;
-  };
+      // Initialize accessibility features
+      ACCESSIBILITY_HANDLER.initialize();
+    };
 
-  // Initialize Application
-  const initializeApp = () => {
-    // Initialize core features
-    PARALLAX.init();
-    preloadHeroImage();
-
-    // Add scroll event listener
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    // Load initial data
-    LOCATION_HANDLER.loadLocations();
-
-    // Set up location change handler
-    DOM.locationSelect.addEventListener("change", (e) => 
-      LOCATION_HANDLER.handleLocationChange(e.target.value)
-    );
-
-    // Initialize navigation
-    NAVIGATION_HANDLER.initialize();
-
-    // Initialize accessibility features
-    ACCESSIBILITY_HANDLER.initialize();
-  };
-
-  // Start the application
-  initializeApp();
-});
+    // Start the application
+    initializeApp();
+  });
 </script>
 {% endblock %}
