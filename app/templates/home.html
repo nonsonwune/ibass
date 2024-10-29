@@ -8,9 +8,18 @@
       url("/static/images/hero.png");
     background-size: cover;
     background-position: center;
-    background-attachment: fixed;
+    background-attachment: fixed; /* Change from dynamic to fixed */
     position: relative;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 3rem 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-section {
+      background-attachment: scroll !important;
+    }
   }
 
   .hero-content {
@@ -43,7 +52,6 @@
     opacity: 1;
     display: block;
   }
-
   .institution-type-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -59,6 +67,7 @@
     transition: all 0.3s ease;
     border: 2px solid transparent;
     text-align: center;
+    position: relative;
   }
 
   .institution-card:hover {
@@ -67,134 +76,6 @@
     border-color: #3498db;
   }
 
-  .institution-card.selected {
-    background: #3498db;
-    color: white;
-    border-color: #3498db;
-  }
-
-  .institution-card.selected .text-muted {
-    color: rgba(255, 255, 255, 0.8) !important;
-  }
-
-  .scroll-prompt {
-    position: absolute;
-    bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
-    color: white;
-    opacity: 0.8;
-    animation: bounce 2s infinite;
-  }
-
-  @keyframes bounce {
-    0%,
-    20%,
-    50%,
-    80%,
-    100% {
-      transform: translateY(0);
-    }
-    40% {
-      transform: translateY(-10px);
-    }
-    60% {
-      transform: translateY(-5px);
-    }
-  }
-
-  .form-select {
-    background-color: white;
-    border: 2px solid #e2e8f0;
-    transition: all 0.3s ease;
-  }
-
-  .form-select:focus {
-    border-color: #3498db;
-    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
-  }
-
-  .course-search {
-    position: relative;
-  }
-
-  .course-search .form-control {
-    padding-left: 2.5rem;
-    border: 2px solid #e2e8f0;
-  }
-
-  .course-search .search-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #718096;
-  }
-
-  .feature-card {
-    background: white;
-    border-radius: 15px;
-    padding: 2rem;
-    height: 100%;
-    transition: all 0.3s ease;
-    border: none;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
-
-  .feature-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
-  }
-
-  .btn-primary {
-    background-color: #3498db;
-    border-color: #3498db;
-    padding: 0.8rem 1.5rem;
-    transition: all 0.3s ease;
-  }
-
-  .btn-primary:hover {
-    background-color: #2980b9;
-    border-color: #2980b9;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .btn-secondary {
-    background-color: #95a5a6;
-    border-color: #95a5a6;
-    padding: 0.8rem 1.5rem;
-    transition: all 0.3s ease;
-  }
-
-  .btn-secondary:hover {
-    background-color: #7f8c8d;
-    border-color: #7f8c8d;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  #loadingSpinner {
-    display: none;
-    justify-content: center;
-    align-items: center;
-    margin: 2rem 0;
-  }
-
-  @media (max-width: 768px) {
-    .hero-section {
-      min-height: auto;
-      padding: 4rem 0;
-    }
-
-    .institution-type-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .feature-card {
-      margin-bottom: 1rem;
-    }
-  }
   .institution-card.selected {
     background: rgba(52, 152, 219, 0.1);
     border-color: #3498db;
@@ -215,6 +96,91 @@
     color: #3498db;
   }
 
+  .scroll-prompt {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    opacity: 0.8;
+    animation: bounce 2s infinite;
+    pointer-events: none;
+  }
+
+  @keyframes bounce {
+    0%,
+    20%,
+    50%,
+    80%,
+    100% {
+      transform: translateX(-50%) translateY(0);
+    }
+    40% {
+      transform: translateX(-50%) translateY(-10px);
+    }
+    60% {
+      transform: translateX(-50%) translateY(-5px);
+    }
+  }
+
+  .form-select {
+    background-color: white;
+    border: 2px solid #e2e8f0;
+    transition: all 0.3s ease;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 1.1rem;
+  }
+
+  .form-select:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+    outline: none;
+  }
+
+  .course-search {
+    position: relative;
+  }
+
+  .course-search .form-control {
+    padding-left: 2.5rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 0.5rem;
+    font-size: 1.1rem;
+    width: 100%;
+    transition: all 0.3s ease;
+  }
+
+  .course-search .form-control:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+    outline: none;
+  }
+
+  .course-search .search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #718096;
+    pointer-events: none;
+  }
+
+  .feature-card {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    height: 100%;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  }
   .selected-types {
     display: flex;
     flex-wrap: wrap;
@@ -242,48 +208,14 @@
     cursor: pointer;
     opacity: 0.8;
     transition: opacity 0.3s ease;
+    display: flex;
+    align-items: center;
   }
 
   .selected-type-badge button:hover {
     opacity: 1;
   }
 
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(5px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .institution-card {
-    position: relative;
-  }
-
-  html {
-    scroll-behavior: smooth;
-  }
-
-  /* Add scroll margin using design system spacing */
-  #wizard-container {
-    scroll-margin-top: var(--spacing-xl);
-  }
-
-  /* Ensure smooth transition when steps change */
-  .wizard-step {
-    transition: opacity var(--transition-normal),
-      transform var(--transition-normal);
-  }
-
-  /* Enhanced loading state */
-  #loadingSpinner {
-    transition: opacity var(--transition-normal);
-  }
-
-  /* Course Search and Autocomplete Styles */
   .course-search-container {
     position: relative;
     margin-bottom: 1.5rem;
@@ -303,6 +235,23 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     z-index: 1000;
     display: none;
+    scrollbar-width: thin;
+    scrollbar-color: #3498db #f8fafc;
+  }
+
+  .course-suggestions::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .course-suggestions::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 0 0 10px 0;
+  }
+
+  .course-suggestions::-webkit-scrollbar-thumb {
+    background-color: #3498db;
+    border-radius: 4px;
+    border: 2px solid #f8fafc;
   }
 
   .course-suggestion-item {
@@ -352,8 +301,45 @@
     }
   }
 
-  /* Mobile Responsiveness */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  #loadingSpinner {
+    display: none;
+    justify-content: center;
+    align-items: center;
+    margin: 2rem 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  #loadingSpinner.show {
+    opacity: 1;
+  }
+
+  /* Mobile Optimizations */
   @media (max-width: 768px) {
+    .hero-section {
+      background-attachment: scroll;
+      padding: 2rem 0;
+    }
+
+    .institution-type-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .feature-card {
+      margin-bottom: 1rem;
+    }
+
     .course-suggestions {
       max-height: 250px;
     }
@@ -361,10 +347,62 @@
     .course-suggestion-item {
       padding: 0.5rem 1rem;
     }
+
+    .selected-types {
+      margin-top: 0.75rem;
+    }
+
+    .wizard-step {
+      padding: 1.5rem;
+    }
+
+    .scroll-prompt {
+      bottom: 1rem;
+    }
+  }
+
+  /* Accessibility and Motion Preferences */
+  @media (prefers-reduced-motion: reduce) {
+    .hero-content,
+    .feature-card,
+    .institution-card,
+    .selected-type-badge,
+    .scroll-prompt {
+      animation: none !important;
+      transition: none !important;
+    }
+
+    .feature-card:hover,
+    .institution-card:hover {
+      transform: none !important;
+    }
+  }
+
+  /* High Contrast Mode */
+  @media (forced-colors: active) {
+    .institution-card,
+    .feature-card,
+    .selected-type-badge {
+      border: 2px solid currentColor;
+    }
+
+    .institution-card.selected {
+      border: 2px solid currentColor;
+      background: Canvas;
+    }
+  }
+
+  html {
+    scroll-behavior: smooth;
+    height: 100%;
+  }
+
+  #wizard-container {
+    scroll-margin-top: 2rem;
   }
 </style>
 {% endblock %} {% block content %}
-<section class="hero-section d-flex align-items-center">
+<section class="hero-section" id="heroSection">
   <div class="container">
     <div class="hero-content text-center text-white mb-5">
       <h1 class="display-3 mb-4 fw-bold">Find Your Perfect Institution</h1>
@@ -374,19 +412,27 @@
     </div>
 
     <div id="wizard-container" class="mx-auto" style="max-width: 800px">
-      <!-- Step 1 -->
+      <!-- Step 1: Location and Institution Type Selection -->
       <div class="wizard-step active" id="step1">
         <h3 class="text-center mb-4">Choose Your Preferred Location</h3>
-        <select
-          id="location"
-          class="form-select form-select-lg mb-4"
-          style="font-size: 1.1rem"
-        >
-          <option value="">Select a State</option>
-        </select>
+        <div class="form-group mb-4">
+          <select
+            id="location"
+            class="form-select form-select-lg"
+            aria-label="Select a State"
+          >
+            <option value="">Select a State</option>
+          </select>
+        </div>
 
         <h4 class="text-center mb-3">Select Institution Type</h4>
-        <div class="institution-type-grid" id="institutionTypes">
+        <div class="selected-types" role="region" aria-live="polite"></div>
+        <div
+          class="institution-type-grid"
+          id="institutionTypes"
+          role="group"
+          aria-label="Institution types"
+        >
           <!-- Institution type cards will be inserted here via JavaScript -->
         </div>
 
@@ -394,16 +440,22 @@
           id="nextStep"
           class="btn btn-primary btn-lg w-100 mt-4"
           disabled
+          aria-label="Continue to next step"
         >
-          Continue <i class="fas fa-arrow-right ms-2"></i>
+          Continue <i class="fas fa-arrow-right ms-2" aria-hidden="true"></i>
         </button>
       </div>
 
-      <!-- Step 2 -->
-      <div class="wizard-step" id="step2">
+      <!-- Step 2: Course Selection -->
+      <div class="wizard-step" id="step2" aria-hidden="true">
         <h3 class="text-center mb-4">Choose Your Course</h3>
 
-        <div id="loadingSpinner" class="text-center">
+        <div
+          id="loadingSpinner"
+          class="text-center"
+          role="status"
+          aria-live="polite"
+        >
           <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading courses...</span>
           </div>
@@ -411,57 +463,73 @@
         </div>
 
         <div class="course-search-container">
-          <div class="course-search mb-4">
-            <i class="fas fa-search search-icon"></i>
+          <div class="course-search">
+            <i class="fas fa-search search-icon" aria-hidden="true"></i>
             <input
               type="text"
               id="courseSearch"
               class="form-control form-control-lg"
               placeholder="Search courses..."
               autocomplete="off"
+              aria-label="Search courses"
               style="display: none"
             />
           </div>
-          <div id="courseSuggestions" class="course-suggestions"></div>
+          <div
+            id="courseSuggestions"
+            class="course-suggestions"
+            role="listbox"
+            aria-label="Course suggestions"
+          ></div>
         </div>
 
-        <!-- Hidden select element for maintaining compatibility -->
-        <select
-          id="course"
-          class="form-select form-select-lg mb-4"
-          style="display: none"
-        >
-          <option value="">Select a Course</option>
-        </select>
+        <div class="form-group mb-4">
+          <select
+            id="course"
+            class="form-select form-select-lg"
+            aria-label="Select a Course"
+            style="display: none"
+          >
+            <option value="">Select a Course</option>
+          </select>
+        </div>
 
         <div class="d-grid gap-3">
           <button
             id="findInstitution"
             class="btn btn-primary btn-lg"
             style="display: none"
+            aria-label="Find institutions offering this course"
           >
-            Find Institution <i class="fas fa-search ms-2"></i>
+            Find Institution
+            <i class="fas fa-search ms-2" aria-hidden="true"></i>
           </button>
-          <button id="prevStep" class="btn btn-secondary btn-lg">
-            <i class="fas fa-arrow-left me-2"></i> Back
+          <button
+            id="prevStep"
+            class="btn btn-secondary btn-lg"
+            aria-label="Go back to previous step"
+          >
+            <i class="fas fa-arrow-left me-2" aria-hidden="true"></i> Back
           </button>
         </div>
       </div>
     </div>
 
-    <div class="scroll-prompt">
+    <div class="scroll-prompt" aria-hidden="true" role="presentation">
       <i class="fas fa-chevron-down fa-2x"></i>
     </div>
   </div>
 </section>
-
 <section class="features-section py-5 bg-light">
   <div class="container">
     <h2 class="text-center mb-5">Why Choose Us?</h2>
     <div class="row g-4">
       <div class="col-md-4">
-        <div class="feature-card text-center">
-          <i class="fas fa-database fa-3x mb-4 text-primary"></i>
+        <div class="feature-card text-center" role="article">
+          <i
+            class="fas fa-database fa-3x mb-4 text-primary"
+            aria-hidden="true"
+          ></i>
           <h3 class="h4 mb-3">Comprehensive Database</h3>
           <p class="text-muted mb-0">
             Access detailed information about all accredited Nigerian
@@ -470,8 +538,11 @@
         </div>
       </div>
       <div class="col-md-4">
-        <div class="feature-card text-center">
-          <i class="fas fa-bullseye fa-3x mb-4 text-primary"></i>
+        <div class="feature-card text-center" role="article">
+          <i
+            class="fas fa-bullseye fa-3x mb-4 text-primary"
+            aria-hidden="true"
+          ></i>
           <h3 class="h4 mb-3">Smart Recommendations</h3>
           <p class="text-muted mb-0">
             Get personalized institution suggestions based on your preferences
@@ -480,8 +551,11 @@
         </div>
       </div>
       <div class="col-md-4">
-        <div class="feature-card text-center">
-          <i class="fas fa-chart-line fa-3x mb-4 text-primary"></i>
+        <div class="feature-card text-center" role="article">
+          <i
+            class="fas fa-chart-line fa-3x mb-4 text-primary"
+            aria-hidden="true"
+          ></i>
           <h3 class="h4 mb-3">Detailed Analysis</h3>
           <p class="text-muted mb-0">
             Compare institutions and make informed decisions with our
@@ -492,11 +566,37 @@
     </div>
   </div>
 </section>
-{% endblock %} {% block extra_scripts %}
+{% endblock %} {% block extra_scripts %} {{ super() }}
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // Constants for program groups
-    const programmeGroups = {
+  document.addEventListener("DOMContentLoaded", function() {
+    // Constants and State Management
+    const STATE = {
+      selectedTypes: new Set(),
+      currentCourses: [],
+      isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
+      prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      isMobile: window.innerWidth <= 768
+    };
+
+    // DOM Elements
+    const DOM = {
+      heroSection: document.getElementById('heroSection'),
+      locationSelect: document.getElementById("location"),
+      institutionTypesGrid: document.getElementById("institutionTypes"),
+      nextStepBtn: document.getElementById("nextStep"),
+      prevStepBtn: document.getElementById("prevStep"),
+      findInstitutionBtn: document.getElementById("findInstitution"),
+      courseSelect: document.getElementById("course"),
+      courseSearch: document.getElementById("courseSearch"),
+      loadingSpinner: document.getElementById("loadingSpinner"),
+      step1: document.getElementById("step1"),
+      step2: document.getElementById("step2"),
+      courseSuggestions: document.getElementById("courseSuggestions"),
+      scrollPrompt: document.querySelector(".scroll-prompt")
+    };
+
+    // Program Groups Configuration
+    const PROGRAMME_GROUPS = {
       "ALL DEGREE AWARDING INSTITUTIONS": [
         "E-LEARNING UNIVERSITIES OF NIGERIA",
         "FEDERAL UNIVERSITIES",
@@ -516,488 +616,422 @@
         "FEDERAL COLLEGES OF EDUCATION",
         "STATE COLLEGES OF EDUCATION",
         "PRIVATE COLLEGES OF EDUCATION",
-      ],
+      ]
     };
 
-    // Initialize elements
-    // Initialize elements
-    const locationSelect = document.getElementById("location");
-    const institutionTypesGrid = document.getElementById("institutionTypes");
-    const nextStepBtn = document.getElementById("nextStep");
-    const prevStepBtn = document.getElementById("prevStep");
-    const findInstitutionBtn = document.getElementById("findInstitution");
-    const courseSelect = document.getElementById("course");
-    const courseSearch = document.getElementById("courseSearch");
-    const loadingSpinner = document.getElementById("loadingSpinner");
-    const step1 = document.getElementById("step1");
-    const step2 = document.getElementById("step2");
+    // Optimized Parallax Implementation
+    const PARALLAX = {
+      init() {
+        // Check if parallax should be disabled
+        if (STATE.isIOS || STATE.prefersReducedMotion) {
+          DOM.heroSection.style.backgroundAttachment = 'scroll';
+          return;
+        }
 
-    let selectedTypes = new Set();
-    let currentCourses = [];
+        // Add smooth scroll listener
+        window.addEventListener('scroll', () => {
+          // Only request animation frame if element is in viewport
+          const rect = DOM.heroSection.getBoundingClientRect();
+          if (rect.bottom > 0 && rect.top < window.innerHeight) {
+            requestAnimationFrame(this.updatePosition);
+          }
+        }, { passive: true });
 
-    // Load locations
-    fetch("/api/locations")
-      .then((response) => response.json())
-      .then((data) => {
-        data.sort().forEach((location) => {
-          const option = document.createElement("option");
-          option.value = location;
-          option.textContent = location;
-          locationSelect.appendChild(option);
-        });
-      })
-      .catch((error) => console.error("Error loading locations:", error));
+        // Handle reduced motion preference changes
+        window.matchMedia('(prefers-reduced-motion: reduce)')
+          .addEventListener('change', (e) => {
+            STATE.prefersReducedMotion = e.matches;
+            DOM.heroSection.style.backgroundAttachment = e.matches ? 'scroll' : 'fixed';
+          });
 
-    // Handle location selection
-    locationSelect.addEventListener("change", function () {
-      const selectedState = this.value;
-      selectedTypes.clear();
-      currentCourses = [];
+        // Handle resize events
+        window.addEventListener('resize', () => {
+          STATE.isMobile = window.innerWidth <= 768;
+          if (STATE.isMobile) {
+            DOM.heroSection.style.backgroundAttachment = 'scroll';
+          } else if (!STATE.isIOS && !STATE.prefersReducedMotion) {
+            DOM.heroSection.style.backgroundAttachment = 'fixed';
+          }
+        }, { passive: true });
+      },
 
-      if (selectedState) {
-        fetch(`/api/programme_types?state=${selectedState}`)
-          .then((response) => response.json())
-          .then((data) => {
-            createInstitutionTypeCards(data);
-            updateSelectedTypesDisplay();
-          })
-          .catch((error) =>
-            console.error("Error loading programme types:", error)
-          );
-      } else {
-        institutionTypesGrid.innerHTML = "";
-        nextStepBtn.disabled = true;
-        updateSelectedTypesDisplay();
+      updatePosition() {
+        if (STATE.isIOS || STATE.prefersReducedMotion) return;
+
+        const scrolled = window.pageYOffset;
+        const factor = STATE.isMobile ? 0.15 : 0.5;
+        const yPos = -(scrolled * factor);
+
+        DOM.heroSection.style.backgroundPositionY = `${yPos}px`;
       }
-    });
+    };
 
-    function createInstitutionTypeCards(types) {
-      // Filter out ALL_INSTITUTION_TYPES and sort alphabetically
+    // Initialize background image loading
+    const preloadHeroImage = () => {
+      const img = new Image();
+      img.src = "/static/images/hero.png";
+      img.onload = () => {
+        DOM.heroSection.style.backgroundImage =
+          `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('${img.src}')`;
+        DOM.heroSection.classList.add("loaded");
+      };
+    };
+
+    // Scroll prompt handler with throttling
+    const handleScroll = () => {
+      requestAnimationFrame(() => {
+        DOM.scrollPrompt.style.opacity = window.pageYOffset > 100 ? "0" : "0.8";
+      });
+    };
+    // Location Handler Implementation
+  const LOCATION_HANDLER = {
+    async loadLocations() {
+      try {
+        const response = await fetch("/api/locations");
+        if (!response.ok) throw new Error('Failed to load locations');
+        
+        const locations = await response.json();
+        this.populateLocations(locations);
+      } catch (error) {
+        console.error("Error loading locations:", error);
+        this.showError("Failed to load locations. Please refresh the page.");
+      }
+    },
+
+    populateLocations(locations) {
+      // Sort locations alphabetically
+      locations.sort().forEach(location => {
+        const option = document.createElement("option");
+        option.value = location;
+        option.textContent = location;
+        DOM.locationSelect.appendChild(option);
+      });
+    },
+
+    async handleLocationChange(selectedState) {
+      // Reset state
+      STATE.selectedTypes.clear();
+      STATE.currentCourses = [];
+      DOM.nextStepBtn.disabled = true;
+      DOM.institutionTypesGrid.innerHTML = '';
+      
+      if (!selectedState) return;
+
+      try {
+        const response = await fetch(
+          `/api/programme_types?state=${encodeURIComponent(selectedState)}`
+        );
+        
+        if (!response.ok) throw new Error('Failed to load programme types');
+        
+        const types = await response.json();
+        INSTITUTION_HANDLER.createTypeCards(types);
+        INSTITUTION_HANDLER.updateSelectedTypesDisplay();
+      } catch (error) {
+        console.error("Error loading programme types:", error);
+        this.showError("Failed to load institution types. Please try again.");
+      }
+    },
+
+    showError(message) {
+      const errorDiv = document.createElement("div");
+      errorDiv.className = "alert alert-danger mt-3";
+      errorDiv.role = "alert";
+      errorDiv.textContent = message;
+      DOM.institutionTypesGrid.insertAdjacentElement('beforebegin', errorDiv);
+      setTimeout(() => errorDiv.remove(), 5000);
+    }
+  };
+
+  // Institution Handler Implementation
+  const INSTITUTION_HANDLER = {
+    createTypeCards(types) {
       const sortedTypes = types
-        .filter((type) => type !== "ALL_INSTITUTION_TYPES")
+        .filter(type => type !== "ALL_INSTITUTION_TYPES")
         .sort((a, b) => a.localeCompare(b));
 
-      institutionTypesGrid.innerHTML = sortedTypes
-        .map(
-          (type) => `
-        <div class="institution-card" data-type="${type}">
-          <i class="fas ${getInstitutionIcon(type)} mb-3 fa-2x"></i>
-          <h5 class="mb-2">${formatInstitutionType(type)}</h5>
-          <p class="mb-0 small text-muted">Click to select</p>
-        </div>
-      `
-        )
-        .join("");
+      this.createSelectedTypesContainer();
+      this.renderTypeCards(sortedTypes);
+      this.addCardEventListeners();
+    },
 
-      // Create selected types container if not exists
+    createSelectedTypesContainer() {
       if (!document.querySelector(".selected-types")) {
         const selectedTypesContainer = document.createElement("div");
         selectedTypesContainer.className = "selected-types";
-        institutionTypesGrid.insertAdjacentElement(
-          "beforebegin",
-          selectedTypesContainer
-        );
+        selectedTypesContainer.setAttribute('aria-label', 'Selected institution types');
+        selectedTypesContainer.setAttribute('role', 'region');
+        selectedTypesContainer.setAttribute('aria-live', 'polite');
+        DOM.institutionTypesGrid.insertAdjacentElement("beforebegin", selectedTypesContainer);
       }
+    },
 
-      // Add click handlers
-      document.querySelectorAll(".institution-card").forEach((card) => {
-        card.addEventListener("click", function () {
-          const type = this.dataset.type;
+    renderTypeCards(types) {
+      DOM.institutionTypesGrid.innerHTML = types
+        .map(type => `
+          <div 
+            class="institution-card" 
+            data-type="${type}"
+            role="button"
+            tabindex="0"
+            aria-pressed="false"
+            aria-label="${this.formatInstitutionType(type)}"
+          >
+            <i class="fas ${this.getInstitutionIcon(type)} mb-3 fa-2x" aria-hidden="true"></i>
+            <h5 class="mb-2">${this.formatInstitutionType(type)}</h5>
+            <p class="mb-0 small text-muted">Click to select</p>
+          </div>
+        `)
+        .join("");
+    },
 
-          if (selectedTypes.has(type)) {
-            selectedTypes.delete(type);
-            this.classList.remove("selected");
-            removeSelectedTypeBadge(type);
+    addCardEventListeners() {
+      document.querySelectorAll(".institution-card").forEach(card => {
+        const handleSelection = () => {
+          const type = card.dataset.type;
+          if (STATE.selectedTypes.has(type)) {
+            this.removeInstitutionType(type);
           } else {
-            selectedTypes.add(type);
-            this.classList.add("selected");
-            addSelectedTypeBadge(type);
+            this.addInstitutionType(type);
           }
+          DOM.nextStepBtn.disabled = STATE.selectedTypes.size === 0;
+        };
 
-          nextStepBtn.disabled = selectedTypes.size === 0;
+        // Click handler
+        card.addEventListener("click", handleSelection);
+
+        // Keyboard handler
+        card.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleSelection();
+          }
         });
       });
-    }
+    },
 
-    function updateSelectedTypesDisplay() {
+    addInstitutionType(type) {
+      STATE.selectedTypes.add(type);
+      const card = document.querySelector(`.institution-card[data-type="${type}"]`);
+      if (card) {
+        card.classList.add("selected");
+        card.setAttribute('aria-pressed', 'true');
+      }
+      this.addSelectedTypeBadge(type);
+    },
+
+    removeInstitutionType(type) {
+      STATE.selectedTypes.delete(type);
+      const card = document.querySelector(`.institution-card[data-type="${type}"]`);
+      if (card) {
+        card.classList.remove("selected");
+        card.setAttribute('aria-pressed', 'false');
+      }
+      this.removeSelectedTypeBadge(type);
+    },
+
+    updateSelectedTypesDisplay() {
       const container = document.querySelector(".selected-types");
       if (!container) return;
 
       container.innerHTML = "";
-      Array.from(selectedTypes)
+      Array.from(STATE.selectedTypes)
         .sort()
-        .forEach((type) => addSelectedTypeBadge(type));
-    }
+        .forEach(type => this.addSelectedTypeBadge(type));
+    },
 
-    function addSelectedTypeBadge(type) {
-      const selectedTypesContainer = document.querySelector(".selected-types");
+    addSelectedTypeBadge(type) {
+      const container = document.querySelector(".selected-types");
       const badge = document.createElement("div");
       badge.className = "selected-type-badge";
       badge.dataset.type = type;
+      badge.setAttribute('role', 'status');
       badge.innerHTML = `
-      ${formatInstitutionType(type)}
-      <button onclick="event.stopPropagation(); removeInstitutionType('${type}')">
-        <i class="fas fa-times"></i>
-      </button>
-    `;
-      selectedTypesContainer.appendChild(badge);
-    }
+        ${this.formatInstitutionType(type)}
+        <button 
+          onclick="removeInstitutionType('${type}')"
+          aria-label="Remove ${this.formatInstitutionType(type)}"
+        >
+          <i class="fas fa-times" aria-hidden="true"></i>
+        </button>
+      `;
+      container.appendChild(badge);
+    },
 
-    function removeSelectedTypeBadge(type) {
-      const badge = document.querySelector(
-        `.selected-type-badge[data-type="${type}"]`
-      );
+    removeSelectedTypeBadge(type) {
+      const badge = document.querySelector(`.selected-type-badge[data-type="${type}"]`);
       if (badge) {
         badge.style.animation = "fadeOut 0.3s ease";
         setTimeout(() => badge.remove(), 300);
       }
-    }
+    },
 
-    window.removeInstitutionType = function (type) {
-      selectedTypes.delete(type);
-      const card = document.querySelector(
-        `.institution-card[data-type="${type}"]`
-      );
-      if (card) card.classList.remove("selected");
-      removeSelectedTypeBadge(type);
-      nextStepBtn.disabled = selectedTypes.size === 0;
-    };
-
-    function formatInstitutionType(type) {
+    formatInstitutionType(type) {
       return type
         .split(/[ _]/g)
-        .map((word) => word.charAt(0) + word.slice(1).toLowerCase())
+        .map(word => word.charAt(0) + word.slice(1).toLowerCase())
         .join(" ");
-    }
+    },
 
-    function getInstitutionIcon(type) {
+    getInstitutionIcon(type) {
       const typeUpper = type.toUpperCase();
-
-      // Combined types
+      
       if (typeUpper.includes("EDUCATION") && typeUpper.includes("TECHNICAL")) {
         return "fa-cog";
       }
-
-      // Specific types
       if (typeUpper.includes("POLYTECHNIC")) return "fa-industry";
       if (typeUpper.includes("UNIVERSITIES")) return "fa-university";
       if (typeUpper.includes("EDUCATION")) return "fa-chalkboard-teacher";
-      if (typeUpper.includes("HEALTH") || typeUpper.includes("MEDICAL"))
+      if (typeUpper.includes("HEALTH") || typeUpper.includes("MEDICAL")) {
         return "fa-hospital";
-      if (typeUpper.includes("TECHNOLOGY") || typeUpper.includes("TECHNICAL"))
+      }
+      if (typeUpper.includes("TECHNOLOGY") || typeUpper.includes("TECHNICAL")) {
         return "fa-microchip";
+      }
       if (typeUpper.includes("AGRICULTURE")) return "fa-leaf";
-      if (typeUpper.includes("DISTANCE") || typeUpper.includes("E-LEARNING"))
+      if (typeUpper.includes("DISTANCE") || typeUpper.includes("E-LEARNING")) {
         return "fa-laptop";
+      }
       if (typeUpper.includes("COLLEGES")) return "fa-school";
-
+      
       return "fa-graduation-cap";
     }
-
-    // Navigation handlers
-    nextStepBtn.addEventListener("click", function () {
-      if (locationSelect.value && selectedTypes.size > 0) {
-        // First scroll to container
-        const wizardContainer = document.getElementById("wizard-container");
-        wizardContainer.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-
-        // Wait for scroll to complete before showing step 2
-        setTimeout(() => {
-          step1.classList.remove("active");
-          step2.classList.add("active");
-          loadCourses(locationSelect.value, selectedTypes);
-        }, 500); // Half second delay to match scroll animation
-      }
-    });
-
-    prevStepBtn.addEventListener("click", function () {
-      step2.classList.remove("active");
-      step1.classList.add("active");
-    });
-
-    async function loadCourses(state, programTypes) {
-      loadingSpinner.style.display = "flex";
-      courseSelect.style.display = "none";
-      courseSearch.style.display = "none";
-      findInstitutionBtn.style.display = "none";
+  };
+  // Course Handler Implementation
+  const COURSE_HANDLER = {
+    async loadCourses(state, programTypes) {
+      this.showLoading(true);
 
       try {
-        // Convert programTypes Set to comma-separated string
-        const programTypesString = Array.from(programTypes).join(",");
+        const courses = await this.fetchCourses(state, programTypes);
+        STATE.currentCourses = this.processCourses(courses);
+        
+        this.initializeSearchInterface();
 
-        // Log the request parameters for debugging
-        console.log(
-          `Loading courses for state: ${state}, types: ${programTypesString}`
-        );
-
-        const response = await fetch(
-          `/api/courses?state=${encodeURIComponent(
-            state
-          )}&programme_type=${encodeURIComponent(programTypesString)}`
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.message || `HTTP error! status: ${response.status}`
-          );
-        }
-
-        const courses = await response.json();
-
-        if (Array.isArray(courses)) {
-          // Create a map to deduplicate courses and track institutions
-          const coursesMap = new Map();
-
-          courses.forEach((course) => {
-            const courseKey = course.course_name.toUpperCase(); // Normalize course names
-            if (!coursesMap.has(courseKey)) {
-              coursesMap.set(courseKey, {
-                name: course.course_name,
-                institutions: new Set([
-                  {
-                    name: course.university_name,
-                    state: course.state,
-                    type: course.program_type,
-                  },
-                ]),
-                details: {
-                  utme: course.utme_requirements,
-                  subjects: course.subjects,
-                  directEntry: course.direct_entry_requirements,
-                  abbreviation: course.abbrv,
-                },
-              });
-            } else {
-              coursesMap.get(courseKey).institutions.add({
-                name: course.university_name,
-                state: course.state,
-                type: course.program_type,
-              });
-            }
-          });
-
-          // Convert to array and sort
-          currentCourses = Array.from(coursesMap.values()).sort((a, b) =>
-            a.name.localeCompare(b.name)
-          );
-
-          // Update UI
-          populateCourseSelect(currentCourses);
-
-          // Show info message based on results
-          if (currentCourses.length === 0) {
-            showInfo(
-              "No courses available for the selected location and institution types."
-            );
-          } else {
-            console.log(`Found ${currentCourses.length} unique courses`);
-          }
-        } else {
-          throw new Error("Invalid response format from server");
+        if (STATE.currentCourses.length === 0) {
+          this.showInfo("No courses available for the selected location and institution types.");
         }
       } catch (error) {
         console.error("Error loading courses:", error);
-        showError(`Failed to load courses: ${error.message}`);
+        this.showError(`Failed to load courses: ${error.message}`);
       } finally {
-        loadingSpinner.style.display = "none";
-        courseSelect.style.display = "block";
-        courseSearch.style.display = "block";
-        findInstitutionBtn.style.display = "block";
-        findInstitutionBtn.disabled = true;
+        this.showLoading(false);
       }
-    }
-    function showInfo(message) {
-      const infoDiv = document.createElement("div");
-      infoDiv.className = "alert alert-info mt-3";
-      infoDiv.role = "alert";
-      infoDiv.textContent = message;
-      step2.appendChild(infoDiv);
-      setTimeout(() => infoDiv.remove(), 5000);
-    }
+    },
 
-    function populateCourseSelect(courses, filterTerm = "") {
-      courseSelect.innerHTML = '<option value="">Select a Course</option>';
+    async fetchCourses(state, programTypes) {
+      const programTypesString = Array.from(programTypes).join(",");
+      const response = await fetch(
+        `/api/courses?state=${encodeURIComponent(state)}&programme_type=${encodeURIComponent(programTypesString)}`
+      );
 
-      const filteredCourses = filterTerm
-        ? courses.filter((course) =>
-            course.name.toLowerCase().includes(filterTerm.toLowerCase())
-          )
-        : courses;
-
-      if (filteredCourses.length === 0) {
-        const option = document.createElement("option");
-        option.disabled = true;
-        option.textContent = filterTerm
-          ? "No matching courses found"
-          : "No courses available";
-        courseSelect.appendChild(option);
-      } else {
-        filteredCourses.forEach((course) => {
-          const option = document.createElement("option");
-          option.value = course.name;
-          // Store full institution data as a data attribute
-          option.dataset.institutions = JSON.stringify(
-            Array.from(course.institutions)
-          );
-          option.textContent = `${course.name} (${course.institutions.size} ${
-            course.institutions.size === 1 ? "institution" : "institutions"
-          })`;
-          courseSelect.appendChild(option);
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
-    }
 
-    // Update the find institution handler to include institution data
-    findInstitutionBtn.addEventListener("click", function () {
-      const selectedOption = courseSelect.options[courseSelect.selectedIndex];
-      const params = {
-        location: locationSelect.value,
-        programme_type: Array.from(selectedTypes).join(","),
-        course: selectedOption.value,
-        // Include institutions data for the recommendation page
-        institutions: selectedOption.dataset.institutions,
-      };
-      window.location.href = `/recommend?${new URLSearchParams(params)}`;
-    });
+      return response.json();
+    },
 
-    // Initialize course search with autocomplete
-    function initializeCourseSearch() {
-      const searchInput = document.getElementById("courseSearch");
-      const suggestionsContainer = document.getElementById("courseSuggestions");
-      const courseSelect = document.getElementById("course");
-      const findInstitutionBtn = document.getElementById("findInstitution");
+    processCourses(courses) {
+      if (!Array.isArray(courses)) throw new Error("Invalid response format from server");
+
+      const coursesMap = new Map();
+
+      courses.forEach(course => {
+        const courseKey = course.course_name.toUpperCase();
+        if (!coursesMap.has(courseKey)) {
+          coursesMap.set(courseKey, {
+            name: course.course_name,
+            institutions: new Set([{
+              name: course.university_name,
+              state: course.state,
+              type: course.program_type
+            }]),
+            details: {
+              utme: course.utme_requirements,
+              subjects: course.subjects,
+              directEntry: course.direct_entry_requirements,
+              abbreviation: course.abbrv
+            }
+          });
+        } else {
+          coursesMap.get(courseKey).institutions.add({
+            name: course.university_name,
+            state: course.state,
+            type: course.program_type
+          });
+        }
+      });
+
+      return Array.from(coursesMap.values())
+        .sort((a, b) => a.name.localeCompare(b.name));
+    },
+
+    initializeSearchInterface() {
+      const searchInput = DOM.courseSearch;
+      const suggestionsContainer = DOM.courseSuggestions;
       let selectedIndex = -1;
 
-      // Show both the search input and course select
-      searchInput.style.display = "block";
-      courseSelect.style.display = "block";
+      this.showSearchInterface();
+      this.attachSearchHandlers(searchInput, suggestionsContainer, selectedIndex);
+      this.attachKeyboardNavigation(searchInput, suggestionsContainer);
+      this.attachClickHandlers(suggestionsContainer);
+      this.resetSearchState();
+    },
 
-      function showSuggestions(suggestions) {
-        if (suggestions.length === 0) {
-          suggestionsContainer.classList.remove("show");
-          return;
-        }
+    showSearchInterface() {
+      DOM.courseSearch.style.display = "block";
+      DOM.courseSelect.style.display = "block";
+      this.populateCourseSelect(STATE.currentCourses);
+    },
 
-        const html = suggestions
-          .map(
-            (course, index) => `
-      <div class="course-suggestion-item" data-index="${index}" data-value="${
-              course.name
-            }" data-institutions='${JSON.stringify(
-              Array.from(course.institutions)
-            )}'>
-        <div class="course-name">${highlightMatch(
-          course.name,
-          searchInput.value
-        )}</div>
-        <div class="institution-count">
-          ${course.institutions.size} ${
-              course.institutions.size === 1 ? "institution" : "institutions"
-            } available
-        </div>
-      </div>
-    `
-          )
-          .join("");
-
-        suggestionsContainer.innerHTML = html;
-        suggestionsContainer.classList.add("show");
-      }
-
-      function highlightMatch(text, query) {
-        if (!query) return text;
-        const cleanQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const regex = new RegExp(`(${cleanQuery})`, "gi");
-        return text.replace(regex, "<strong>$1</strong>");
-      }
-
-      function selectSuggestion(suggestionElement) {
-        const courseName = suggestionElement.dataset.value;
-        const institutions = JSON.parse(suggestionElement.dataset.institutions);
-
-        searchInput.value = courseName;
-        suggestionsContainer.classList.remove("show");
-
-        // Update the select element
-        courseSelect.value = courseName;
-
-        // Enable the find institution button
-        findInstitutionBtn.disabled = false;
-
-        // Clear selection
-        selectedIndex = -1;
-      }
-
-      // Populate course select dropdown
-      function populateCourseSelect(courses) {
-        courseSelect.innerHTML = '<option value="">Select a Course</option>';
-
-        courses.forEach((course) => {
-          const option = document.createElement("option");
-          option.value = course.name;
-          option.dataset.institutions = JSON.stringify(
-            Array.from(course.institutions)
-          );
-          option.textContent = `${course.name} (${course.institutions.size} ${
-            course.institutions.size === 1 ? "institution" : "institutions"
-          })`;
-          courseSelect.appendChild(option);
-        });
-      }
-
-      // Search handler with debounce
-      const searchHandler = debounce(function () {
-        const query = this.value.toLowerCase().trim();
+    attachSearchHandlers(searchInput, suggestionsContainer, selectedIndex) {
+      const searchHandler = this.debounce((event) => {
+        const query = event.target.value.toLowerCase().trim();
 
         if (!query) {
           suggestionsContainer.classList.remove("show");
-          findInstitutionBtn.disabled = !courseSelect.value;
-          // Reset dropdown to show all courses when search is empty
-          populateCourseSelect(currentCourses);
+          DOM.findInstitutionBtn.disabled = !DOM.courseSelect.value;
+          this.populateCourseSelect(STATE.currentCourses);
           return;
         }
 
-        const filteredCourses = currentCourses.filter((course) =>
+        const filteredCourses = STATE.currentCourses.filter(course =>
           course.name.toLowerCase().includes(query)
         );
 
-        showSuggestions(filteredCourses);
+        this.showSuggestions(filteredCourses, query);
+        this.populateCourseSelect(filteredCourses);
         selectedIndex = -1;
-
-        // Update the dropdown with filtered results
-        populateCourseSelect(filteredCourses);
       }, 300);
 
-      // Event Listeners
       searchInput.addEventListener("input", searchHandler);
+    },
 
-      // Keyboard navigation
-      searchInput.addEventListener("keydown", function (e) {
-        const suggestions = document.querySelectorAll(
-          ".course-suggestion-item"
-        );
+    attachKeyboardNavigation(searchInput, suggestionsContainer) {
+      let selectedIndex = -1;
+
+      searchInput.addEventListener("keydown", (e) => {
+        const suggestions = document.querySelectorAll(".course-suggestion-item");
 
         switch (e.key) {
           case "ArrowDown":
             e.preventDefault();
             selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
-            updateSelection(suggestions);
+            this.updateSelection(suggestions, selectedIndex);
             break;
 
           case "ArrowUp":
             e.preventDefault();
             selectedIndex = Math.max(selectedIndex - 1, -1);
-            updateSelection(suggestions);
+            this.updateSelection(suggestions, selectedIndex);
             break;
 
           case "Enter":
             e.preventDefault();
             if (selectedIndex >= 0 && suggestions[selectedIndex]) {
-              selectSuggestion(suggestions[selectedIndex]);
+              this.selectSuggestion(suggestions[selectedIndex]);
             }
             break;
 
@@ -1007,160 +1041,99 @@
             break;
         }
       });
+    },
 
-      function updateSelection(suggestions) {
-        suggestions.forEach((suggestion, index) => {
-          suggestion.classList.toggle("active", index === selectedIndex);
-          if (index === selectedIndex) {
-            suggestion.scrollIntoView({ block: "nearest" });
-          }
-        });
-      }
-
-      // Handle clicks on suggestions
-      suggestionsContainer.addEventListener("click", function (e) {
+    attachClickHandlers(suggestionsContainer) {
+      suggestionsContainer.addEventListener("click", (e) => {
         const suggestion = e.target.closest(".course-suggestion-item");
         if (suggestion) {
-          selectSuggestion(suggestion);
+          this.selectSuggestion(suggestion);
         }
       });
 
-      // Handle course select changes
-      courseSelect.addEventListener("change", function () {
-        const selectedOption = this.options[this.selectedIndex];
-        if (selectedOption.value) {
-          searchInput.value = selectedOption.value;
-          findInstitutionBtn.disabled = false;
-        } else {
-          searchInput.value = "";
-          findInstitutionBtn.disabled = true;
-        }
-        suggestionsContainer.classList.remove("show");
-      });
-
-      // Close suggestions when clicking outside
-      document.addEventListener("click", function (e) {
-        if (
-          !searchInput.contains(e.target) &&
-          !suggestionsContainer.contains(e.target)
-        ) {
+      // Close suggestions on outside click
+      document.addEventListener("click", (e) => {
+        if (!DOM.courseSearch.contains(e.target) && !suggestionsContainer.contains(e.target)) {
           suggestionsContainer.classList.remove("show");
         }
       });
+    },
 
-      // Initial population of course select
-      populateCourseSelect(currentCourses);
-
-      // Reset search on load
-      searchInput.value = "";
-      findInstitutionBtn.disabled = true;
-    }
-
-    // Modified loadCourses function
-    async function loadCourses(state, programTypes) {
-      loadingSpinner.style.display = "flex";
-      courseSelect.style.display = "none";
-      courseSearch.style.display = "none";
-      findInstitutionBtn.style.display = "none";
-
-      try {
-        const programTypesString = Array.from(programTypes).join(",");
-        const response = await fetch(
-          `/api/courses?state=${encodeURIComponent(
-            state
-          )}&programme_type=${encodeURIComponent(programTypesString)}`
-        );
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.message || `HTTP error! status: ${response.status}`
-          );
-        }
-
-        const courses = await response.json();
-
-        if (Array.isArray(courses)) {
-          const coursesMap = new Map();
-
-          courses.forEach((course) => {
-            const courseKey = course.course_name.toUpperCase();
-            if (!coursesMap.has(courseKey)) {
-              coursesMap.set(courseKey, {
-                name: course.course_name,
-                institutions: new Set([
-                  {
-                    name: course.university_name,
-                    state: course.state,
-                    type: course.program_type,
-                  },
-                ]),
-                details: {
-                  utme: course.utme_requirements,
-                  subjects: course.subjects,
-                  directEntry: course.direct_entry_requirements,
-                  abbreviation: course.abbrv,
-                },
-              });
-            } else {
-              coursesMap.get(courseKey).institutions.add({
-                name: course.university_name,
-                state: course.state,
-                type: course.program_type,
-              });
-            }
-          });
-
-          currentCourses = Array.from(coursesMap.values()).sort((a, b) =>
-            a.name.localeCompare(b.name)
-          );
-
-          if (currentCourses.length === 0) {
-            showInfo(
-              "No courses available for the selected location and institution types."
-            );
-          }
-        } else {
-          throw new Error("Invalid response format from server");
-        }
-      } catch (error) {
-        console.error("Error loading courses:", error);
-        showError(`Failed to load courses: ${error.message}`);
-      } finally {
-        loadingSpinner.style.display = "none";
-        courseSearch.style.display = "block";
-        courseSelect.style.display = "block";
-        findInstitutionBtn.style.display = "block";
-        findInstitutionBtn.disabled = true;
-
-        // Initialize the autocomplete search
-        initializeCourseSearch();
+    showSuggestions(suggestions, query) {
+      const suggestionsContainer = DOM.courseSuggestions;
+      
+      if (suggestions.length === 0) {
+        suggestionsContainer.classList.remove("show");
+        return;
       }
-    }
 
-    courseSelect.addEventListener("change", function () {
-      findInstitutionBtn.disabled = !this.value;
-    });
+      const html = suggestions.map((course, index) => `
+        <div 
+          class="course-suggestion-item" 
+          data-index="${index}" 
+          data-value="${course.name}"
+          data-institutions='${JSON.stringify(Array.from(course.institutions))}'
+          role="option"
+          aria-selected="false"
+        >
+          <div class="course-name">
+            ${this.highlightMatch(course.name, query)}
+          </div>
+          <div class="institution-count">
+            ${course.institutions.size} ${course.institutions.size === 1 ? "institution" : "institutions"} available
+          </div>
+        </div>
+      `).join("");
 
-    findInstitutionBtn.addEventListener("click", function () {
-      const params = {
-        location: locationSelect.value,
-        programme_type: Array.from(selectedTypes).join(","),
-        course: courseSelect.value,
-      };
-      window.location.href = `/recommend?${new URLSearchParams(params)}`;
-    });
+      suggestionsContainer.innerHTML = html;
+      suggestionsContainer.classList.add("show");
+    },
 
-    function showError(message) {
-      const errorDiv = document.createElement("div");
-      errorDiv.className = "alert alert-danger mt-3";
-      errorDiv.role = "alert";
-      errorDiv.textContent = message;
-      step2.appendChild(errorDiv);
-      setTimeout(() => errorDiv.remove(), 5000);
-    }
+    updateSelection(suggestions, selectedIndex) {
+      suggestions.forEach((suggestion, index) => {
+        suggestion.classList.toggle("active", index === selectedIndex);
+        suggestion.setAttribute("aria-selected", index === selectedIndex);
+        if (index === selectedIndex) {
+          suggestion.scrollIntoView({ block: "nearest" });
+        }
+      });
+    },
 
-    function debounce(func, wait) {
+    selectSuggestion(suggestionElement) {
+      const courseName = suggestionElement.dataset.value;
+      const institutions = JSON.parse(suggestionElement.dataset.institutions);
+
+      DOM.courseSearch.value = courseName;
+      DOM.courseSuggestions.classList.remove("show");
+
+      DOM.courseSelect.value = courseName;
+      DOM.findInstitutionBtn.disabled = false;
+    },
+
+    populateCourseSelect(courses) {
+      DOM.courseSelect.innerHTML = '<option value="">Select a Course</option>';
+      
+      courses.forEach((course) => {
+        const option = document.createElement("option");
+        option.value = course.name;
+        option.dataset.institutions = JSON.stringify(Array.from(course.institutions));
+        option.textContent = `${course.name} (${course.institutions.size} ${
+          course.institutions.size === 1 ? "institution" : "institutions"
+        })`;
+        DOM.courseSelect.appendChild(option);
+      });
+    },
+
+    // Utility functions
+    showLoading(show) {
+      DOM.loadingSpinner.style.display = show ? "flex" : "none";
+      DOM.courseSelect.style.display = show ? "none" : "block";
+      DOM.courseSearch.style.display = show ? "none" : "block";
+      DOM.findInstitutionBtn.style.display = show ? "none" : "block";
+      if (!show) DOM.findInstitutionBtn.disabled = true;
+    },
+
+    debounce(func, wait) {
       let timeout;
       return function executedFunction(...args) {
         const later = () => {
@@ -1170,33 +1143,220 @@
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
       };
+    },
+
+    highlightMatch(text, query) {
+      if (!query) return text;
+      const cleanQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(`(${cleanQuery})`, "gi");
+      return text.replace(regex, "<strong>$1</strong>");
+    },
+
+    resetSearchState() {
+      DOM.courseSearch.value = "";
+      DOM.findInstitutionBtn.disabled = true;
+    },
+
+    showInfo(message) {
+      this.showMessage(message, 'info');
+    },
+
+    showError(message) {
+      this.showMessage(message, 'danger');
+    },
+
+    showMessage(message, type) {
+      const div = document.createElement("div");
+      div.className = `alert alert-${type} mt-3`;
+      div.role = "alert";
+      div.textContent = message;
+      DOM.step2.appendChild(div);
+      setTimeout(() => div.remove(), 5000);
     }
+  };
+  // Navigation Handler Implementation
+  const NAVIGATION_HANDLER = {
+    initialize() {
+      this.initializeStepNavigation();
+      this.initializeButtonHandlers();
+      this.initializeKeyboardNavigation();
+    },
 
-    // Scroll prompt
-    const scrollPrompt = document.querySelector(".scroll-prompt");
-    window.addEventListener("scroll", () => {
-      scrollPrompt.style.opacity = window.scrollY > 100 ? "0" : "0.8";
-    });
-
-    // Hero background
-    const heroSection = document.querySelector(".hero-section");
-    const img = new Image();
-    img.src = "/static/images/hero.png";
-    img.onload = function () {
-      heroSection.style.backgroundImage = `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('${img.src}')`;
-      heroSection.classList.add("loaded");
-    };
-
-    // Keyboard navigation
-    document.addEventListener("keydown", function (e) {
-      if (step2.classList.contains("active")) {
-        if (e.key === "Escape") {
-          prevStepBtn.click();
-        } else if (e.key === "Enter" && !findInstitutionBtn.disabled) {
-          findInstitutionBtn.click();
+    initializeStepNavigation() {
+      DOM.nextStepBtn.addEventListener("click", () => {
+        if (DOM.locationSelect.value && STATE.selectedTypes.size > 0) {
+          this.moveToStep2();
         }
-      }
-    });
-  });
+      });
+
+      DOM.prevStepBtn.addEventListener("click", () => {
+        this.moveToStep1();
+      });
+    },
+
+    initializeButtonHandlers() {
+      // Find institution button handler
+      DOM.findInstitutionBtn.addEventListener("click", () => {
+        this.handleFindInstitution();
+      });
+
+      // Course select change handler
+      DOM.courseSelect.addEventListener("change", (e) => {
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        if (selectedOption.value) {
+          DOM.courseSearch.value = selectedOption.value;
+          DOM.findInstitutionBtn.disabled = false;
+        } else {
+          DOM.courseSearch.value = "";
+          DOM.findInstitutionBtn.disabled = true;
+        }
+        DOM.courseSuggestions.classList.remove("show");
+      });
+    },
+
+    initializeKeyboardNavigation() {
+      document.addEventListener("keydown", (e) => {
+        if (DOM.step2.classList.contains("active")) {
+          if (e.key === "Escape") {
+            this.moveToStep1();
+          } else if (e.key === "Enter" && !DOM.findInstitutionBtn.disabled) {
+            this.handleFindInstitution();
+          }
+        }
+      });
+    },
+
+    moveToStep2() {
+      const wizardContainer = document.getElementById("wizard-container");
+      
+      // Smooth scroll to wizard container
+      wizardContainer.scrollIntoView({
+        behavior: STATE.prefersReducedMotion ? "auto" : "smooth",
+        block: "start"
+      });
+
+      // Switch steps with animation
+      setTimeout(() => {
+        DOM.step1.classList.remove("active");
+        DOM.step1.setAttribute("aria-hidden", "true");
+        DOM.step2.classList.add("active");
+        DOM.step2.setAttribute("aria-hidden", "false");
+        
+        // Load courses for selected location and types
+        COURSE_HANDLER.loadCourses(
+          DOM.locationSelect.value, 
+          STATE.selectedTypes
+        );
+      }, STATE.prefersReducedMotion ? 0 : 500);
+    },
+
+    moveToStep1() {
+      DOM.step2.classList.remove("active");
+      DOM.step2.setAttribute("aria-hidden", "true");
+      DOM.step1.classList.add("active");
+      DOM.step1.setAttribute("aria-hidden", "false");
+    },
+
+    handleFindInstitution() {
+      const selectedOption = DOM.courseSelect.options[DOM.courseSelect.selectedIndex];
+      
+      const params = new URLSearchParams({
+        location: DOM.locationSelect.value,
+        programme_type: Array.from(STATE.selectedTypes).join(","),
+        course: selectedOption.value,
+        institutions: selectedOption.dataset.institutions
+      });
+
+      window.location.href = `/recommend?${params}`;
+    }
+  };
+
+  // Accessibility Handler Implementation
+  const ACCESSIBILITY_HANDLER = {
+    initialize() {
+      this.setupLiveRegion();
+      this.setupKeyboardNavigation();
+      this.setupFocusManagement();
+    },
+
+    setupLiveRegion() {
+      const liveRegion = document.createElement('div');
+      liveRegion.setAttribute('aria-live', 'polite');
+      liveRegion.setAttribute('aria-atomic', 'true');
+      liveRegion.className = 'visually-hidden';
+      document.body.appendChild(liveRegion);
+    },
+
+    setupKeyboardNavigation() {
+      DOM.institutionTypesGrid.addEventListener('keydown', (e) => {
+        if (e.target.classList.contains('institution-card')) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.target.click();
+          }
+        }
+      });
+    },
+
+    setupFocusManagement() {
+      [DOM.step1, DOM.step2].forEach(step => {
+        this.trapFocus(step);
+      });
+    },
+
+    trapFocus(element) {
+      const focusableElements = element.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstFocusable = focusableElements[0];
+      const lastFocusable = focusableElements[focusableElements.length - 1];
+
+      element.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+          if (e.shiftKey && document.activeElement === firstFocusable) {
+            e.preventDefault();
+            lastFocusable.focus();
+          } else if (!e.shiftKey && document.activeElement === lastFocusable) {
+            e.preventDefault();
+            firstFocusable.focus();
+          }
+        }
+      });
+    }
+  };
+
+  // Global remove institution type function
+  window.removeInstitutionType = function(type) {
+    INSTITUTION_HANDLER.removeInstitutionType(type);
+    DOM.nextStepBtn.disabled = STATE.selectedTypes.size === 0;
+  };
+
+  // Initialize Application
+  const initializeApp = () => {
+    // Initialize core features
+    PARALLAX.init();
+    preloadHeroImage();
+
+    // Add scroll event listener
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    // Load initial data
+    LOCATION_HANDLER.loadLocations();
+
+    // Set up location change handler
+    DOM.locationSelect.addEventListener("change", (e) => 
+      LOCATION_HANDLER.handleLocationChange(e.target.value)
+    );
+
+    // Initialize navigation
+    NAVIGATION_HANDLER.initialize();
+
+    // Initialize accessibility features
+    ACCESSIBILITY_HANDLER.initialize();
+  };
+
+  // Start the application
+  initializeApp();
+});
 </script>
 {% endblock %}
