@@ -11,6 +11,7 @@ from ..models.interaction import Bookmark, Comment, Vote
 from ..models.user import User
 from ..extensions import db
 from ..config import Config
+from ..utils.decorators import admin_required
 
 bp = Blueprint('api', __name__)
 
@@ -438,3 +439,32 @@ def delete_comment(comment_id):
             'success': False,
             'message': 'An error occurred while deleting the comment'
         }), 400
+
+@bp.route('/admin/search_courses', methods=['GET'])
+@login_required
+@admin_required
+def search_courses():
+    query = request.args.get('query', '').strip()
+    try:
+        if query:
+            # Using ilike for case-insensitive search
+            courses = Course.query.filter(
+                db.or_(
+                    Course.course_name.ilike(f'%{query}%'),
+                    Course.abbrv.ilike(f'%{query}%')
+                )
+            ).order_by(Course.course_name).all()
+        else:
+            return jsonify({'courses': []})
+
+        courses_data = [{
+            'id': course.id,
+            'course_name': course.course_name,
+            'university_name': course.university_name,
+            'abbrv': course.abbrv or ''  # Ensure abbrv is never null
+        } for course in courses]
+
+        return jsonify({'courses': courses_data})
+    except Exception as e:
+        current_app.logger.error(f"Error in course search: {str(e)}")
+        return jsonify({'error': str(e)}), 500

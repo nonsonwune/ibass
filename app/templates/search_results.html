@@ -400,71 +400,114 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize loading overlay
-  const loadingOverlay = document.getElementById('loadingOverlay');
-  
-  // Handle filter form submission
-  const filterForm = document.getElementById('filterForm');
-  filterForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    loadingOverlay.style.display = 'flex';
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const filterForm = document.getElementById('filterForm');
     
-    const formData = new FormData(this);
-    const searchParams = new URLSearchParams(formData);
-    
-    // Add current search query to params
-    const currentQuery = new URLSearchParams(window.location.search).get('q');
-    if (currentQuery) {
-      searchParams.append('q', currentQuery);
+    // Handle new search - clear filters
+    const searchForm = document.querySelector('form[action*="search_results"]');
+    if (searchForm) {
+        searchForm.addEventListener('submit', function() {
+            // Clear all saved filters when starting a new search
+            localStorage.removeItem('filter_state');
+            localStorage.removeItem('filter_type');
+            localStorage.removeItem('filter_level');
+        });
     }
     
-    window.location.href = `${window.location.pathname}?${searchParams.toString()}`;
-  });
-
-  // Handle tab transitions
-  const tabLinks = document.querySelectorAll('.nav-link');
-  tabLinks.forEach(link => {
-    link.addEventListener('click', function() {
-      // Remove active class from all tabs
-      tabLinks.forEach(tab => tab.classList.remove('active'));
-      // Add active class to clicked tab
-      this.classList.add('active');
-    });
-  });
-
-  // Initialize tooltips
-  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-  });
-
-  // Handle course modal dynamic content loading
-  const courseModals = document.querySelectorAll('[data-bs-target^="#courseModal"]');
-  courseModals.forEach(modal => {
-    modal.addEventListener('click', function() {
-      // Add any dynamic content loading logic here
-    });
-  });
-
-  // Save filter state
-  const filterInputs = document.querySelectorAll('#filterForm input, #filterForm select');
-  filterInputs.forEach(input => {
-    input.addEventListener('change', function() {
-      localStorage.setItem(`filter_${input.name}`, input.value);
-    });
-  });
-
-  // Restore filter state
-  filterInputs.forEach(input => {
-    const savedValue = localStorage.getItem(`filter_${input.name}`);
-    if (savedValue) {
-      if (input.type === 'checkbox') {
-        input.checked = savedValue === 'true';
-      } else {
-        input.value = savedValue;
-      }
+    // Handle filter form submission
+    if (filterForm) {
+        filterForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            loadingOverlay.style.display = 'flex';
+            
+            const formData = new FormData(this);
+            const searchParams = new URLSearchParams();
+            
+            // Handle multiple checkbox selections for type
+            const selectedTypes = formData.getAll('type');
+            selectedTypes.forEach(type => {
+                searchParams.append('type', type);
+            });
+            
+            // Add other form data
+            const state = formData.get('state');
+            if (state) {
+                searchParams.append('state', state);
+            }
+            
+            // Preserve search query
+            const currentQuery = new URLSearchParams(window.location.search).get('q');
+            if (currentQuery) {
+                searchParams.append('q', currentQuery);
+            }
+            
+            // Navigate to filtered results
+            window.location.href = `${window.location.pathname}?${searchParams.toString()}`;
+        });
     }
-  });
+
+    // Handle tab transitions
+    const tabLinks = document.querySelectorAll('.nav-link');
+    tabLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            tabLinks.forEach(tab => tab.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipTriggerList.forEach(tooltipTriggerEl => {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Save filter state
+    const filterInputs = document.querySelectorAll('#filterForm input, #filterForm select');
+    filterInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            if (input.type === 'checkbox') {
+                localStorage.setItem(`filter_${input.name}_${input.value}`, input.checked);
+            } else {
+                localStorage.setItem(`filter_${input.name}`, input.value);
+            }
+        });
+    });
+
+    // Restore filter state only if there's no active search
+    if (!new URLSearchParams(window.location.search).has('q')) {
+        filterInputs.forEach(input => {
+            if (input.type === 'checkbox') {
+                const savedValue = localStorage.getItem(`filter_${input.name}_${input.value}`);
+                if (savedValue !== null) {
+                    input.checked = savedValue === 'true';
+                }
+            } else {
+                const savedValue = localStorage.getItem(`filter_${input.name}`);
+                if (savedValue) {
+                    input.value = savedValue;
+                }
+            }
+        });
+    }
+
+    // Handle course modals
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        modal.addEventListener('show.bs.modal', function() {
+            const modalBody = this.querySelector('.modal-body');
+            if (modalBody.querySelector('.course-requirements')) {
+                // Content is already loaded
+                return;
+            }
+            // Add loading spinner if needed for dynamic content
+            modalBody.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>`;
+        });
+    });
 });
 </script>
 {% endblock %}

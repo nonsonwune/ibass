@@ -1,15 +1,15 @@
 <!-- app/templates/admin_courses.html -->
-{% extends "base.html" %} {% block title %}Manage Courses - Nigerian
-Institutions Finder{% endblock %} {% block content %}
+<!-- app/templates/admin_edit_course.html -->
+{% extends "base.html" %}
+{% block title %}Manage Courses - Nigerian Institutions Finder{% endblock %}
+{% block content %}
 <div class="container my-5">
   <h1 class="mb-4 text-center">Manage Courses</h1>
 
   <!-- Search and Add New Course row -->
   <div class="row mb-3">
     <div class="col-md-6">
-      <a href="{{ url_for('admin.add_course') }}" class="btn btn-success"
-        >Add New Course</a
-      >
+      <a href="{{ url_for('admin.add_course') }}" class="btn btn-success">Add New Course</a>
     </div>
     <div class="col-md-6">
       <input
@@ -17,144 +17,184 @@ Institutions Finder{% endblock %} {% block content %}
         id="courseSearch"
         class="form-control"
         placeholder="Search course by name..."
-        onkeyup="filterCourses()"
+        onkeyup="debounce(searchCourses, 300)()"
       />
     </div>
   </div>
 
-  {% if courses.items %}
-  <table class="table table-striped" id="coursesTable">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Course Name</th>
-        <th>University Name</th>
-        <th>Abbreviation</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for course in courses.items %}
-      <tr>
-        <td>{{ course.id }}</td>
-        <td>{{ course.course_name }}</td>
-        <td>{{ course.university_name }}</td>
-        <td>{{ course.abbrv }}</td>
-        <td>
-          <a
-            href="{{ url_for('admin.edit_course', course_id=course.id) }}"
-            class="btn btn-sm btn-primary"
-            >Edit</a
-          >
-          <form
-            action="{{ url_for('admin.delete_course', course_id=course.id) }}"
-            method="POST"
-            style="display: inline"
-          >
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button
-              type="submit"
-              class="btn btn-sm btn-danger"
-              onclick="return confirm('Are you sure you want to delete this course?');"
-            >
-              Delete
-            </button>
-          </form>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <!-- Pagination Navigation -->
-  <nav aria-label="Page navigation" class="mt-4">
-    <ul class="pagination justify-content-center">
-      <!-- Previous page -->
-      {% if courses.has_prev %}
-      <li class="page-item">
-        <a
-          class="page-link"
-          href="{{ url_for('admin.admin_courses', page=courses.prev_num) }}"
-          >Previous</a
-        >
-      </li>
-      {% else %}
-      <li class="page-item disabled">
-        <span class="page-link">Previous</span>
-      </li>
-      {% endif %}
-
-      <!-- Page numbers -->
-      {% for page_num in courses.iter_pages(left_edge=2, left_current=2,
-      right_current=2, right_edge=2) %} {% if page_num %} {% if page_num ==
-      courses.page %}
-      <li class="page-item active">
-        <span class="page-link">{{ page_num }}</span>
-      </li>
-      {% else %}
-      <li class="page-item">
-        <a
-          class="page-link"
-          href="{{ url_for('admin.admin_courses', page=page_num) }}"
-          >{{ page_num }}</a
-        >
-      </li>
-      {% endif %} {% else %}
-      <li class="page-item disabled">
-        <span class="page-link">...</span>
-      </li>
-      {% endif %} {% endfor %}
-
-      <!-- Next page -->
-      {% if courses.has_next %}
-      <li class="page-item">
-        <a
-          class="page-link"
-          href="{{ url_for('admin.admin_courses', page=courses.next_num) }}"
-          >Next</a
-        >
-      </li>
-      {% else %}
-      <li class="page-item disabled">
-        <span class="page-link">Next</span>
-      </li>
-      {% endif %}
-    </ul>
-  </nav>
-
-  <!-- Page info -->
-  <div class="text-center mt-2">
-    <small class="text-muted">
-      Showing page {{ courses.page }} of {{ courses.pages }} ({{ courses.total
-      }} total courses)
-    </small>
+  <!-- Loading indicator -->
+  <div id="loadingIndicator" class="text-center d-none">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
   </div>
-  {% else %}
-  <p class="text-muted">No courses found.</p>
-  {% endif %}
+
+  <div id="courseTableContainer">
+    <table class="table table-striped" id="coursesTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Course Name</th>
+          <th>University Name</th>
+          <th>Abbreviation</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="courseTableBody">
+        {% if courses.items %}
+          {% for course in courses.items %}
+          <tr>
+            <td>{{ course.id }}</td>
+            <td>{{ course.course_name }}</td>
+            <td>{{ course.university_name }}</td>
+            <td>{{ course.abbrv }}</td>
+            <td>
+              <a href="{{ url_for('admin.edit_course', course_id=course.id) }}" class="btn btn-sm btn-primary">Edit</a>
+              <form action="{{ url_for('admin.delete_course', course_id=course.id) }}" method="POST" style="display: inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this course?');">
+                  Delete
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+    </table>
+
+    <!-- Pagination section - only show when not searching -->
+    <div id="paginationSection" {% if search_active %}style="display: none;"{% endif %}>
+      <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+          {% if courses.has_prev %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('admin.admin_courses', page=courses.prev_num) }}">Previous</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled">
+            <span class="page-link">Previous</span>
+          </li>
+          {% endif %}
+
+          {% for page_num in courses.iter_pages(left_edge=2, left_current=2, right_current=2, right_edge=2) %}
+            {% if page_num %}
+              {% if page_num == courses.page %}
+              <li class="page-item active">
+                <span class="page-link">{{ page_num }}</span>
+              </li>
+              {% else %}
+              <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.admin_courses', page=page_num) }}">{{ page_num }}</a>
+              </li>
+              {% endif %}
+            {% else %}
+            <li class="page-item disabled">
+              <span class="page-link">...</span>
+            </li>
+            {% endif %}
+          {% endfor %}
+
+          {% if courses.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="{{ url_for('admin.admin_courses', page=courses.next_num) }}">Next</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled">
+            <span class="page-link">Next</span>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+
+      <div class="text-center mt-2">
+        <small class="text-muted">
+          Showing page {{ courses.page }} of {{ courses.pages }} ({{ courses.total }} total courses)
+        </small>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- Add the search functionality script -->
 <script>
-  function filterCourses() {
-    const input = document.getElementById("courseSearch");
-    const filter = input.value.toLowerCase();
-    const table = document.getElementById("coursesTable");
-    const rows = table.getElementsByTagName("tr");
+// Debounce function remains the same
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
-    // Loop through all table rows, start from index 1 to skip the header
-    for (let i = 1; i < rows.length; i++) {
-      const courseNameCell = rows[i].getElementsByTagName("td")[1]; // Index 1 is the Course Name column
-      if (courseNameCell) {
-        const courseName =
-          courseNameCell.textContent || courseNameCell.innerText;
-        if (courseName.toLowerCase().indexOf(filter) > -1) {
-          rows[i].style.display = "";
-        } else {
-          rows[i].style.display = "none";
-        }
-      }
-    }
+// Loading functions remain the same
+function showLoading() {
+  document.getElementById('loadingIndicator').classList.remove('d-none');
+}
+
+function hideLoading() {
+  document.getElementById('loadingIndicator').classList.add('d-none');
+}
+
+// Updated search function with correct URL handling
+async function searchCourses() {
+  const searchInput = document.getElementById('courseSearch');
+  const query = searchInput.value.trim();
+  const paginationSection = document.getElementById('paginationSection');
+  const tbody = document.getElementById('courseTableBody');
+
+  // Show/hide pagination based on search
+  paginationSection.style.display = query ? 'none' : 'block';
+
+  if (query.length === 0) {
+    // Reload the page to show original pagination
+    window.location.href = "{{ url_for('admin.admin_courses') }}";
+    return;
   }
+
+  showLoading();
+
+  try {
+    const response = await fetch(`/api/admin/search_courses?query=${encodeURIComponent(query)}`);
+    const data = await response.json();
+
+    if (response.ok) {
+      tbody.innerHTML = ''; // Clear existing rows
+
+      data.courses.forEach(course => {
+        const row = document.createElement('tr');
+        // Use Flask's url_for to generate correct URLs
+        const editUrl = "{{ url_for('admin.edit_course', course_id=0) }}".replace('0', course.id);
+        const deleteUrl = "{{ url_for('admin.delete_course', course_id=0) }}".replace('0', course.id);
+        
+        row.innerHTML = `
+          <td>${course.id}</td>
+          <td>${course.course_name}</td>
+          <td>${course.university_name}</td>
+          <td>${course.abbrv || ''}</td>
+          <td>
+            <a href="${editUrl}" class="btn btn-sm btn-primary">Edit</a>
+            <form action="${deleteUrl}" method="POST" style="display: inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+              <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this course?');">
+                Delete
+              </button>
+            </form>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    } else {
+      console.error('Search failed:', data.error);
+    }
+  } catch (error) {
+    console.error('Error during search:', error);
+  } finally {
+    hideLoading();
+  }
+}
 </script>
 {% endblock %}
