@@ -18,7 +18,9 @@ bp = Blueprint('api', __name__)
 def get_locations():
     try:
         locations = University.get_all_states()
-        current_app.logger.info(f"Retrieved {len(locations)} locations")
+        # Add "All States" as the first option
+        locations.insert(0, "ALL")
+        current_app.logger.info(f"Retrieved {len(locations)} locations including ALL option")
         return jsonify(locations)
     except Exception as e:
         current_app.logger.error(f"Error retrieving locations: {str(e)}")
@@ -90,8 +92,8 @@ def get_courses():
         # Start with base query
         query = db.session.query(Course).join(University)
         
-        # Always filter by state
-        if state:
+        # Filter by state only if not "ALL"
+        if state and state != "ALL":
             query = query.filter(University.state == state)
         
         # Handle multiple programme types
@@ -110,9 +112,21 @@ def get_courses():
             
         courses = query.order_by(Course.course_name).all()
         
-        current_app.logger.info(f"Found {len(courses)} courses for state: {state}, types: {programme_types}")
+        # Add "All Courses" option at the beginning of the response
+        response_data = [{
+            "id": 0,  # Special ID for "All Courses"
+            "course_name": "ALL",
+            "university_name": None,
+            "state": None,
+            "program_type": None,
+            "abbrv": None,
+            "direct_entry_requirements": None,
+            "utme_requirements": None,
+            "subjects": None,
+        }]
         
-        return jsonify([{
+        # Add actual courses
+        response_data.extend([{
             "id": course.id,
             "course_name": course.course_name,
             "university_name": course.university.university_name,
@@ -123,6 +137,10 @@ def get_courses():
             "utme_requirements": course.utme_requirements,
             "subjects": course.subjects,
         } for course in courses])
+        
+        current_app.logger.info(f"Found {len(response_data)-1} courses for state: {state}, types: {programme_types}")
+        
+        return jsonify(response_data)
         
     except Exception as e:
         current_app.logger.error(f"Error retrieving courses: {str(e)}")
