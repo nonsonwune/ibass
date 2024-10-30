@@ -1,7 +1,11 @@
 <!-- app/templates/recommend.html -->
-{% extends "base.html" %} {% block title %}Recommended Institutions - Nigerian
-Institutions Finder{% endblock %} {% block extra_head %}
+{% extends "base.html" %}
+
+{% block title %}Recommended Institutions - Nigerian Institutions Finder{% endblock %}
+
+{% block extra_head %}
 <style>
+  /* Hero Section */
   .hero-section {
     background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
       url("/static/images/hero.png");
@@ -12,6 +16,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
     margin-bottom: 3rem;
   }
 
+  /* Filter Styles */
   .filter-section {
     background: white;
     border-radius: 15px;
@@ -29,6 +34,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
     margin-bottom: 0;
   }
 
+  /* Card Styles */
   .recommendation-card {
     background: white;
     border-radius: 15px;
@@ -44,6 +50,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
     box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
   }
 
+  /* Institution Type Tags */
   .institution-type {
     display: inline-block;
     padding: 0.25rem 0.75rem;
@@ -56,50 +63,18 @@ Institutions Finder{% endblock %} {% block extra_head %}
     background: #e3f2fd;
     color: #1976d2;
   }
+
   .type-state {
     background: #e8f5e9;
     color: #388e3c;
   }
+
   .type-private {
     background: #fff3e0;
     color: #f57c00;
   }
 
-  .pagination .page-link {
-    padding: 0.75rem 1rem;
-    margin: 0 0.25rem;
-    border-radius: 8px;
-    border: none;
-    color: var(--text-primary);
-    background-color: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-  }
-
-  .pagination .page-link:hover {
-    background-color: var(--primary-color);
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  }
-
-  .pagination .page-item.active .page-link {
-    background-color: var(--primary-color);
-    color: white;
-  }
-
-  .results-count {
-    color: #64748b;
-    margin-bottom: 1.5rem;
-  }
-
-  @media (max-width: 991.98px) {
-    .filter-section {
-      position: static;
-      margin-bottom: 1.5rem;
-    }
-  }
-  /* Enhanced Pagination Styles */
+  /* Pagination Styles */
   .pagination {
     gap: 0.25rem;
   }
@@ -147,39 +122,268 @@ Institutions Finder{% endblock %} {% block extra_head %}
   .pagination .page-link i {
     font-size: 0.875rem;
   }
-</style>
-{% endblock %} {% block content %}
-<!-- Hero Section -->
-<section class="hero-section">
-  <div class="container">
-    <div class="row justify-content-center">
-      <div class="col-lg-8 text-center">
-        <h1 class="mb-4">Recommended Institutions</h1>
-        {% if location or course %}
-        <div class="search-criteria">
-          <div class="criteria-badges">
-            {% if location %}
-            <span class="badge bg-primary me-2">
-              <i class="fas fa-map-marker-alt me-1"></i>
-              Location: {{ location }}
-            </span>
-            {% endif %}
-            {% if course %}
-            <span class="badge bg-warning text-dark me-2">
-              <i class="fas fa-book me-1"></i>
-              Course: {{ course }}
-            </span>
-            {% endif %}
-          </div>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-</section>
 
+  /* Results Count */
+  .results-count {
+    color: #64748b;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Mobile Filter Button Styles */
+  .filter-toggle {
+    position: fixed !important;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    display: none !important;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+  }
+
+  .filter-toggle i {
+    font-size: 1.25rem;
+  }
+
+  /* Loading Overlay */
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+
+  /* Filter Badge */
+  .filter-badge {
+    font-size: 0.75rem;
+    padding: 0.25em 0.6em;
+    margin-left: 0.5rem;
+    background-color: #e9ecef;
+    color: #6c757d;
+    border-radius: 10px;
+  }
+
+  /* Disabled Form Elements */
+  .form-check-input:disabled + .form-check-label {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Institution Modal Styles */
+  .institution-header {
+    background-color: var(--primary-color);
+    color: white;
+  }
+
+  .institution-header .btn-close {
+    filter: brightness(0) invert(1);
+  }
+
+  .institution-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+
+  .info-card {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 1rem;
+  }
+
+  .info-card-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .info-card i {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+  }
+
+  .info-label {
+    display: block;
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+  }
+
+  .info-value {
+    font-weight: 500;
+    color: #1e293b;
+  }
+
+  .course-search-section {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  .course-search-wrapper {
+    position: relative;
+    margin: 1rem 0;
+  }
+
+  .search-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+  }
+
+  /* Mobile Filter Modal Styles */
+  @media (max-width: 991.98px) {
+    .filter-toggle {
+      display: flex !important;
+    }
+
+    .filter-section {
+      display: none;
+    }
+
+    #mobileFiltersModal .modal-dialog {
+      margin: 0;
+      position: fixed;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    #mobileFiltersModal .modal-content {
+      height: 100%;
+      border-radius: 0;
+    }
+
+    #mobileFiltersModal .modal-body {
+      padding: 1rem;
+      overflow-y: auto;
+    }
+
+    #mobileFiltersModal .modal-footer {
+      border-top: 1px solid #dee2e6;
+      padding: 1rem;
+      position: sticky;
+      bottom: 0;
+      background: white;
+    }
+
+    .modal {
+      z-index: 1055 !important;
+    }
+
+    .modal-backdrop {
+      z-index: 1054 !important;
+    }
+
+    #mobileFiltersModal .form-check {
+      margin-bottom: 0.75rem;
+    }
+
+    #mobileFiltersModal .filter-group {
+      margin-bottom: 1.5rem;
+    }
+
+    #mobileFiltersModal .form-select {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+{% block content %}
 <div class="container">
   <div class="row">
+    <!-- Mobile Filter Toggle -->
+    <button type="button" class="filter-toggle d-lg-none" id="filterToggleBtn" aria-label="Show filters">
+      <i class="fas fa-filter"></i>
+    </button>
+    <!-- Mobile Filters Modal -->
+    <div class="modal fade" id="mobileFiltersModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-fullscreen-sm-down">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="filterModalLabel">
+              <i class="fas fa-filter me-2"></i>Filters
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body" id="mobileFilterModalBody">
+            <!-- Filter form will be cloned here -->
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-primary" id="mobileApplyFiltersBtn">
+              <i class="fas fa-check me-2"></i>Apply Filters
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Debug output
+        console.warn("Script execution started");
+        
+        // Function to initialize modals
+        function initializeModals() {
+            try {
+                // Get modal elements
+                const filterModal = document.getElementById('mobileFiltersModal');
+                const filterBtn = document.getElementById('filterToggleBtn');
+                
+                console.log('Elements found:', {
+                    filterModal: !!filterModal,
+                    filterBtn: !!filterBtn
+                });
+
+                // Verify Bootstrap
+                if (typeof bootstrap === 'undefined') {
+                    throw new Error('Bootstrap not loaded');
+                }
+
+                // Initialize modal
+                const modalInstance = new bootstrap.Modal(filterModal, {
+                    backdrop: 'static',
+                    keyboard: false
+                });
+
+                // Add click handler
+                if (filterBtn) {
+                    filterBtn.addEventListener('click', function(e) {
+                        console.log('Filter button clicked');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        modalInstance.show();
+                    });
+                }
+
+                console.log('Modal initialization complete');
+            } catch (error) {
+                console.error('Modal initialization failed:', error);
+            }
+        }
+
+        // Initialize immediately
+        initializeModals();
+    });
+    </script>
+
     <!-- Filters Sidebar -->
     <div class="col-lg-3 mb-4">
       <div class="filter-section">
@@ -191,13 +395,17 @@ Institutions Finder{% endblock %} {% block extra_head %}
             <div class="custom-checkboxes">
               {% for program_type in available_program_types %}
               <div class="form-check mb-2">
-                <input class="form-check-input" type="checkbox" 
-                      name="programme_type" 
-                      value="{{ program_type }}" 
-                      id="type{{ program_type|replace(' ', '') }}"
-                      {% if program_type in programme_types %}checked{% endif %}>
-                <label class="form-check-label" for="type{{ program_type|replace(' ', '') }}">
+                <input class="form-check-input" 
+                       type="checkbox" 
+                       name="programme_type" 
+                       value="{{ program_type }}" 
+                       id="type{{ program_type|replace(' ', '') }}"
+                       {% if program_type in programme_types %}checked{% endif %}
+                       {% if program_type not in active_program_types %}disabled{% endif %}>
+                <label class="form-check-label {% if program_type not in active_program_types %}text-muted{% endif %}" 
+                       for="type{{ program_type|replace(' ', '') }}">
                   {{ program_type }}
+                  <span class="badge bg-secondary">{{ program_type_counts.get(program_type, 0) }}</span>
                 </label>
               </div>
               {% endfor %}
@@ -210,13 +418,16 @@ Institutions Finder{% endblock %} {% block extra_head %}
             <select class="form-select" id="location" name="location">
               <option value="">All States</option>
               {% for state in available_states %}
-              <option value="{{ state }}" {% if state == location %}selected{% endif %}>
-                {{ state }}
+              <option value="{{ state }}" 
+                      {% if state == location %}selected{% endif %}
+                      {% if state not in active_states %}disabled{% endif %}>
+                {{ state }} ({{ state_counts.get(state, 0) }})
               </option>
               {% endfor %}
             </select>
           </div>
 
+          <!-- Submit Button -->
           <button type="submit" class="btn btn-primary w-100">
             <i class="fas fa-filter me-2"></i>Apply Filters
           </button>
@@ -231,11 +442,22 @@ Institutions Finder{% endblock %} {% block extra_head %}
           Found {{ total_results }} institutions
         </div>
 
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+          <div class="text-center text-white">
+            <div class="spinner-border mb-2" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <div>Updating results...</div>
+          </div>
+        </div>
+        <!-- Recommendations Grid -->
         <div class="row row-cols-1 row-cols-md-2 g-4">
           {% for uni in recommendations %}
           <div class="col">
             <div class="recommendation-card">
               <div class="card-body d-flex flex-column">
+                <!-- Card Header -->
                 <div class="d-flex justify-content-between align-items-start mb-3">
                   <h5 class="card-title mb-0">{{ uni.university_name }}</h5>
                   <span class="institution-type type-{{ uni.program_type.lower().replace(' ', '-') }}">
@@ -243,6 +465,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
                   </span>
                 </div>
 
+                <!-- Institution Info -->
                 <div class="institution-info mb-3">
                   <p class="mb-2">
                     <i class="fas fa-map-marker-alt me-2 text-primary"></i>
@@ -254,6 +477,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
                   </p>
                 </div>
 
+                <!-- Card Actions -->
                 <div class="mt-auto">
                   <button class="btn btn-primary w-100 mb-2 view-details-btn"
                           data-bs-toggle="modal"
@@ -276,7 +500,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
                   </button>
                   {% else %}
                   <a href="{{ url_for('auth.login', next=request.url) }}" 
-                    class="btn btn-outline-secondary w-100">
+                     class="btn btn-outline-secondary w-100">
                     <i class="fas fa-bookmark me-1"></i>Login to Bookmark
                   </a>
                   {% endif %}
@@ -293,17 +517,22 @@ Institutions Finder{% endblock %} {% block extra_head %}
           <ul class="pagination justify-content-center">
             <!-- Previous Page -->
             <li class="page-item {% if not has_prev %}disabled{% endif %}">
-              <a class="page-link" href="{{ url_for('university.recommend', page=page-1, location=location, programme_type=','.join(programme_types), course=course) if has_prev else '#' }}" {% if not has_prev %}tabindex="-1" aria-disabled="true"{% endif %}>
+              <a class="page-link" 
+                 href="{{ url_for('university.recommend', page=page-1, location=location, programme_type=','.join(programme_types), course=course) if has_prev else '#' }}"
+                 {% if not has_prev %}tabindex="-1" aria-disabled="true"{% endif %}>
                 <i class="fas fa-chevron-left"></i>
               </a>
             </li>
 
-            {# First page #}
+            <!-- First Page -->
             <li class="page-item {% if page == 1 %}active{% endif %}">
-              <a class="page-link" href="{{ url_for('university.recommend', page=1, location=location, programme_type=','.join(programme_types), course=course) }}">1</a>
+              <a class="page-link" 
+                 href="{{ url_for('university.recommend', page=1, location=location, programme_type=','.join(programme_types), course=course) }}">
+                1
+              </a>
             </li>
 
-            {# Ellipsis and middle pages #}
+            <!-- Ellipsis and Middle Pages -->
             {% set start = [page - 2, 2] | max %}
             {% set end = [page + 2, total_pages - 1] | min %}
 
@@ -316,7 +545,10 @@ Institutions Finder{% endblock %} {% block extra_head %}
             {% for p in range(start, end + 1) %}
               {% if p > 1 and p < total_pages %}
                 <li class="page-item {% if p == page %}active{% endif %}">
-                  <a class="page-link" href="{{ url_for('university.recommend', page=p, location=location, programme_type=','.join(programme_types), course=course) }}">{{ p }}</a>
+                  <a class="page-link" 
+                     href="{{ url_for('university.recommend', page=p, location=location, programme_type=','.join(programme_types), course=course) }}">
+                    {{ p }}
+                  </a>
                 </li>
               {% endif %}
             {% endfor %}
@@ -327,16 +559,21 @@ Institutions Finder{% endblock %} {% block extra_head %}
               </li>
             {% endif %}
 
-            {# Last page if more than 1 page #}
+            <!-- Last Page -->
             {% if total_pages > 1 %}
               <li class="page-item {% if page == total_pages %}active{% endif %}">
-                <a class="page-link" href="{{ url_for('university.recommend', page=total_pages, location=location, programme_type=','.join(programme_types), course=course) }}">{{ total_pages }}</a>
+                <a class="page-link" 
+                   href="{{ url_for('university.recommend', page=total_pages, location=location, programme_type=','.join(programme_types), course=course) }}">
+                  {{ total_pages }}
+                </a>
               </li>
             {% endif %}
 
             <!-- Next Page -->
             <li class="page-item {% if not has_next %}disabled{% endif %}">
-              <a class="page-link" href="{{ url_for('university.recommend', page=page+1, location=location, programme_type=','.join(programme_types), course=course) if has_next else '#' }}" {% if not has_next %}tabindex="-1" aria-disabled="true"{% endif %}>
+              <a class="page-link" 
+                 href="{{ url_for('university.recommend', page=page+1, location=location, programme_type=','.join(programme_types), course=course) if has_next else '#' }}"
+                 {% if not has_next %}tabindex="-1" aria-disabled="true"{% endif %}>
                 <i class="fas fa-chevron-right"></i>
               </a>
             </li>
@@ -345,6 +582,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
         {% endif %}
 
       {% else %}
+        <!-- No Results Message -->
         <div class="alert alert-info d-flex align-items-center" role="alert">
           <i class="fas fa-info-circle me-3 fa-lg"></i>
           <div>
@@ -353,6 +591,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
         </div>
       {% endif %}
 
+      <!-- New Search Button -->
       <div class="text-center mt-4">
         <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-lg">
           <i class="fas fa-search me-2"></i>New Search
@@ -361,15 +600,12 @@ Institutions Finder{% endblock %} {% block extra_head %}
     </div>
   </div>
 </div>
-
 <!-- Institution Details Modal -->
-<div
-  class="modal fade"
-  id="institutionModal"
-  tabindex="-1"
-  aria-labelledby="institutionModalLabel"
-  aria-hidden="true"
->
+<div class="modal fade" 
+     id="institutionModal" 
+     tabindex="-1" 
+     aria-labelledby="institutionModalLabel" 
+     aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content">
       <!-- Modal Header -->
@@ -380,16 +616,15 @@ Institutions Finder{% endblock %} {% block extra_head %}
             Institution Details
           </h5>
         </div>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
+        <button type="button" 
+                class="btn-close" 
+                data-bs-dismiss="modal" 
+                aria-label="Close">
+        </button>
       </div>
 
       <!-- Modal Body -->
-      <div class="modal-body">
+      <div class="modal-body" id="filterModalBody">
         <!-- Loading State -->
         <div id="loadingIndicator" class="text-center py-4" aria-hidden="true">
           <div class="spinner-border text-primary" role="status">
@@ -399,17 +634,17 @@ Institutions Finder{% endblock %} {% block extra_head %}
         </div>
 
         <!-- Error Message -->
-        <div
-          id="modalErrorMessage"
-          class="alert alert-danger"
-          role="alert"
-          style="display: none"
-        ></div>
+        <div id="modalErrorMessage" 
+             class="alert alert-danger" 
+             role="alert" 
+             style="display: none">
+        </div>
 
         <!-- Institution Details Content -->
         <div id="institutionDetails" style="display: none">
           <!-- Institution Info Cards -->
           <div class="institution-info-grid mb-4">
+            <!-- Location Card -->
             <div class="info-card location">
               <div class="info-card-content">
                 <i class="fas fa-map-marker-alt"></i>
@@ -420,6 +655,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
               </div>
             </div>
 
+            <!-- Program Type Card -->
             <div class="info-card program">
               <div class="info-card-content">
                 <i class="fas fa-graduation-cap"></i>
@@ -430,6 +666,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
               </div>
             </div>
 
+            <!-- Website Card -->
             <div class="info-card website">
               <div class="info-card-content">
                 <i class="fas fa-globe"></i>
@@ -440,6 +677,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
               </div>
             </div>
 
+            <!-- Established Date Card -->
             <div class="info-card established">
               <div class="info-card-content">
                 <i class="fas fa-calendar-alt"></i>
@@ -454,9 +692,7 @@ Institutions Finder{% endblock %} {% block extra_head %}
           <!-- Selected Course Section -->
           <div id="selectedCourseSection" class="mt-4" style="display: none">
             <div class="card border-success">
-              <div
-                class="card-header bg-success text-white d-flex align-items-center"
-              >
+              <div class="card-header bg-success text-white d-flex align-items-center">
                 <i class="fas fa-star me-2"></i>
                 <h5 class="mb-0">Selected Course</h5>
               </div>
@@ -466,20 +702,16 @@ Institutions Finder{% endblock %} {% block extra_head %}
 
           <!-- Course Search Section -->
           <div class="course-search-section mt-4">
-            <div
-              class="search-header d-flex justify-content-between align-items-center"
-            >
+            <div class="search-header d-flex justify-content-between align-items-center">
               <h6 class="mb-0">Available Courses</h6>
               <span id="courseCount" class="badge bg-secondary">0 courses</span>
             </div>
             <div class="course-search-wrapper">
-              <input
-                type="text"
-                id="courseSearch"
-                class="form-control"
-                placeholder="Search courses..."
-                aria-label="Search courses"
-              />
+              <input type="text" 
+                     id="courseSearch" 
+                     class="form-control" 
+                     placeholder="Search courses..." 
+                     aria-label="Search courses" />
               <i class="fas fa-search search-icon"></i>
             </div>
             <div id="coursesList" class="accordion custom-accordion">
@@ -498,61 +730,175 @@ Institutions Finder{% endblock %} {% block extra_head %}
     </div>
   </div>
 </div>
-{% endblock %} {% block scripts %} {{ super() }}
+{% endblock %}
+{% block scripts %}
+{{ super() }}
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const filterForm = document.getElementById("filterForm");
-    const loadingOverlay = document.createElement("div");
-    loadingOverlay.className = "loading-overlay";
-    loadingOverlay.style.display = "none";
-    loadingOverlay.innerHTML = `
-        <div class="text-center">
-            <div class="spinner-border text-primary mb-3" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mb-0">Updating results...</p>
-        </div>
-    `;
-    document.body.appendChild(loadingOverlay);
+document.addEventListener('DOMContentLoaded', function() {
+    // Verify dependencies
+    if (typeof jQuery === 'undefined') {
+        console.error('jQuery not loaded!');
+        return;
+    }
+    if (typeof bootstrap === 'undefined') {
+        console.error('Bootstrap not loaded!');
+        return;
+    }
+    
+    console.log('Dependencies verified');
 
-    if (filterForm) {
-      filterForm.addEventListener("submit", function (e) {
-        e.preventDefault();
-        loadingOverlay.style.display = "flex";
+    const modalElement = document.getElementById('mobileFiltersModal');
+    const filterBtn = document.getElementById('filterToggleBtn');
+    const modalBody = document.getElementById('mobileFilterModalBody');
+    const filterForm = document.getElementById('filterForm');
+    const applyBtn = document.getElementById('mobileApplyFiltersBtn');
 
-        const formData = new FormData(this);
-        const searchParams = new URLSearchParams(window.location.search);
-
-        // Preserve existing query parameters
-        for (const [key, value] of searchParams.entries()) {
-          if (!["type", "state", "level", "page"].includes(key)) {
-            formData.append(key, value);
-          }
-        }
-
-        // Reset to first page when filtering
-        formData.append("page", "1");
-
-        // Convert FormData to URLSearchParams
-        const params = new URLSearchParams();
-        for (const [key, value] of formData.entries()) {
-          params.append(key, value);
-        }
-
-        // Navigate to filtered results
-        window.location.href = `${
-          window.location.pathname
-        }?${params.toString()}`;
-      });
+    if (!modalElement || !filterBtn || !modalBody || !filterForm || !applyBtn) {
+        console.error('Required elements not found');
+        return;
     }
 
-    // Initialize existing functionality
-    initializeInstitutionModal();
-    initializeBookmarkButtons();
+    const modal = new bootstrap.Modal(modalElement, {
+        backdrop: 'static',
+        keyboard: false
+    });
 
-    if (window.isAuthenticated) {
-      fetchUserBookmarks();
-    }
-  });
+    // Show modal when filter button is clicked
+    filterBtn.addEventListener('click', function() {
+        // Clone the filter form
+        const clonedForm = filterForm.cloneNode(true);
+        clonedForm.id = 'mobileFilterForm';
+        
+        // Remove the submit button from cloned form
+        const submitBtn = clonedForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.remove();
+        }
+        
+        // Clear previous content and append cloned form
+        modalBody.innerHTML = '';
+        modalBody.appendChild(clonedForm);
+        
+        // Show modal
+        modal.show();
+    });
+
+    // Handle apply filters button
+    applyBtn.addEventListener('click', function() {
+        const mobileForm = document.getElementById('mobileFilterForm');
+        if (mobileForm) {
+            // Transfer values from mobile form to main form
+            const formData = new FormData(mobileForm);
+            for (const [key, value] of formData.entries()) {
+                const originalInput = filterForm.querySelector(`[name="${key}"]`);
+                if (originalInput) {
+                    if (originalInput.type === 'checkbox') {
+                        originalInput.checked = mobileForm.querySelector(`[name="${key}"]`).checked;
+                    } else {
+                        originalInput.value = value;
+                    }
+                }
+            }
+            
+            // Hide modal and submit main form
+            modal.hide();
+            filterForm.submit();
+        }
+    });
+
+    // Initialize with jQuery for better compatibility
+    $(function() {
+        // Cache DOM elements
+        const $filterBtn = $('#filterToggleBtn');
+        const $modalElement = $('#mobileFiltersModal');
+        const $modalBody = $('#mobileFilterModalBody');
+        const $filterForm = $('#filterForm');
+        
+        // Log elements found
+        console.log('Elements found:', {
+            filterBtn: $filterBtn.length,
+            modalElement: $modalElement.length,
+            modalBody: $modalBody.length,
+            filterForm: $filterForm.length
+        });
+
+        // Initialize Bootstrap modal
+        let modal;
+        try {
+            modal = new bootstrap.Modal($modalElement[0], {
+                backdrop: 'static',
+                keyboard: false
+            });
+            console.log('Modal initialized');
+        } catch (error) {
+            console.error('Modal initialization failed:', error);
+            return;
+        }
+
+        // Handle filter button click
+        $filterBtn.on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Filter button clicked');
+
+            try {
+                if (!$filterForm.length || !$modalBody.length) {
+                    throw new Error('Required elements missing');
+                }
+
+                // Clone form
+                const $clonedForm = $filterForm.clone();
+                $clonedForm.attr('id', 'mobileFilterForm');
+                
+                // Remove submit button
+                $clonedForm.find('button[type="submit"]').remove();
+                
+                // Update modal
+                $modalBody.empty().append($clonedForm);
+                
+                // Show modal
+                modal.show();
+                console.log('Modal shown');
+            } catch (error) {
+                console.error('Error in click handler:', error);
+            }
+        });
+
+        // Handle apply filters
+        $('#mobileApplyFiltersBtn').on('click', function() {
+            try {
+                const $modalForm = $('#mobileFilterForm');
+                if ($modalForm.length && $filterForm.length) {
+                    // Transfer form values
+                    const formData = new FormData($modalForm[0]);
+                    for (const [key, value] of formData.entries()) {
+                        const $originalInput = $filterForm.find(`[name="${key}"]`);
+                        if ($originalInput.length) {
+                            if ($originalInput.attr('type') === 'checkbox') {
+                                $originalInput.prop('checked', $modalForm.find(`[name="${key}"]`).prop('checked'));
+                            } else {
+                                $originalInput.val(value);
+                            }
+                        }
+                    }
+
+                    // Submit form and hide modal
+                    modal.hide();
+                    $filterForm.submit();
+                }
+            } catch (error) {
+                console.error('Error applying filters:', error);
+            }
+        });
+
+        // Monitor modal events
+        $modalElement.on('show.bs.modal', () => console.log('Modal show event'));
+        $modalElement.on('shown.bs.modal', () => console.log('Modal shown event'));
+        $modalElement.on('hide.bs.modal', () => console.log('Modal hide event'));
+        $modalElement.on('hidden.bs.modal', () => console.log('Modal hidden event'));
+
+        console.log('Initialization complete');
+    });
+});
 </script>
 {% endblock %}
