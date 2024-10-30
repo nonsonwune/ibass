@@ -94,22 +94,27 @@ def recommend():
         # Process results
         recommendations = []
         for uni in results:
-            courses = []
+            # Get all courses for total count
+            all_courses = uni.courses
+
+            # Get filtered courses if course filter is applied
+            filtered_courses = []
             if preferred_course:
-                courses = [
+                filtered_courses = [
                     course
-                    for course in uni.courses
+                    for course in all_courses
                     if course.course_name == preferred_course
                 ]
             else:
-                courses = uni.courses
+                filtered_courses = all_courses
 
-            if not preferred_course or courses:
+            if not preferred_course or filtered_courses:
                 uni_data = {
                     "id": uni.id,
                     "university_name": uni.university_name,
                     "state": uni.state,
                     "program_type": uni.program_type,
+                    "total_courses": len(all_courses),  # Add total course count
                     "courses": [
                         {
                             "id": course.id,
@@ -119,8 +124,8 @@ def recommend():
                             "direct_entry_requirements": course.direct_entry_requirements,
                             "abbrv": course.abbrv,
                         }
-                        for course in courses
-                    ],
+                        for course in filtered_courses
+                    ],  # Use filtered courses for course list
                     "selected_course": preferred_course,
                 }
                 recommendations.append(uni_data)

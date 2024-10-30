@@ -248,12 +248,10 @@ Institutions Finder{% endblock %} {% block extra_head %}
                     <i class="fas fa-map-marker-alt me-2 text-primary"></i>
                     {{ uni.state }}
                   </p>
-                  {% if uni.courses %}
                   <p class="mb-0">
                     <i class="fas fa-book me-2 text-info"></i>
-                    {{ uni.courses|length }} Course{% if uni.courses|length != 1 %}s{% endif %} Available
+                    {{ uni.total_courses }} Course{% if uni.total_courses != 1 %}s{% endif %} Available
                   </p>
-                  {% endif %}
                 </div>
 
                 <div class="mt-auto">
