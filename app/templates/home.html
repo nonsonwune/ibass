@@ -757,7 +757,7 @@ document.addEventListener("DOMContentLoaded", function () {
             locations.forEach((location) => {
                 const option = document.createElement("option");
                 option.value = location;
-                option.textContent = location === "ALL" ? "All States" : location;
+                option.textContent = location === "ALL" ? "ANY STATE" : location;
                 DOM.locationSelect.appendChild(option);
             });
         },
@@ -1051,7 +1051,7 @@ document.addEventListener("DOMContentLoaded", function () {
             // Start with default and "All Courses" options
             DOM.courseSelect.innerHTML = `
                 <option value="">Select a Course</option>
-                <option value="ALL">All Courses</option>
+                <option value="ALL">ANY COURSE</option>
             `;
 
             // Add the rest of the courses
