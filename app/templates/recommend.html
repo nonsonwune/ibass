@@ -1,136 +1,366 @@
 <!-- app/templates/recommend.html -->
 {% extends "base.html" %} {% block title %}Recommended Institutions - Nigerian
-Institutions Finder{% endblock %} {% block content %}
-<div class="container my-5">
-  <!-- Flash Messages -->
-  {% with messages = get_flashed_messages(with_categories=true) %} {% if
-  messages %} {% for category, message in messages %}
-  <div
-    class="alert alert-{{ category }} alert-dismissible fade show"
-    role="alert"
-  >
-    {{ message }}
-    <button
-      type="button"
-      class="btn-close"
-      data-bs-dismiss="alert"
-      aria-label="Close"
-    ></button>
-  </div>
-  {% endfor %} {% endif %} {% endwith %}
+Institutions Finder{% endblock %} {% block extra_head %}
+<style>
+  .hero-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+      url("/static/images/hero.png");
+    background-size: cover;
+    background-position: center;
+    padding: 4rem 0;
+    color: white;
+    margin-bottom: 3rem;
+  }
 
-  <!-- Breadcrumb -->
-  <nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item">
-        <a href="/"><i class="fas fa-home me-1"></i>Home</a>
-      </li>
-      <li class="breadcrumb-item active" aria-current="page">
-        Recommended Institutions
-      </li>
-    </ol>
-  </nav>
+  .filter-section {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 2rem;
+  }
 
-  <h1 class="mb-4">Recommended Institutions</h1>
+  .filter-group {
+    margin-bottom: 1.5rem;
+  }
 
-  <!-- Search Criteria -->
-  {% if location or course %}
-  <div class="search-criteria mb-4">
-    <h5 class="mb-3">Search Criteria:</h5>
-    <div class="criteria-badges">
-      {% if location %}
-      <span class="badge bg-primary me-2">
-        <i class="fas fa-map-marker-alt me-1"></i>
-        Location: {{ location }}
-      </span>
-      {% endif %} {% if course %}
-      <span class="badge bg-warning text-dark me-2">
-        <i class="fas fa-book me-1"></i>
-        Course: {{ course }}
-      </span>
-      {% endif %}
-    </div>
-  </div>
-  {% endif %}
+  .filter-group:last-child {
+    margin-bottom: 0;
+  }
 
-  <!-- Recommendations Grid -->
-  {% if recommendations %}
-  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-    {% for uni in recommendations %}
-    <div class="col">
-      <div class="card h-100 recommendation-card">
-        <div class="card-body d-flex flex-column">
-          <div class="institution-header mb-3">
-            <h5 class="card-title">{{ uni.university_name }}</h5>
-            {% if uni.program_type == 'PRIVATE' %}
-            <span class="badge bg-purple">Private Institution</span>
+  .recommendation-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    height: 100%;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .recommendation-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .institution-type {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .type-federal {
+    background: #e3f2fd;
+    color: #1976d2;
+  }
+  .type-state {
+    background: #e8f5e9;
+    color: #388e3c;
+  }
+  .type-private {
+    background: #fff3e0;
+    color: #f57c00;
+  }
+
+  .pagination .page-link {
+    padding: 0.75rem 1rem;
+    margin: 0 0.25rem;
+    border-radius: 8px;
+    border: none;
+    color: var(--text-primary);
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+  }
+
+  .pagination .page-link:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .pagination .page-item.active .page-link {
+    background-color: var(--primary-color);
+    color: white;
+  }
+
+  .results-count {
+    color: #64748b;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 991.98px) {
+    .filter-section {
+      position: static;
+      margin-bottom: 1.5rem;
+    }
+  }
+  /* Enhanced Pagination Styles */
+  .pagination {
+    gap: 0.25rem;
+  }
+
+  .pagination .page-item {
+    margin: 0 0.125rem;
+  }
+
+  .pagination .page-link {
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-weight: 500;
+    border-radius: 8px;
+    color: #64748b;
+    background-color: white;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+  }
+
+  .pagination .page-link:hover:not(.disabled) {
+    transform: translateY(-2px);
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .pagination .page-item.active .page-link {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 600;
+  }
+
+  .pagination .page-item.disabled .page-link {
+    background-color: #f8f9fa;
+    color: #a0aec0;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .pagination .page-link i {
+    font-size: 0.875rem;
+  }
+</style>
+{% endblock %} {% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 text-center">
+        <h1 class="mb-4">Recommended Institutions</h1>
+        {% if location or course %}
+        <div class="search-criteria">
+          <div class="criteria-badges">
+            {% if location %}
+            <span class="badge bg-primary me-2">
+              <i class="fas fa-map-marker-alt me-1"></i>
+              Location: {{ location }}
+            </span>
             {% endif %}
-          </div>
-
-          <div class="institution-info mb-3">
-            <p class="mb-2">
-              <i class="fas fa-map-marker-alt me-2 text-primary"></i>
-              {{ uni.state }}
-            </p>
-            <p class="mb-0">
-              <i class="fas fa-graduation-cap me-2 text-success"></i>
-              {{ uni.program_type }}
-            </p>
-          </div>
-
-          <div class="mt-auto">
-            <button
-              class="btn btn-primary w-100 mb-2 view-details-btn"
-              data-bs-toggle="modal"
-              data-bs-target="#institutionModal"
-              data-uni-id="{{ uni.id }}"
-              data-selected-course="{{ course }}"
-            >
-              <i class="fas fa-info-circle me-2"></i>
-              View Details
-            </button>
-
-            {% if current_user.is_authenticated %}
-            <button
-              class="btn btn-outline-secondary w-100 bookmark-btn"
-              data-uni-id="{{ uni.id }}"
-              data-bookmarked="{{ 'true' if uni.id in user_bookmarks else 'false' }}"
-            >
-              <i class="fas fa-bookmark me-1"></i>
-              <span class="bookmark-text">
-                {% if uni.id in user_bookmarks %}Bookmarked{% else %}Bookmark{%
-                endif %}
-              </span>
-            </button>
-            {% else %}
-            <a
-              href="{{ url_for('auth.login', next=request.url) }}"
-              class="btn btn-outline-secondary w-100"
-            >
-              <i class="fas fa-bookmark me-1"></i>
-              Login to Bookmark
-            </a>
+            {% if course %}
+            <span class="badge bg-warning text-dark me-2">
+              <i class="fas fa-book me-1"></i>
+              Course: {{ course }}
+            </span>
             {% endif %}
           </div>
         </div>
+        {% endif %}
       </div>
     </div>
-    {% endfor %}
   </div>
-  {% else %}
-  <div class="alert alert-info d-flex align-items-center" role="alert">
-    <i class="fas fa-info-circle me-3 fa-lg"></i>
-    <div>
-      No matching institutions found. Please try different search criteria.
-    </div>
-  </div>
-  {% endif %}
+</section>
 
-  <div class="text-center mt-4">
-    <a href="/" class="btn btn-secondary btn-lg">
-      <i class="fas fa-search me-2"></i>
-      New Search
-    </a>
+<div class="container">
+  <div class="row">
+    <!-- Filters Sidebar -->
+    <div class="col-lg-3 mb-4">
+      <div class="filter-section">
+        <h4 class="mb-4">Filters</h4>
+        <form id="filterForm" action="{{ url_for('university.recommend') }}" method="GET">
+          <!-- Institution Type Filter -->
+          <div class="filter-group">
+            <label class="fw-bold mb-2">Institution Type</label>
+            <div class="custom-checkboxes">
+              {% for program_type in available_program_types %}
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" 
+                      name="programme_type" 
+                      value="{{ program_type }}" 
+                      id="type{{ program_type|replace(' ', '') }}"
+                      {% if program_type in programme_types %}checked{% endif %}>
+                <label class="form-check-label" for="type{{ program_type|replace(' ', '') }}">
+                  {{ program_type }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- State Filter -->
+          <div class="filter-group">
+            <label class="fw-bold mb-2">State</label>
+            <select class="form-select" id="location" name="location">
+              <option value="">All States</option>
+              {% for state in available_states %}
+              <option value="{{ state }}" {% if state == location %}selected{% endif %}>
+                {{ state }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="fas fa-filter me-2"></i>Apply Filters
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="col-lg-9">
+      {% if recommendations %}
+        <div class="results-count mb-4">
+          Found {{ total_results }} institutions
+        </div>
+
+        <div class="row row-cols-1 row-cols-md-2 g-4">
+          {% for uni in recommendations %}
+          <div class="col">
+            <div class="recommendation-card">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                  <h5 class="card-title mb-0">{{ uni.university_name }}</h5>
+                  <span class="institution-type type-{{ uni.program_type.lower().replace(' ', '-') }}">
+                    {{ uni.program_type }}
+                  </span>
+                </div>
+
+                <div class="institution-info mb-3">
+                  <p class="mb-2">
+                    <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                    {{ uni.state }}
+                  </p>
+                  {% if uni.courses %}
+                  <p class="mb-0">
+                    <i class="fas fa-book me-2 text-info"></i>
+                    {{ uni.courses|length }} Course{% if uni.courses|length != 1 %}s{% endif %} Available
+                  </p>
+                  {% endif %}
+                </div>
+
+                <div class="mt-auto">
+                  <button class="btn btn-primary w-100 mb-2 view-details-btn"
+                          data-bs-toggle="modal"
+                          data-bs-target="#institutionModal"
+                          data-uni-id="{{ uni.id }}"
+                          {% if uni.selected_course %}
+                          data-selected-course="{{ uni.selected_course }}"
+                          {% endif %}>
+                    <i class="fas fa-info-circle me-2"></i>View Details
+                  </button>
+
+                  {% if current_user.is_authenticated %}
+                  <button class="btn btn-outline-secondary w-100 bookmark-btn"
+                          data-uni-id="{{ uni.id }}"
+                          data-bookmarked="{{ 'true' if uni.id in user_bookmarks else 'false' }}">
+                    <i class="fas fa-bookmark me-1"></i>
+                    <span class="bookmark-text">
+                      {% if uni.id in user_bookmarks %}Bookmarked{% else %}Bookmark{% endif %}
+                    </span>
+                  </button>
+                  {% else %}
+                  <a href="{{ url_for('auth.login', next=request.url) }}" 
+                    class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-bookmark me-1"></i>Login to Bookmark
+                  </a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <nav aria-label="Page navigation" class="mt-4">
+          <ul class="pagination justify-content-center">
+            <!-- Previous Page -->
+            <li class="page-item {% if not has_prev %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('university.recommend', page=page-1, location=location, programme_type=','.join(programme_types), course=course) if has_prev else '#' }}" {% if not has_prev %}tabindex="-1" aria-disabled="true"{% endif %}>
+                <i class="fas fa-chevron-left"></i>
+              </a>
+            </li>
+
+            {# First page #}
+            <li class="page-item {% if page == 1 %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('university.recommend', page=1, location=location, programme_type=','.join(programme_types), course=course) }}">1</a>
+            </li>
+
+            {# Ellipsis and middle pages #}
+            {% set start = [page - 2, 2] | max %}
+            {% set end = [page + 2, total_pages - 1] | min %}
+
+            {% if start > 2 %}
+              <li class="page-item disabled">
+                <span class="page-link">...</span>
+              </li>
+            {% endif %}
+
+            {% for p in range(start, end + 1) %}
+              {% if p > 1 and p < total_pages %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                  <a class="page-link" href="{{ url_for('university.recommend', page=p, location=location, programme_type=','.join(programme_types), course=course) }}">{{ p }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if end < total_pages - 1 %}
+              <li class="page-item disabled">
+                <span class="page-link">...</span>
+              </li>
+            {% endif %}
+
+            {# Last page if more than 1 page #}
+            {% if total_pages > 1 %}
+              <li class="page-item {% if page == total_pages %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('university.recommend', page=total_pages, location=location, programme_type=','.join(programme_types), course=course) }}">{{ total_pages }}</a>
+              </li>
+            {% endif %}
+
+            <!-- Next Page -->
+            <li class="page-item {% if not has_next %}disabled{% endif %}">
+              <a class="page-link" href="{{ url_for('university.recommend', page=page+1, location=location, programme_type=','.join(programme_types), course=course) if has_next else '#' }}" {% if not has_next %}tabindex="-1" aria-disabled="true"{% endif %}>
+                <i class="fas fa-chevron-right"></i>
+              </a>
+            </li>
+          </ul>
+        </nav>
+        {% endif %}
+
+      {% else %}
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+          <i class="fas fa-info-circle me-3 fa-lg"></i>
+          <div>
+            No matching institutions found. Please try different criteria.
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="text-center mt-4">
+        <a href="{{ url_for('main.home') }}" class="btn btn-secondary btn-lg">
+          <i class="fas fa-search me-2"></i>New Search
+        </a>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -272,7 +502,53 @@ Institutions Finder{% endblock %} {% block content %}
 </div>
 {% endblock %} {% block scripts %} {{ super() }}
 <script>
-  $(document).ready(function () {
+  document.addEventListener("DOMContentLoaded", function () {
+    const filterForm = document.getElementById("filterForm");
+    const loadingOverlay = document.createElement("div");
+    loadingOverlay.className = "loading-overlay";
+    loadingOverlay.style.display = "none";
+    loadingOverlay.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mb-0">Updating results...</p>
+        </div>
+    `;
+    document.body.appendChild(loadingOverlay);
+
+    if (filterForm) {
+      filterForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        loadingOverlay.style.display = "flex";
+
+        const formData = new FormData(this);
+        const searchParams = new URLSearchParams(window.location.search);
+
+        // Preserve existing query parameters
+        for (const [key, value] of searchParams.entries()) {
+          if (!["type", "state", "level", "page"].includes(key)) {
+            formData.append(key, value);
+          }
+        }
+
+        // Reset to first page when filtering
+        formData.append("page", "1");
+
+        // Convert FormData to URLSearchParams
+        const params = new URLSearchParams();
+        for (const [key, value] of formData.entries()) {
+          params.append(key, value);
+        }
+
+        // Navigate to filtered results
+        window.location.href = `${
+          window.location.pathname
+        }?${params.toString()}`;
+      });
+    }
+
+    // Initialize existing functionality
     initializeInstitutionModal();
     initializeBookmarkButtons();
 
