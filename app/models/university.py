@@ -16,8 +16,7 @@ class University(BaseModel):
     program_type = db.Column(db.String(50), nullable=False)
     website = db.Column(db.String(255))
     established = db.Column(db.Integer)
-    
-    # Add search optimization fields
+    abbrv = db.Column(db.String(255))
     search_vector = db.Column(TSVECTOR)
     
     # Add indexes
@@ -90,12 +89,9 @@ class Course(BaseModel):
     id = db.Column(db.Integer, primary_key=True)
     course_name = db.Column(db.String(256), nullable=False)
     university_name = db.Column(db.String(256), db.ForeignKey('university.university_name'), nullable=False)
-    abbrv = db.Column(db.Text)
     direct_entry_requirements = db.Column(db.Text)
     utme_requirements = db.Column(db.Text)
     subjects = db.Column(db.Text)
-    
-    # Add search optimization fields
     search_vector = db.Column(TSVECTOR)
     
     # Add indexes

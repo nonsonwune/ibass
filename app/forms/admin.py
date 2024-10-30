@@ -18,12 +18,12 @@ class UniversityForm(FlaskForm):
     program_type = StringField('Program Type', validators=[DataRequired()])
     website = StringField('Website', validators=[Optional()])
     established = IntegerField('Established Year', validators=[Optional()])
+    abbrv = StringField('Abbreviation', validators=[Optional()])  # Added this line
     submit = SubmitField('Save')
 
 class CourseForm(FlaskForm):
     course_name = StringField('Course Name', validators=[DataRequired()])
     university_name = SelectField('University', validators=[DataRequired()], coerce=str)
-    abbrv = StringField('Abbreviation', validators=[Optional()])
     direct_entry_requirements = TextAreaField('Direct Entry Requirements', validators=[Optional()])
     utme_requirements = TextAreaField('UTME Requirements', validators=[Optional()])
     subjects = TextAreaField('Subjects', validators=[Optional()])

@@ -58,7 +58,7 @@ def search_results():
         ).filter(
             or_(
                 Course.course_name.ilike(f"%{query_text}%"),
-                Course.abbrv.ilike(f"%{query_text}%"),
+                University.abbrv.ilike(f"%{query_text}%"),
                 text(
                     "course.search_vector @@ plainto_tsquery('english', :query)"
                 ).bindparams(query=query_text),

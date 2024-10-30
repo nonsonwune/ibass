@@ -114,7 +114,6 @@ def init_search_vectors():
                     SELECT 
                         id,
                         COALESCE(course_name, '') || ' ' ||
-                        COALESCE(abbrv, '') || ' ' ||
                         COALESCE(subjects, '') as combined_text
                     FROM course
                 )

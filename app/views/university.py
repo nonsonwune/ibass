@@ -178,7 +178,6 @@ def get_paginated_results(query, page, per_page):
     }
 
 def format_university_results(universities, preferred_course=None):
-    """Format university results for template"""
     formatted_results = []
     
     for uni in universities:
@@ -196,18 +195,15 @@ def format_university_results(universities, preferred_course=None):
                 "program_type": uni.program_type,
                 "website": uni.website,
                 "established": uni.established,
+                "abbrv": uni.abbrv,  # Added this line
                 "total_courses": len(courses),
-                "courses": [
-                    {
-                        "id": course.id,
-                        "course_name": course.course_name,
-                        "utme_requirements": course.utme_requirements,
-                        "subjects": course.subjects,
-                        "direct_entry_requirements": course.direct_entry_requirements,
-                        "abbrv": course.abbrv,
-                    }
-                    for course in filtered_courses
-                ],
+                "courses": [{
+                    "id": course.id,
+                    "course_name": course.course_name,
+                    "utme_requirements": course.utme_requirements,
+                    "subjects": course.subjects,
+                    "direct_entry_requirements": course.direct_entry_requirements,
+                } for course in filtered_courses],
                 "selected_course": preferred_course
             }
             formatted_results.append(uni_data)
@@ -296,9 +292,9 @@ def get_institution_courses(id):
         if search_query:
             search_terms = [term.strip() for term in search_query.split()]
             for term in search_terms:
-                query = query.filter(
+                query = query.join(University).filter(
                     Course.course_name.ilike(f'%{term}%') |
-                    Course.abbrv.ilike(f'%{term}%')
+                    University.abbrv.ilike(f'%{term}%')
                 )
 
         # Get total count for pagination

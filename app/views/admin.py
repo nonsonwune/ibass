@@ -200,7 +200,6 @@ def add_course():
         course = Course(
             course_name=form.course_name.data,
             university_name=form.university_name.data,
-            abbrv=form.abbrv.data,
             direct_entry_requirements=form.direct_entry_requirements.data,
             utme_requirements=form.utme_requirements.data,
             subjects=form.subjects.data

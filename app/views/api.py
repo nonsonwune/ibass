@@ -133,7 +133,7 @@ def get_courses():
             "university_name": course.university.university_name,
             "state": course.university.state,
             "program_type": course.university.program_type,
-            "abbrv": course.abbrv,
+            "abbrv": course.university.abbrv,
             "direct_entry_requirements": course.direct_entry_requirements,
             "utme_requirements": course.utme_requirements,
             "subjects": course.subjects,
@@ -164,6 +164,7 @@ def get_institution_details(uni_id):
             "program_type": university.program_type,
             "website": university.website,
             "established": university.established,
+            "abbrv": university.abbrv,  # Added this line
             "selected_course": selected_course,
             "courses": [{
                 "id": course.id,
@@ -171,7 +172,6 @@ def get_institution_details(uni_id):
                 "utme_requirements": course.utme_requirements or "N/A",
                 "subjects": course.subjects or "N/A",
                 "direct_entry_requirements": course.direct_entry_requirements or "N/A",
-                "abbrv": course.abbrv or "N/A",
             } for course in courses]
         }
 
@@ -377,9 +377,9 @@ def search():
             )
         universities = universities_query.all()
 
-        courses_query = Course.query.filter(
+        courses_query = Course.query.join(University).filter(
             (Course.course_name.ilike(f"%{query_text}%"))
-            | (Course.abbrv.ilike(f"%{query_text}%"))
+            | (University.abbrv.ilike(f"%{query_text}%"))
         )
         courses = courses_query.all()
 

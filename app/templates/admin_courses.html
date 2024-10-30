@@ -47,7 +47,6 @@
             <td>{{ course.id }}</td>
             <td>{{ course.course_name }}</td>
             <td>{{ course.university_name }}</td>
-            <td>{{ course.abbrv }}</td>
             <td>
               <a href="{{ url_for('admin.edit_course', course_id=course.id) }}" class="btn btn-sm btn-primary">Edit</a>
               <form action="{{ url_for('admin.delete_course', course_id=course.id) }}" method="POST" style="display: inline">
