@@ -47,8 +47,8 @@ function showModalError(message) {
 
   if (!errorDiv) return;
 
-  loadingIndicator.style.display = "none";
-  institutionDetails.style.display = "none";
+  if (loadingIndicator) loadingIndicator.style.display = "none";
+  if (institutionDetails) institutionDetails.style.display = "none";
   errorDiv.textContent = message;
   errorDiv.style.display = "block";
 }

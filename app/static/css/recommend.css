@@ -1,0 +1,371 @@
+/* app/static/css/recommend.css */
+
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+      url("/static/images/hero.png");
+    background-size: cover;
+    background-position: center;
+    padding: 4rem 0;
+    color: white;
+    margin-bottom: 3rem;
+  }
+  
+  /* Filter Styles */
+  .filter-section {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    position: sticky;
+    top: 2rem;
+  }
+  
+  .filter-group {
+    margin-bottom: 1.5rem;
+  }
+  
+  .filter-group:last-child {
+    margin-bottom: 0;
+  }
+  
+  .custom-checkboxes .form-check-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  
+  .custom-checkboxes .badge {
+    margin-left: 0.5rem;
+  }
+  
+  /* Card Styles */
+  .recommendation-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+    height: 100%;
+    border: none;
+    box-shadow: var(--shadow-md);
+  }
+  
+  .recommendation-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  /* Institution Type Tags */
+  .institution-type {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .type-federal {
+    background: #e3f2fd;
+    color: #1976d2;
+  }
+  
+  .type-state {
+    background: #e8f5e9;
+    color: #388e3c;
+  }
+  
+  .type-private {
+    background: #fff3e0;
+    color: #f57c00;
+  }
+  
+  /* Pagination Styles */
+  .pagination {
+    gap: 0.25rem;
+  }
+  
+  .pagination .page-item {
+    margin: 0 0.125rem;
+  }
+  
+  .pagination .page-link {
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-weight: 500;
+    border-radius: 8px;
+    color: #64748b;
+    background-color: white;
+    border: none;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-fast);
+  }
+  
+  .pagination .page-link:hover:not(.disabled) {
+    transform: translateY(-2px);
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow-md);
+  }
+  
+  .pagination .page-item.active .page-link {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 600;
+  }
+  
+  .pagination .page-item.disabled .page-link {
+    background-color: #f8f9fa;
+    color: #a0aec0;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  
+  .pagination .page-link i {
+    font-size: 0.875rem;
+  }
+  
+  /* Results Count */
+  .results-count {
+    color: #64748b;
+    margin-bottom: 1.5rem;
+  }
+  
+  /* Mobile Filter Button Styles */
+  .filter-toggle {
+    position: fixed !important;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    box-shadow: var(--shadow-lg);
+    display: none !important;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+  }
+  
+  .filter-toggle i {
+    font-size: 1.25rem;
+  }
+  
+  /* Loading Overlay */
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+  }
+  
+  .loading-overlay.show {
+    display: flex;
+  }
+  
+  .loading-overlay .spinner-border {
+    width: 3rem;
+    height: 3rem;
+  }
+  
+  .loading-overlay .text {
+    margin-top: 1rem;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+  }
+  
+  /* Filter Badge */
+  .filter-badge {
+    font-size: 0.75rem;
+    padding: 0.25em 0.6em;
+    margin-left: 0.5rem;
+    background-color: #e9ecef;
+    color: #6c757d;
+    border-radius: 10px;
+  }
+  
+  /* Disabled Form Elements */
+  .form-check-input:disabled + .form-check-label {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  /* Institution Modal Styles */
+  .institution-header {
+    background-color: var(--primary-color);
+    color: white;
+  }
+  
+  .institution-header .btn-close {
+    filter: brightness(0) invert(1);
+  }
+  
+  .institution-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+  
+  .info-card {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  
+  .info-card-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .info-card i {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+  }
+  
+  .info-label {
+    display: block;
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-bottom: 0.25rem;
+  }
+  
+  .info-value {
+    font-weight: 500;
+    color: #1e293b;
+  }
+  
+  .course-search-section {
+    background: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .course-search-wrapper {
+    position: relative;
+    margin: 1rem 0;
+  }
+  
+  .course-search-wrapper .search-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+  }
+  
+  /* Course List Styles */
+  .course-search-header .badge {
+    font-size: 0.875rem;
+  }
+  
+  .accordion-item .accordion-button {
+    background-color: #f8fafc;
+    font-weight: 500;
+  }
+  
+  .accordion-item .accordion-button:not(.collapsed) {
+    color: var(--primary-color);
+  }
+  
+  .accordion-body {
+    background-color: white;
+  }
+  
+  .requirement-section h6 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .requirement-section .icon {
+    color: var(--primary-color);
+  }
+  
+  .requirement-section .ps-4 {
+    margin-left: 1.5rem;
+  }
+  
+  /* Mobile Filter Modal Styles */
+  @media (max-width: 991.98px) {
+    .filter-toggle {
+      display: flex !important;
+    }
+  
+    .filter-section {
+      display: none;
+    }
+  
+    #mobileFiltersModal .modal-dialog {
+      margin: 0;
+      position: fixed;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+      max-width: 100%;
+    }
+  
+    #mobileFiltersModal .modal-content {
+      height: 100%;
+      border-radius: 0;
+    }
+  
+    #mobileFiltersModal .modal-body {
+      padding: 1rem;
+      overflow-y: auto;
+    }
+  
+    #mobileFiltersModal .modal-footer {
+      border-top: 1px solid #dee2e6;
+      padding: 1rem;
+      position: sticky;
+      bottom: 0;
+      background: white;
+    }
+  
+    .modal {
+      z-index: 1055 !important;
+    }
+  
+    .modal-backdrop {
+      z-index: 1054 !important;
+    }
+  
+    #mobileFiltersModal .form-check {
+      margin-bottom: 0.75rem;
+    }
+  
+    #mobileFiltersModal .filter-group {
+      margin-bottom: 1.5rem;
+    }
+  
+    #mobileFiltersModal .form-select {
+      width: 100%;
+    }
+  }
+  
+  /* Responsive Adjustments */
+  @media (max-width: 768px) {
+    .recommendation-card {
+      margin-bottom: var(--spacing-md);
+    }
+  
+    .pagination {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+  }
+  

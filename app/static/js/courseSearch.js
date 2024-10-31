@@ -1,5 +1,4 @@
 // app/static/js/courseSearch.js
-
 const CourseSearch = {
   debounceTimeout: null,
 
@@ -114,14 +113,14 @@ const CourseSearch = {
         message.id = "noCoursesFound";
         message.className = "alert alert-info mt-3";
         message.innerHTML = `
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-info-circle me-3 fa-lg"></i>
-                        <div>
-                            <p class="mb-1"><strong>No matching courses found</strong></p>
-                            <p class="mb-0 small">Try adjusting your search terms</p>
-                        </div>
-                    </div>
-                `;
+          <div class="d-flex align-items-center">
+            <i class="fas fa-info-circle me-3 fa-lg"></i>
+            <div>
+              <p class="mb-1"><strong>No matching courses found</strong></p>
+              <p class="mb-0 small">Try adjusting your search terms</p>
+            </div>
+          </div>
+        `;
         container.appendChild(message);
       }
     } else if (message) {
@@ -130,5 +129,5 @@ const CourseSearch = {
   },
 };
 
-// Expose CourseSearch globally
+// Expose CourseSearch globally if needed for legacy code
 window.CourseSearch = CourseSearch;

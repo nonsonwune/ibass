@@ -1,0 +1,140 @@
+/* app/static/css/contact.css */
+
+/* Background Image */
+.contact-background {
+    background: url("/static/images/contact-bg.png") no-repeat center center fixed;
+    background-size: cover;
+    height: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 3rem 0;
+  }
+  
+  /* Fix user score visibility */
+  .badge.bg-primary-soft {
+    background-color: #e3f2fd !important; /* Light blue background */
+    color: #2c3e50 !important; /* Dark text color for contrast */
+    border: 1px solid #90caf9; /* Optional: adds a subtle border */
+  }
+  
+  /* Ensure hoverable elements maintain contrast */
+  .badge.bg-primary-soft:hover {
+    background-color: #bbdefb !important;
+    color: #1a2733 !important;
+  }
+  
+  .content-wrapper {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    backdrop-filter: blur(10px);
+  }
+  
+  .text-gradient {
+    background: linear-gradient(45deg, #2c3e50, #3498db);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  
+  .shadow-hover {
+    transition: all 0.3s ease;
+  }
+  
+  .shadow-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  .bg-gradient {
+    background: linear-gradient(145deg, #f8f9fa, #ffffff);
+  }
+  
+  .comments-section::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .comments-section::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+  
+  .comments-section::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+  }
+  
+  .comments-section::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+  
+  @media (max-width: 768px) {
+    .contact-background {
+      padding: 2rem 0;
+    }
+  
+    .content-wrapper {
+      border-radius: 10px;
+      padding: 1.5rem;
+    }
+  }
+  
+  /* Ensure text visibility */
+  .lead {
+    color: #2c3e50 !important; /* Use your text-primary color */
+  }
+  
+  .comments-section {
+    color: #2c3e50;
+  }
+  
+  /* Fix any potentially inherited white text */
+  .card-header h2,
+  .card-body,
+  .form-label,
+  .modal-title,
+  .modal-body {
+    color: #2c3e50;
+  }
+  
+  .form-control::placeholder {
+    color: #6c757d;
+  }
+  
+  /* Make sure links are visible */
+  .card a {
+    color: #3498db;
+  }
+  
+  /* Ensure button text contrast */
+  .btn-primary {
+    color: #ffffff !important;
+  }
+  
+  .btn-outline-primary {
+    color: #3498db;
+  }
+  
+  .btn-outline-primary:hover {
+    color: #ffffff;
+  }
+  
+  /* Fix modal text colors */
+  .modal-content {
+    color: #2c3e50;
+  }
+  
+  /* Ensure comment text is visible */
+  .comment-card {
+    color: #2c3e50;
+  }
+  
+  /* Fix alert text */
+  .alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+  }
+  

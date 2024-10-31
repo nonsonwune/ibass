@@ -5,7 +5,6 @@ document.addEventListener("DOMContentLoaded", function () {
   initializeTooltips();
   initializeCommentSystem();
   initializeVoting();
-  initializeInstitutionModal();
   initializeBookmarkSystem();
 
   if (window.isAuthenticated) {

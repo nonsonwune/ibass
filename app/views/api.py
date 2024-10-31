@@ -468,3 +468,23 @@ def search_courses():
     except Exception as e:
         current_app.logger.error(f"Error in course search: {str(e)}")
         return jsonify({'error': str(e)}), 500
+    
+@bp.route('/course/<int:course_id>', methods=['GET'])
+def get_course_details(course_id):
+    try:
+        course = Course.query.get_or_404(course_id)
+        university = University.query.filter_by(university_name=course.university_name).first()
+        course_data = {
+            'id': course.id,
+            'course_name': course.course_name,
+            'university_name': course.university_name,
+            'abbrv': course.abbrv,
+            'utme_requirements': course.utme_requirements,
+            'direct_entry_requirements': course.direct_entry_requirements,
+            'subjects': course.subjects,
+            'university_id': university.id if university else None,
+        }
+        return jsonify(course_data), 200
+    except Exception as e:
+        current_app.logger.error(f"Error fetching course details: {str(e)}")
+        return jsonify({'error': 'An error occurred while fetching course details.'}), 500
