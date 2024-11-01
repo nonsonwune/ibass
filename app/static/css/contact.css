@@ -1,181 +1,243 @@
 /* app/static/css/contact.css */
 
-/* Background Image */
+/* Contact Page Styles */
+:root {
+  --primary-color: #3498db;
+  --secondary-color: #2c3e50;
+  --danger-color: #e74c3c;
+  --success-color: #2ecc71;
+  --warning-color: #f1c40f;
+  --info-color: #0c5460;
+  --border-color: #e9ecef;
+  --text-primary: #2c3e50;
+  --text-secondary: #6c757d;
+  --bg-light: #f8f9fa;
+  --bg-white: #ffffff;
+}
+
+/* Background and Container Styles */
 .contact-background {
-    background: url("/static/images/contact-bg.png") no-repeat center center fixed;
-    background-size: cover;
-    height: 100%;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    padding: 3rem 0;
-  }
-  
-  /* Fix user score visibility */
-  .badge.bg-primary-soft {
-    background-color: #e3f2fd !important; /* Light blue background */
-    color: #2c3e50 !important; /* Dark text color for contrast */
-    border: 1px solid #90caf9; /* Optional: adds a subtle border */
-  }
-  
-  /* Ensure hoverable elements maintain contrast */
-  .badge.bg-primary-soft:hover {
-    background-color: #bbdefb !important;
-    color: #1a2733 !important;
-  }
-  
-  .content-wrapper {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 15px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    padding: 2rem;
-    backdrop-filter: blur(10px);
-  }
-  
-  .text-gradient {
-    background: linear-gradient(45deg, #2c3e50, #3498db);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  
-  .shadow-hover {
-    transition: all 0.3s ease;
-  }
-  
-  .shadow-hover:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
-  }
-  
-  .bg-gradient {
-    background: linear-gradient(145deg, #f8f9fa, #ffffff);
-  }
-  
-  .comments-section::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  .comments-section::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-  }
-  
-  .comments-section::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 10px;
-  }
-  
-  .comments-section::-webkit-scrollbar-thumb:hover {
-    background: #555;
-  }
-  
-  @media (max-width: 768px) {
-    .contact-background {
-      padding: 2rem 0;
-    }
-  
-    .content-wrapper {
-      border-radius: 10px;
-      padding: 1.5rem;
-    }
-  }
-  
-  /* Ensure text visibility */
-  .lead {
-    color: #2c3e50 !important; /* Use your text-primary color */
-  }
-  
-  .comments-section {
-    color: #2c3e50;
-  }
-  
-  /* Fix any potentially inherited white text */
-  .card-header h2,
-  .card-body,
-  .form-label,
-  .modal-title,
-  .modal-body {
-    color: #2c3e50;
-  }
-  
-  .form-control::placeholder {
-    color: #6c757d;
-  }
-  
-  /* Make sure links are visible */
-  .card a {
-    color: #3498db;
-  }
-  
-  /* Ensure button text contrast */
-  .btn-primary {
-    color: #ffffff !important;
-  }
-  
-  .btn-outline-primary {
-    color: #3498db;
-  }
-  
-  .btn-outline-primary:hover {
-    color: #ffffff;
-  }
-  
-  /* Fix modal text colors */
-  .modal-content {
-    color: #2c3e50;
-  }
-  
-  /* Ensure comment text is visible */
-  .comment-card {
-    color: #2c3e50;
-  }
-  
-  /* Fix alert text */
-  .alert-info {
-    color: #0c5460;
-    background-color: #d1ecf1;
-    border-color: #bee5eb;
-  }
-  
-  /* Add to contact.css */
+  background: url("/static/images/contact-bg.png") no-repeat center center fixed;
+  background-size: cover;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 3rem 0;
+}
+
+.content-wrapper {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+}
+
+/* Text Styles */
+.text-gradient {
+  background: linear-gradient(45deg, var(--secondary-color), var(--primary-color));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lead {
+  color: var(--text-primary) !important;
+  font-size: 1.2rem;
+  line-height: 1.6;
+}
+
+/* Card Styles */
+.card {
+  border: none;
+  background: var(--bg-white);
+}
+
+.shadow-hover {
+  transition: all 0.3s ease;
+}
+
+.shadow-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
+}
+
+.card-header {
+  background: linear-gradient(145deg, var(--bg-light), var(--bg-white));
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Comments Section Styles */
+.comments-section {
+  color: var(--text-primary);
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.comments-section::-webkit-scrollbar {
+  width: 6px;
+}
+
+.comments-section::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.comments-section::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.comments-section::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.comment-card {
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.comment-content {
+  background: var(--bg-light);
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+/* User Score Badge */
+.badge.bg-primary-soft {
+  background-color: #e3f2fd !important;
+  color: var(--text-primary) !important;
+  border: 1px solid #90caf9;
+  padding: 0.35em 0.65em;
+  font-weight: 500;
+}
+
+.badge.bg-primary-soft:hover {
+  background-color: #bbdefb !important;
+  color: #1a2733 !important;
+}
+
+/* Admin Username */
 .admin-username {
   color: var(--danger-color) !important;
   font-weight: 600;
 }
 
+/* Reply System Styles */
 .comment-replies {
   margin-left: 2rem;
   border-left: 2px solid var(--border-color);
   padding-left: 1rem;
-}
-
-.reply-form {
   margin-top: 1rem;
-  margin-bottom: 1rem;
-}
-
-@media (max-width: 768px) {
-  .comment-replies {
-      margin-left: 1rem;
-      padding-left: 0.5rem;
-  }
-}
-
-.reply-form-container {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-}
-
-.comment-replies {
-  margin-left: 2rem;
-  border-left: 2px solid #ccc;
-  padding-left: 1rem;
 }
 
 .reply-card {
   background: #f9f9f9;
   padding: 1rem;
-  border-radius: 5px;
+  border-radius: 8px;
   margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.reply-form-container {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--bg-light);
+  border-radius: 8px;
+}
+
+.reply-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Button Styles */
+.btn-primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--bg-white) !important;
+}
+
+.btn-outline-primary {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary-color);
+  color: var(--bg-white);
+}
+
+/* Form Styles */
+.form-control {
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+}
+
+.form-control:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.form-control::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Alert Styles */
+.alert-info {
+  color: var(--info-color);
+  background-color: #d1ecf1;
+  border-color: #bee5eb;
+}
+
+/* Modal Styles */
+.modal-content {
+  color: var(--text-primary);
+  border: none;
+  border-radius: 12px;
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border-color);
+}
+
+/* Animation Classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .contact-background {
+    padding: 2rem 0;
+  }
+
+  .content-wrapper {
+    border-radius: 10px;
+    padding: 1.5rem;
+  }
+
+  .comment-replies {
+    margin-left: 1rem;
+    padding-left: 0.5rem;
+  }
+  
+  .btn-group {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .btn-group .btn {
+    flex: 1;
+    min-width: calc(50% - 0.5rem);
+  }
 }

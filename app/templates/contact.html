@@ -1,11 +1,13 @@
 <!-- app/templates/contact.html -->
-{% extends "base.html" %} {% block title %}Contact Us - Nigerian Institutions
-Finder{% endblock %} {% block extra_head %}
-<link
-  rel="stylesheet"
-  href="{{ url_for('static', filename='css/contact.css') }}"
-/>
-{% endblock %} {% block content %}
+{% extends "base.html" %}
+
+{% block title %}Contact Us - Nigerian Institutions Finder{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/contact.css') }}" />
+{% endblock %}
+
+{% block content %}
 <div class="contact-background">
   <div class="container">
     <div class="content-wrapper">
@@ -25,79 +27,53 @@ Finder{% endblock %} {% block extra_head %}
         <!-- Comments Section -->
         <div class="col-lg-7">
           <div class="card shadow-hover h-100">
-            <div
-              class="card-header bg-gradient d-flex justify-content-between align-items-center py-3"
-            >
+            <div class="card-header bg-gradient d-flex justify-content-between align-items-center py-3">
               <h2 class="h5 mb-0">
-                <i class="fas fa-comments me-2 text-primary"></i>Community
-                Discussion
+                <i class="fas fa-comments me-2 text-primary"></i>Community Discussion
               </h2>
               {% if current_user.is_authenticated %}
-              <button
-                class="btn btn-primary btn-sm px-3"
-                data-bs-toggle="modal"
-                data-bs-target="#addCommentModal"
-              >
+              <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#addCommentModal">
                 <i class="fas fa-plus-circle me-2"></i>Add Comment
               </button>
               {% else %}
-              <a
-                href="{{ url_for('auth.login') }}"
-                class="btn btn-outline-primary btn-sm px-3"
-                data-bs-toggle="tooltip"
-                data-bs-placement="top"
-                title="Sign in to add a comment"
-              >
+              <a href="{{ url_for('auth.login') }}" 
+                 class="btn btn-outline-primary btn-sm px-3"
+                 data-bs-toggle="tooltip"
+                 data-bs-placement="top"
+                 title="Sign in to add a comment">
                 <i class="fas fa-sign-in-alt me-2"></i>Login to Comment
               </a>
               {% endif %}
             </div>
 
             <div class="card-body p-0">
-              <div
-                class="comments-section"
-                style="max-height: 600px; overflow-y: auto"
-              >
+              <div class="comments-section">
                 {% if not current_user.is_authenticated %}
-                <div
-                  class="alert alert-info m-3 d-flex align-items-center"
-                  role="alert"
-                >
+                <div class="alert alert-info m-3 d-flex align-items-center" role="alert">
                   <i class="fas fa-info-circle me-3 fa-lg"></i>
-                  <div>
-                    Sign in to join the conversation and interact with other
-                    members.
-                  </div>
+                  <div>Sign in to join the conversation and interact with other members.</div>
                 </div>
-                {% endif %} {% if comments %}
+                {% endif %}
+
+                {% if comments %}
                 <div class="comment-list p-3">
                   {% for comment in comments %}
-                  <div class="comment-card mb-3 fade-in">
+                  <div class="comment-card mb-3 fade-in" id="comment-{{ comment.id }}">
                     <div class="p-3 bg-light rounded-3">
-                      <div
-                        class="d-flex justify-content-between align-items-center mb-2"
-                      >
+                      <div class="d-flex justify-content-between align-items-center mb-2">
                         <div class="d-flex align-items-center">
                           <div class="user-avatar me-2">
-                            <i
-                              class="fas fa-user-circle fa-2x text-primary"
-                            ></i>
+                            <i class="fas fa-user-circle fa-2x text-primary"></i>
                           </div>
                           <div>
-                            <h6
-                              class="mb-0 {% if comment.author.is_admin %}admin-username{% endif %}"
-                            >
+                            <h6 class="mb-0 {% if comment.author.is_admin %}admin-username{% endif %}">
                               {{ comment.author.username }}
-                              <span
-                                class="badge bg-primary-soft ms-1 user-score"
-                                data-user-id="{{ comment.author.id }}"
-                              >
+                              <span class="badge bg-primary-soft ms-1 user-score" data-user-id="{{ comment.author.id }}">
                                 {{ comment.author.score }}
                               </span>
                             </h6>
                             <small class="text-muted">
-                              {{ comment.date_posted.strftime('%B %d, %Y at
-                              %H:%M') }}
+                              {{ comment.date_posted.strftime('%B %d, %Y at %H:%M') }}
                             </small>
                           </div>
                         </div>
@@ -107,74 +83,72 @@ Finder{% endblock %} {% block extra_head %}
                         <p class="mb-0">{{ comment.content }}</p>
                       </div>
 
-                      <div
-                        class="d-flex justify-content-between align-items-center"
-                      >
+                      <div class="d-flex justify-content-between align-items-center">
                         <div class="btn-group">
-                          <button
-                            class="btn btn-sm btn-outline-primary vote-btn"
-                            data-comment-id="{{ comment.id }}"
-                            data-vote-type="like"
-                          >
+                          <button class="btn btn-sm btn-outline-primary vote-btn"
+                                  data-comment-id="{{ comment.id }}"
+                                  data-vote-type="like">
                             <i class="fas fa-thumbs-up me-1"></i>
-                            <span class="like-count"
-                              >({{ comment.likes }})</span
-                            >
+                            <span class="like-count">({{ comment.likes }})</span>
                           </button>
-                          <button
-                            class="btn btn-sm btn-outline-danger vote-btn"
-                            data-comment-id="{{ comment.id }}"
-                            data-vote-type="dislike"
-                          >
+                          <button class="btn btn-sm btn-outline-danger vote-btn"
+                                  data-comment-id="{{ comment.id }}"
+                                  data-vote-type="dislike">
                             <i class="fas fa-thumbs-down me-1"></i>
-                            <span class="dislike-count"
-                              >({{ comment.dislikes }})</span
-                            >
+                            <span class="dislike-count">({{ comment.dislikes }})</span>
                           </button>
-                          <button
-                            class="btn btn-sm btn-outline-secondary reply-btn"
-                            data-comment-id="{{ comment.id }}"
-                          >
+                          <button class="btn btn-sm btn-outline-secondary reply-btn"
+                                  data-comment-id="{{ comment.id }}">
                             <i class="fas fa-reply me-1"></i>Reply
                           </button>
-                          <div
-                            class="reply-form-container"
-                            id="reply-form-{{ comment.id }}"
-                            style="display: none"
-                          >
-                            <textarea
-                              class="form-control reply-textarea"
-                              placeholder="Write your reply"
-                            ></textarea>
-                            <button
-                              class="btn btn-primary post-reply-btn"
-                              data-parent-id="{{ comment.id }}"
-                            >
-                              Post Reply
-                            </button>
-                          </div>
                         </div>
 
-                        {% if current_user.is_authenticated and (current_user.id
-                        == comment.user_id or current_user.is_admin) %}
+                        {% if current_user.is_authenticated and (current_user.id == comment.user_id or current_user.is_admin) %}
                         <div class="comment-actions">
-                          <form
-                            action="{{ url_for('main.delete_comment', comment_id=comment.id) }}"
-                            method="POST"
-                            class="d-inline delete-comment-form"
-                          >
+                          <form action="{{ url_for('main.delete_comment', comment_id=comment.id) }}"
+                                method="POST"
+                                class="d-inline delete-comment-form">
                             {{ form.hidden_tag() }}
-                            <button
-                              type="submit"
-                              class="btn btn-sm btn-danger"
-                              data-bs-toggle="tooltip"
-                              data-bs-placement="top"
-                              title="Delete comment"
-                            >
+                            <button type="submit"
+                                    class="btn btn-sm btn-danger"
+                                    data-bs-toggle="tooltip"
+                                    data-bs-placement="top"
+                                    title="Delete comment">
                               <i class="fas fa-trash-alt"></i>
                             </button>
                           </form>
                         </div>
+                        {% endif %}
+                      </div>
+
+                      <!-- Reply Container -->
+                      <div class="comment-replies mt-3" id="replies-{{ comment.id }}">
+                        {% if comment.replies %}
+                          {% for reply in comment.replies %}
+                          <div class="reply-card animate__animated animate__fadeIn">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                              <div class="d-flex align-items-center">
+                                <div class="user-avatar me-2">
+                                  <i class="fas fa-user-circle text-primary"></i>
+                                </div>
+                                <div>
+                                  <h6 class="mb-0 {% if reply.author.is_admin %}admin-username{% endif %}">
+                                    {{ reply.author.username }}
+                                    <span class="badge bg-primary-soft ms-1 user-score" data-user-id="{{ reply.author.id }}">
+                                      {{ reply.author.score }}
+                                    </span>
+                                  </h6>
+                                  <small class="text-muted">
+                                    {{ reply.date_posted.strftime('%B %d, %Y at %H:%M') }}
+                                  </small>
+                                </div>
+                              </div>
+                            </div>
+                            <div class="reply-content">
+                              <p class="mb-0">{{ reply.content }}</p>
+                            </div>
+                          </div>
+                          {% endfor %}
                         {% endif %}
                       </div>
                     </div>
@@ -184,9 +158,7 @@ Finder{% endblock %} {% block extra_head %}
                 {% else %}
                 <div class="text-center py-5">
                   <i class="fas fa-comments text-muted fa-3x mb-3"></i>
-                  <p class="text-muted mb-0">
-                    No comments yet. Be the first to start the conversation!
-                  </p>
+                  <p class="text-muted mb-0">No comments yet. Be the first to start the conversation!</p>
                 </div>
                 {% endif %}
               </div>
@@ -203,17 +175,14 @@ Finder{% endblock %} {% block extra_head %}
               </h2>
             </div>
             <div class="card-body">
-              <form
-                action="{{ url_for('main.contact') }}"
-                method="POST"
-                class="needs-validation contact-form"
-                novalidate
-              >
+              <form action="{{ url_for('main.contact') }}"
+                    method="POST"
+                    class="needs-validation contact-form"
+                    novalidate>
                 {{ form.hidden_tag() }}
 
                 <div class="form-floating mb-3">
-                  {{ form.name(class="form-control", placeholder="Enter your
-                  name", id="floatingName") }}
+                  {{ form.name(class="form-control", placeholder="Enter your name", id="floatingName") }}
                   <label for="floatingName">
                     <i class="fas fa-user me-2"></i>Your Name
                   </label>
@@ -221,19 +190,15 @@ Finder{% endblock %} {% block extra_head %}
                 </div>
 
                 <div class="form-floating mb-3">
-                  {{ form.email(class="form-control", placeholder="Enter your
-                  email", id="floatingEmail") }}
+                  {{ form.email(class="form-control", placeholder="Enter your email", id="floatingEmail") }}
                   <label for="floatingEmail">
                     <i class="fas fa-envelope me-2"></i>Email Address
                   </label>
-                  <div class="invalid-feedback">
-                    Please enter a valid email address.
-                  </div>
+                  <div class="invalid-feedback">Please enter a valid email address.</div>
                 </div>
 
                 <div class="form-floating mb-3">
-                  {{ form.subject(class="form-control", placeholder="Enter
-                  subject", id="floatingSubject") }}
+                  {{ form.subject(class="form-control", placeholder="Enter subject", id="floatingSubject") }}
                   <label for="floatingSubject">
                     <i class="fas fa-heading me-2"></i>Subject
                   </label>
@@ -241,8 +206,7 @@ Finder{% endblock %} {% block extra_head %}
                 </div>
 
                 <div class="form-floating mb-3">
-                  {{ form.message(class="form-control", style="height: 150px",
-                  placeholder="Enter your message", id="floatingMessage") }}
+                  {{ form.message(class="form-control", style="height: 150px", placeholder="Enter your message", id="floatingMessage") }}
                   <label for="floatingMessage">
                     <i class="fas fa-comment me-2"></i>Your Message
                   </label>
@@ -261,62 +225,48 @@ Finder{% endblock %} {% block extra_head %}
 
     <!-- Add Comment Modal -->
     {% if current_user.is_authenticated %}
-    <div
-      class="modal fade"
-      id="addCommentModal"
-      tabindex="-1"
-      aria-labelledby="addCommentModalLabel"
-      aria-hidden="true"
-    >
+    <div class="modal fade"
+         id="addCommentModal"
+         tabindex="-1"
+         aria-labelledby="addCommentModalLabel"
+         aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-          <form
-            action="{{ url_for('main.add_comment') }}"
-            method="POST"
-            class="comment-form"
-            novalidate
-          >
+          <form action="{{ url_for('main.add_comment') }}"
+                method="POST"
+                class="comment-form"
+                novalidate>
             {{ form.hidden_tag() }}
             <div class="modal-header">
               <h5 class="modal-title" id="addCommentModalLabel">
                 <i class="fas fa-comment-dots me-2"></i>Add a Comment
               </h5>
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              ></button>
+              <button type="button"
+                      class="btn-close"
+                      data-bs-dismiss="modal"
+                      aria-label="Close"></button>
             </div>
             <div class="modal-body">
               <div class="form-floating mb-3">
-                <textarea
-                  class="form-control"
-                  id="comment"
-                  name="comment"
-                  style="height: 150px"
-                  maxlength="200"
-                  placeholder="Write your comment"
-                  required
-                ></textarea>
+                <textarea class="form-control"
+                         id="comment"
+                         name="comment"
+                         style="height: 150px"
+                         maxlength="200"
+                         placeholder="Write your comment"
+                         required></textarea>
                 <label for="comment">Your Comment</label>
-                <div
-                  class="form-text d-flex justify-content-between align-items-center mt-2"
-                >
+                <div class="form-text d-flex justify-content-between align-items-center mt-2">
                   <span class="text-muted">Maximum 200 characters</span>
-                  <span id="charCount" class="badge bg-secondary"
-                    >200 remaining</span
-                  >
+                  <span id="charCount" class="badge bg-secondary">200 remaining</span>
                 </div>
                 <div class="invalid-feedback">Please enter your comment.</div>
               </div>
             </div>
             <div class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                data-bs-dismiss="modal"
-              >
+              <button type="button"
+                      class="btn btn-secondary"
+                      data-bs-dismiss="modal">
                 <i class="fas fa-times me-2"></i>Cancel
               </button>
               <button type="submit" class="btn btn-primary">
@@ -328,53 +278,63 @@ Finder{% endblock %} {% block extra_head %}
       </div>
     </div>
     {% endif %}
-<div class="modal fade" id="replyModal" tabindex="-1" aria-labelledby="replyModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="replyModalLabel">
-          <i class="fas fa-reply me-2"></i>Reply to Comment
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="original-comment mb-3">
-          <h6 class="text-muted mb-2">Original Comment:</h6>
-          <div class="parent-comment bg-light p-3 rounded"></div>
-        </div>
-        <div class="form-floating">
-          <textarea 
-            class="form-control reply-textarea" 
-            placeholder="Write your reply" 
-            style="height: 100px"
-            maxlength="200"
-            required
-          ></textarea>
-          <label>Your Reply</label>
-          <div class="form-text text-end">
-            <span class="reply-char-count">200</span> characters remaining
+
+    <!-- Reply Modal -->
+    <div class="modal fade"
+         id="replyModal"
+         tabindex="-1"
+         aria-labelledby="replyModalLabel"
+         aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="replyModalLabel">
+              <i class="fas fa-reply me-2"></i>Reply to Comment
+            </h5>
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="original-comment mb-3">
+              <h6 class="text-muted mb-2">Original Comment:</h6>
+              <div class="parent-comment bg-light p-3 rounded"></div>
+            </div>
+            <div class="form-floating">
+              <textarea class="form-control reply-textarea"
+                        placeholder="Write your reply"
+                        style="height: 100px"
+                        maxlength="200"
+                        required></textarea>
+              <label>Your Reply</label>
+              <div class="form-text text-end">
+                <span class="reply-char-count">200</span> characters remaining
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+              <i class="fas fa-times me-2"></i>Cancel
+            </button>
+            <button type="button" class="btn btn-primary submit-reply">
+              <i class="fas fa-paper-plane me-2"></i>Post Reply
+            </button>
           </div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times me-2"></i>Cancel
-        </button>
-        <button type="button" class="btn btn-primary submit-reply">
-          <i class="fas fa-paper-plane me-2"></i>Post Reply
-        </button>
-      </div>
     </div>
-  </div>
-</div>
+
     <!-- Toast Container -->
-    <div
-      class="toast-container position-fixed bottom-0 end-0 p-3"
-      id="toastContainer"
-    ></div>
+    <div class="toast-container position-fixed bottom-0 end-0 p-3"
+         id="toastContainer"></div>
   </div>
 </div>
-{% endblock %} {% block extra_scripts %}
+{% endblock %}
+
+{% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/comments.js') }}"></script>
 <script>
   window.isAuthenticated = {{ current_user.is_authenticated|tojson }};
