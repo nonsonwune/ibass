@@ -315,4 +315,14 @@
 <script defer src="{{ url_for('static', filename='js/courseSearch.js') }}"></script>
 <script src="{{ url_for('static', filename='js/institutionModal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/recommend.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bookmarks.js') }}"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    initializeBookmarkSystem();
+    if (window.isAuthenticated) {
+      fetchUserBookmarks();
+    }
+  });
+</script>
 {% endblock %}

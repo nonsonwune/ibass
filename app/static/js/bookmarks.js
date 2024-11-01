@@ -11,12 +11,15 @@ function initializeBookmarkSystem() {
 async function handleBookmarkClick(event) {
   event.preventDefault();
 
+  // Early authentication check
   if (!window.isAuthenticated) {
-    window.location.href = "/auth/login";
+    // Store current URL for redirect back after login
+    const currentUrl = window.location.href;
+    window.location.href = `/auth/login?next=${encodeURIComponent(currentUrl)}`;
     return;
   }
 
-  const button = this;
+  const button = event.currentTarget;
   const uniId = button.getAttribute("data-uni-id");
   const isBookmarked = button.classList.contains("btn-secondary");
 
@@ -34,14 +37,20 @@ async function handleBookmarkClick(event) {
         "X-CSRFToken": window.csrfToken,
       },
       body,
+      // Prevent automatic redirect
+      redirect: 'manual'
     });
 
-    if (response.redirected || response.status === 401) {
-      throw new Error("Please sign in to bookmark institutions.");
+    // Handle authentication issues
+    if (response.type === 'opaqueredirect') {
+      const currentUrl = window.location.href;
+      window.location.href = `/auth/login?next=${encodeURIComponent(currentUrl)}`;
+      return;
     }
 
     if (!response.ok) {
-      throw new Error("An unexpected error occurred.");
+      const errorData = await response.json();
+      throw new Error(errorData.message || "An unexpected error occurred.");
     }
 
     const data = await response.json();

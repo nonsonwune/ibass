@@ -138,3 +138,26 @@
     border-color: #bee5eb;
   }
   
+  /* Add to contact.css */
+.admin-username {
+  color: var(--danger-color) !important;
+  font-weight: 600;
+}
+
+.comment-replies {
+  margin-left: 2rem;
+  border-left: 2px solid var(--border-color);
+  padding-left: 1rem;
+}
+
+.reply-form {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .comment-replies {
+      margin-left: 1rem;
+      padding-left: 0.5rem;
+  }
+}

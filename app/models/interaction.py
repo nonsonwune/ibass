@@ -10,7 +10,19 @@ class Comment(BaseModel):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
     likes = db.Column(db.Integer, default=0)
     dislikes = db.Column(db.Integer, default=0)
+    parent_id = db.Column(db.Integer, db.ForeignKey('comment.id', ondelete='CASCADE'), nullable=True)
     
+    # Corrected relationship
+    replies = db.relationship(
+        'Comment',
+        backref=db.backref(
+            'parent', 
+            remote_side='Comment.id'
+        ),
+        lazy='dynamic',
+        cascade='all, delete-orphan'
+    )
+
     votes = db.relationship(
         'Vote', 
         backref='comment',

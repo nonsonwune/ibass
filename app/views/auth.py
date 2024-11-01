@@ -13,8 +13,11 @@ bp = Blueprint('auth', __name__)
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
+        next_page = request.args.get('next')
+        if next_page:
+            return redirect(next_page)
         if current_user.is_admin:
-            return redirect(url_for('admin.admin_dashboard'))  # Fixed from admin.dashboard
+            return redirect(url_for('admin.admin_dashboard'))
         return redirect(url_for('main.home'))
     
     form = LoginForm()
@@ -31,9 +34,11 @@ def login():
             flash('Logged in successfully.', 'success')
             
             next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
             if user.is_admin:
                 return redirect(url_for('admin.admin_dashboard'))
-            return redirect(next_page if next_page else url_for('main.home'))
+            return redirect(url_for('main.home'))
             
         flash('Login unsuccessful. Please check username and password.', 'danger')
     
