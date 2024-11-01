@@ -206,28 +206,6 @@
     margin-bottom: 1rem;
 }
 
-/* Button Styles */
-.btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-}
-
-.btn-primary:hover {
-    background-color: var(--primary-dark);
-    border-color: var(--primary-dark);
-}
-
-.btn-secondary {
-    background-color: var(--secondary-color);
-    border-color: var(--secondary-color);
-}
-
-.btn-secondary:hover {
-    background-color: var(--secondary-color);
-    border-color: var(--secondary-color);
-    opacity: 0.9;
-}
-
 /* Card Body Styles */
 .card-body {
     padding: 1.5rem;

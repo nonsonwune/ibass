@@ -81,3 +81,17 @@ window.IconUtils = {
       }
   }
 };
+
+// Add this to your existing utils.js
+$(document).ready(function() {
+    // Handle search form submission
+    $('.nav-search').on('submit', function(e) {
+        const searchInput = $(this).find('.search-input');
+        
+        // If search input is empty, prevent submission and focus the input
+        if (!searchInput.val().trim()) {
+            e.preventDefault();
+            searchInput.focus();
+        }
+    });
+});
