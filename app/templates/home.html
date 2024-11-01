@@ -9,7 +9,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="hero-section" id="heroSection">
+<section class="hero-section home-hero-section" id="heroSection">
   <div class="container">
     <div class="hero-content text-center text-white mb-5">
       <h1 class="display-3 mb-4 fw-bold">Find Your Perfect Institution</h1>
@@ -18,7 +18,8 @@
       </p>
     </div>
 
-    <div id="wizard-container" class="mx-auto" style="max-width: 800px">
+    <div class="wizard-wrapper">
+    <div id="wizard-container" class="mx-auto">
       <!-- Step 1: Location and Institution Type Selection -->
       <div class="wizard-step active" id="step1">
         <h3 class="text-center mb-4">Choose Your Preferred Location</h3>
@@ -81,7 +82,6 @@
               placeholder="Search courses..."
               autocomplete="off"
               aria-label="Search courses"
-              style="display: none"
             />
           </div>
           <div
@@ -97,7 +97,6 @@
             id="course"
             class="form-select form-select-lg"
             aria-label="Select a Course"
-            style="display: none"
           >
             <option value="">Select a Course</option>
           </select>
@@ -107,7 +106,6 @@
           <button
             id="findInstitution"
             class="btn btn-primary btn-lg"
-            style="display: none"
             aria-label="Find institutions offering this course"
           >
             Find Institution
@@ -122,6 +120,7 @@
           </button>
         </div>
       </div>
+    </div>
     </div>
 
     <div class="scroll-prompt" aria-hidden="true" role="presentation">
@@ -180,5 +179,5 @@
 
 {% block extra_scripts %}
 <!-- Include additional JavaScript files -->
-<script src="{{ url_for('static', filename='js/home.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/home.js') }}"></script>
 {% endblock %}

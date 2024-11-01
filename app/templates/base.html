@@ -10,46 +10,60 @@
       name="description"
       content="Find the perfect educational institution in Nigeria - Compare universities, courses, and admission requirements"
     />
-    <meta name="theme-color" content="var(--primary-color)" />
+    <meta name="theme-color" content="#3498db" />
 
     <title>{% block title %}Naija! Find Uni{% endblock %}</title>
 
-    <!-- Preload Critical Resources -->
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <!-- Preconnect to External Resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
 
     <!-- Core Stylesheets -->
     <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+      integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
-      crossorigin="anonymous"
     />
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-      crossorigin="anonymous"
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
     />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/styles.css') }}"
     />
-    <script>
-      // Add this right after your CSS link
-      document.addEventListener("DOMContentLoaded", function () {
-        const style = getComputedStyle(document.querySelector(".navbar"));
-        if (
-          style.backgroundColor === "rgba(0, 0, 0, 0)" ||
-          style.backgroundColor === "transparent"
-        ) {
-          console.error("Navbar styles not loading properly");
-          // Fallback styles
-          document.querySelector(".navbar").style.backgroundColor = "#2c3e50";
-        }
-      });
-    </script>
 
     <!-- Custom Head Block -->
     {% block extra_head %}{% endblock %}
+
+    <!-- Early Loading Scripts -->
+    <script>
+      // Feature Detection
+      window.APP = {
+        reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)")
+          .matches,
+        touchDevice: "ontouchstart" in window || navigator.maxTouchPoints > 0,
+        darkMode: window.matchMedia("(prefers-color-scheme: dark)").matches,
+      };
+
+      // Add classes to body based on feature detection
+      document.documentElement.classList.toggle(
+        "touch-device",
+        APP.touchDevice
+      );
+      document.documentElement.classList.toggle(
+        "reduced-motion",
+        APP.reducedMotion
+      );
+      document.documentElement.classList.toggle("dark-mode", APP.darkMode);
+    </script>
 
     <!-- Google Adsense -->
     <script
@@ -60,17 +74,21 @@
     <meta name="google-adsense-account" content="ca-pub-1794093128763042" />
   </head>
   <body>
-    <!-- Navigation -->
+    <!-- Enhanced Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container">
+        <!-- Brand -->
         <a
           class="navbar-brand d-flex align-items-center"
           href="{{ url_for('main.home') }}"
         >
-          <i class="fas fa-university me-2"></i>
-          Naija! Find Uni
+          <div class="brand-icon animate__animated animate__fadeIn">
+            <i class="fas fa-university"></i>
+          </div>
+          <span class="ms-2">Naija! Find Uni</span>
         </a>
 
+        <!-- Mobile Toggle -->
         <button
           class="navbar-toggler"
           type="button"
@@ -83,6 +101,7 @@
           <span class="navbar-toggler-icon"></span>
         </button>
 
+        <!-- Navigation Links -->
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav me-auto">
             <li class="nav-item">
@@ -90,7 +109,8 @@
                 class="nav-link {% if request.endpoint == 'main.home' %}active{% endif %}"
                 href="{{ url_for('main.home') }}"
               >
-                <i class="fas fa-home me-1"></i>Home
+                <i class="fas fa-home nav-icon"></i>
+                <span>Home</span>
               </a>
             </li>
             <li class="nav-item">
@@ -98,29 +118,30 @@
                 class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}"
                 href="{{ url_for('main.about') }}"
               >
-                <i class="fas fa-info-circle me-1"></i>About
+                <i class="fas fa-info-circle nav-icon"></i>
+                <span>About</span>
               </a>
             </li>
-            <li class="nav-item position-relative">
+            <li class="nav-item">
               <a
                 class="nav-link {% if request.endpoint == 'main.contact' %}active{% endif %}"
                 href="{{ url_for('main.contact') }}"
               >
-                <i class="fas fa-envelope me-1"></i>Contact
-                <span class="notification-badge"></span>
+                <i class="fas fa-envelope nav-icon"></i>
+                <span>Contact</span>
               </a>
             </li>
           </ul>
 
-          <!-- Global Search -->
+          <!-- Enhanced Search -->
           <form
-            class="d-flex me-2"
+            class="d-flex me-2 nav-search"
             action="{{ url_for('main.search_results') }}"
             method="GET"
           >
             <div class="input-group">
               <input
-                class="form-control"
+                class="form-control search-input"
                 type="search"
                 placeholder="Search institutions or courses..."
                 name="q"
@@ -138,18 +159,20 @@
             {% if current_user.is_authenticated %}
             <li class="nav-item dropdown">
               <a
-                class="nav-link dropdown-toggle"
+                class="nav-link dropdown-toggle user-dropdown"
                 href="#"
                 id="userDropdown"
                 role="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                <i class="fas fa-user-circle me-1"></i>
-                {{ current_user.username }}
+                <div class="user-avatar">
+                  <i class="fas fa-user-circle"></i>
+                </div>
+                <span class="ms-2">{{ current_user.username }}</span>
               </a>
               <ul
-                class="dropdown-menu dropdown-menu-end"
+                class="dropdown-menu dropdown-menu-end animate__animated animate__fadeIn"
                 aria-labelledby="userDropdown"
               >
                 <li>
@@ -180,12 +203,12 @@
             </li>
             {% else %}
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('auth.login') }}">
+              <a class="nav-link auth-link" href="{{ url_for('auth.login') }}">
                 <i class="fas fa-sign-in-alt me-1"></i>Login
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('auth.signup') }}">
+              <a class="nav-link auth-link" href="{{ url_for('auth.signup') }}">
                 <i class="fas fa-user-plus me-1"></i>Sign Up
               </a>
             </li>
@@ -195,19 +218,19 @@
       </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="container mt-4">
+    <!-- Flash Messages -->
+    <div class="flash-messages" aria-live="polite">
       {% with messages = get_flashed_messages(with_categories=true) %} {% if
       messages %} {% for category, message in messages %}
       <div
         class="alert alert-{{ category }} alert-dismissible fade show"
         role="alert"
       >
-        <div class="d-flex align-items-center">
+        <div class="alert-content">
           <i
-            class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"
+            class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} alert-icon"
           ></i>
-          <div>{{ message }}</div>
+          <div class="alert-text">{{ message }}</div>
         </div>
         <button
           type="button"
@@ -216,55 +239,71 @@
           aria-label="Close"
         ></button>
       </div>
-      {% endfor %} {% endif %} {% endwith %} {% block content %}{% endblock %}
+      {% endfor %} {% endif %} {% endwith %}
     </div>
 
-    <!-- Footer -->
-    <footer class="footer py-4 mt-5 bg-dark text-white">
+    <!-- Main Content -->
+    <main class="main-content">{% block content %}{% endblock %}</main>
+
+    <!-- Enhanced Footer -->
+    <footer class="footer py-4 mt-5">
       <div class="container">
-        <div class="row">
-          <div class="col-md-6">
-            <h5>Naija! Find Uni</h5>
-            <p class="mb-0">
+        <div class="row g-4">
+          <div class="col-lg-4">
+            <div class="footer-brand">
+              <i class="fas fa-university footer-icon"></i>
+              <h5 class="mb-3">Naija! Find Uni</h5>
+            </div>
+            <p class="footer-description">
               Helping students find their perfect educational path in Nigeria.
             </p>
           </div>
-          <div class="col-md-3">
-            <h5>Quick Links</h5>
-            <ul class="list-unstyled">
+          <div class="col-lg-4">
+            <h5 class="footer-heading">Quick Links</h5>
+            <ul class="footer-links">
               <li>
-                <a href="{{ url_for('main.home') }}" class="text-white"
-                  ><i class="fas fa-home me-2"></i>Home</a
-                >
+                <a href="{{ url_for('main.home') }}">
+                  <i class="fas fa-home me-2"></i>Home
+                </a>
               </li>
               <li>
-                <a href="{{ url_for('main.about') }}" class="text-white"
-                  ><i class="fas fa-info-circle me-2"></i>About</a
-                >
+                <a href="{{ url_for('main.about') }}">
+                  <i class="fas fa-info-circle me-2"></i>About
+                </a>
               </li>
               <li>
-                <a href="{{ url_for('main.contact') }}" class="text-white"
-                  ><i class="fas fa-envelope me-2"></i>Contact</a
-                >
+                <a href="{{ url_for('main.contact') }}">
+                  <i class="fas fa-envelope me-2"></i>Contact
+                </a>
               </li>
             </ul>
           </div>
-          <div class="col-md-3">
-            <h5>Follow Us</h5>
+          <div class="col-lg-4">
+            <h5 class="footer-heading">Connect With Us</h5>
             <div class="social-links">
               <a
                 href="https://www.facebook.com/9jaSL"
-                class="text-white me-3"
+                target="_blank"
+                rel="noopener"
+                class="social-link"
                 aria-label="Facebook"
               >
                 <i class="fab fa-facebook-f"></i>
               </a>
-              <a href="#" class="text-white me-3" aria-label="Twitter">
+              <a
+                href="https://twitter.com/9jastudentlife"
+                target="_blank"
+                rel="noopener"
+                class="social-link"
+                aria-label="Twitter"
+              >
                 <i class="fab fa-twitter"></i>
               </a>
               <a
                 href="https://www.instagram.com/9jastudentlife"
-                class="text-white me-3"
+                target="_blank"
+                rel="noopener"
+                class="social-link"
                 aria-label="Instagram"
               >
                 <i class="fab fa-instagram"></i>
@@ -272,43 +311,46 @@
             </div>
           </div>
         </div>
-        <hr class="mt-4 mb-3" />
-        <p class="text-center mb-0">
-          &copy; 2015 9jaStudentLife LTD. All rights reserved.
-        </p>
+
+        <hr class="footer-divider" />
+
+        <div class="footer-bottom">
+          <p class="copyright">
+            &copy; <span class="current-year">2024</span> 9jaStudentLife LTD.
+            All rights reserved.
+          </p>
+        </div>
       </div>
     </footer>
 
-    <!-- Toast Container -->
-    <div
-      id="toastContainer"
-      class="toast-container position-fixed top-0 end-0 p-3"
-    ></div>
+    <!-- Back to Top Button -->
+    <button id="backToTop" class="back-to-top" aria-label="Back to top">
+      <i class="fas fa-arrow-up"></i>
+    </button>
 
-    <!-- Cookie Consent -->
-    <div id="consent-banner" class="cookie-consent-banner">
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+    <!-- Enhanced Cookie Consent -->
+    <div id="cookieConsent" class="cookie-consent">
       <div class="container">
         <div class="cookie-content">
-          <p class="mb-3">
-            We use cookies and similar technologies to improve your browsing
-            experience, personalize content and ads, and analyze our traffic. By
-            clicking "Accept All", you consent to our use of cookies.
-          </p>
+          <div class="cookie-text">
+            <i class="fas fa-cookie-bite cookie-icon"></i>
+            <p>
+              We use cookies to enhance your browsing experience and analyze our
+              traffic.
+            </p>
+          </div>
           <div class="cookie-buttons">
-            <button class="btn btn-primary" onclick="acceptAllConsent()">
-              <i class="fas fa-check"></i>
-              Accept All
+            <button class="btn btn-primary accept-cookies">
+              <i class="fas fa-check"></i> Accept All
             </button>
-            <button
-              class="btn btn-outline-secondary"
-              onclick="rejectAllConsent()"
-            >
-              <i class="fas fa-times"></i>
-              Reject All
+            <button class="btn btn-outline-secondary reject-cookies">
+              <i class="fas fa-times"></i> Reject All
             </button>
-            <button class="btn btn-link" onclick="managePreferences()">
-              <i class="fas fa-cog"></i>
-              Manage Preferences
+            <button class="btn btn-link manage-cookies">
+              <i class="fas fa-cog"></i> Preferences
             </button>
           </div>
         </div>
@@ -317,16 +359,16 @@
 
     <!-- Cookie Preferences Modal -->
     <div
-      id="preferences-modal"
       class="modal fade"
+      id="cookiePreferences"
       tabindex="-1"
-      aria-labelledby="preferencesModalLabel"
+      aria-labelledby="cookiePreferencesLabel"
       aria-hidden="true"
     >
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="preferencesModalLabel">
+            <h5 class="modal-title" id="cookiePreferencesLabel">
               <i class="fas fa-cookie-bite me-2"></i>Cookie Preferences
             </h5>
             <button
@@ -337,20 +379,48 @@
             ></button>
           </div>
           <div class="modal-body">
-            <div class="form-check form-switch mb-3">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                id="personalizedAdsConsent"
-                checked
-              />
-              <label class="form-check-label" for="personalizedAdsConsent"
-                >Personalized Ads</label
-              >
-              <small class="form-text text-muted d-block">
-                When enabled, we use cookies to personalize ads based on your
-                interests and browsing activity.
-              </small>
+            <div class="cookie-settings">
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="necessaryCookies"
+                  checked
+                  disabled
+                />
+                <label class="form-check-label" for="necessaryCookies">
+                  Necessary Cookies
+                  <small class="text-muted d-block"
+                    >Required for basic website functionality</small
+                  >
+                </label>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="analyticsCookies"
+                />
+                <label class="form-check-label" for="analyticsCookies">
+                  Analytics Cookies
+                  <small class="text-muted d-block"
+                    >Help us improve our website</small
+                  >
+                </label>
+              </div>
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="marketingCookies"
+                />
+                <label class="form-check-label" for="marketingCookies">
+                  Marketing Cookies
+                  <small class="text-muted d-block"
+                    >Used for personalized advertisements</small
+                  >
+                </label>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
@@ -359,14 +429,10 @@
               class="btn btn-secondary"
               data-bs-dismiss="modal"
             >
-              <i class="fas fa-times me-2"></i>Close
+              Close
             </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              onclick="savePreferences()"
-            >
-              <i class="fas fa-save me-2"></i>Save changes
+            <button type="button" class="btn btn-primary save-preferences">
+              Save Preferences
             </button>
           </div>
         </div>
@@ -374,310 +440,181 @@
     </div>
 
     <!-- Core Scripts -->
-    <script>
-      window.csrfToken = "{{ csrf_token() }}";
-      window.isAuthenticated = {{ current_user.is_authenticated|tojson }};
-    </script>
+    <!-- Core Scripts -->
+    <script defer src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script
-      src="https://code.jquery.com/jquery-3.6.0.min.js"
-      crossorigin="anonymous"
-    ></script>
-    <script
+      defer
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
-      crossorigin="anonymous"
+    ></script>
+    <script
+      defer
+      src="https://cdnjs.cloudflare.com/ajax/libs/jquery-throttle-debounce/1.1/jquery.ba-throttle-debounce.min.js"
     ></script>
 
-    <!-- Refactored Custom Scripts -->
-    <script src="{{ url_for('static', filename='js/state.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/comments.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/voting.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/bookmarks.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/courseSearch.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <!-- Include your scripts with 'defer' -->
+    <script
+      defer
+      src="{{ url_for('static', filename='js/utils.js') }}"
+    ></script>
+    <script
+      defer
+      src="{{ url_for('static', filename='js/state.js') }}"
+    ></script>
 
-    <!-- Cookie Consent Script -->
-    <script>
-      // Cookie Consent Management
-      const CookieConsent = {
-        init() {
-          // Only show banner if consent hasn't been given
-          if (!this.hasConsent()) {
-            this.showBanner();
-          }
-          this.attachEventListeners();
-        },
-
-        hasConsent() {
-          return localStorage.getItem("cookieConsent") !== null;
-        },
-
-        showBanner() {
-          const banner = document.getElementById("consent-banner");
-          if (banner) {
-            banner.style.display = "block";
-          }
-        },
-
-        hideBanner() {
-          const banner = document.getElementById("consent-banner");
-          if (banner) {
-            banner.style.display = "none";
-          }
-        },
-
-        saveConsent(type, preferences = {}) {
-          localStorage.setItem("cookieConsent", type);
-          localStorage.setItem(
-            "cookiePreferences",
-            JSON.stringify(preferences)
-          );
-          localStorage.setItem("consentTimestamp", new Date().toISOString());
-          this.hideBanner();
-        },
-
-        attachEventListeners() {
-          // Accept All
-          const acceptBtn = document.querySelector(
-            '[onclick="acceptAllConsent()"]'
-          );
-          if (acceptBtn) {
-            acceptBtn.addEventListener("click", (e) => {
-              e.preventDefault();
-              this.saveConsent("full", { analytics: true, advertising: true });
-              this.applyPreferences({ analytics: true, advertising: true });
-            });
-          }
-
-          // Reject All
-          const rejectBtn = document.querySelector(
-            '[onclick="rejectAllConsent()"]'
-          );
-          if (rejectBtn) {
-            rejectBtn.addEventListener("click", (e) => {
-              e.preventDefault();
-              this.saveConsent("minimal", {
-                analytics: false,
-                advertising: false,
-              });
-              this.applyPreferences({ analytics: false, advertising: false });
-            });
-          }
-
-          // Manage Preferences
-          const manageBtn = document.querySelector(
-            '[onclick="managePreferences()"]'
-          );
-          if (manageBtn) {
-            manageBtn.addEventListener("click", (e) => {
-              e.preventDefault();
-              this.showPreferencesModal();
-            });
-          }
-        },
-
-        applyPreferences(preferences) {
-          if (preferences.advertising) {
-            // Enable personalized ads
-            window.googletag = window.googletag || { cmd: [] };
-            googletag.cmd.push(() => {
-              googletag.pubads().setRequestNonPersonalizedAds(0);
-            });
-          } else {
-            // Disable personalized ads
-            window.googletag = window.googletag || { cmd: [] };
-            googletag.cmd.push(() => {
-              googletag.pubads().setRequestNonPersonalizedAds(1);
-            });
-          }
-
-          // Apply other preferences as needed
-        },
-
-        showPreferencesModal() {
-          const modal = new bootstrap.Modal(
-            document.getElementById("preferences-modal")
-          );
-          const savedPreferences = JSON.parse(
-            localStorage.getItem("cookiePreferences") || "{}"
-          );
-
-          // Update checkbox states
-          const checkboxes = document.querySelectorAll(
-            '#preferences-modal input[type="checkbox"]'
-          );
-          checkboxes.forEach((checkbox) => {
-            checkbox.checked = savedPreferences[checkbox.id] || false;
-          });
-
-          modal.show();
-        },
-      };
-
-      // Initialize on DOM load
-      document.addEventListener("DOMContentLoaded", () => {
-        CookieConsent.init();
-      });
-
-      // Make functions available globally
-      window.acceptAllConsent = () =>
-        CookieConsent.saveConsent("full", {
-          analytics: true,
-          advertising: true,
-        });
-      window.rejectAllConsent = () =>
-        CookieConsent.saveConsent("minimal", {
-          analytics: false,
-          advertising: false,
-        });
-      window.managePreferences = () => CookieConsent.showPreferencesModal();
-      window.savePreferences = () => {
-        const preferences = {
-          analytics:
-            document.getElementById("analyticsConsent")?.checked || false,
-          advertising:
-            document.getElementById("personalizedAdsConsent")?.checked || false,
-        };
-        CookieConsent.saveConsent("custom", preferences);
-        CookieConsent.applyPreferences(preferences);
-        bootstrap.Modal.getInstance(
-          document.getElementById("preferences-modal")
-        ).hide();
-      };
-    </script>
-
-    <!-- Utility Scripts -->
-    <script>
-      // Initialize Bootstrap tooltips
-      document.addEventListener("DOMContentLoaded", function () {
-        var tooltipTriggerList = [].slice.call(
-          document.querySelectorAll('[data-bs-toggle="tooltip"]')
-        );
-        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-          new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-      });
-
-      // Handle navigation active states
-      document.addEventListener("DOMContentLoaded", function () {
-        const currentPath = window.location.pathname;
-        document.querySelectorAll(".nav-link").forEach((link) => {
-          if (link.getAttribute("href") === currentPath) {
-            link.classList.add("active");
-          }
-        });
-      });
-
-      // Smooth scroll behavior
-      document.addEventListener("DOMContentLoaded", function () {
-        document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
-          anchor.addEventListener("click", function (e) {
-            const href = this.getAttribute("href");
-            if (href === "#" || href === "") {
-              // Prevent default action for href="#" or empty href
-              e.preventDefault();
-            } else {
-              e.preventDefault();
-              try {
-                const target = document.querySelector(href);
-                if (target) {
-                  target.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
-                }
-              } catch (error) {
-                console.error(`Invalid selector '${href}'`, error);
-              }
-            }
-          });
-        });
-      });
-
-      // Handle mobile navigation
-      document.addEventListener("DOMContentLoaded", function () {
-        const navbarToggler = document.querySelector(".navbar-toggler");
-        const navbarCollapse = document.querySelector(".navbar-collapse");
-
-        if (navbarToggler && navbarCollapse) {
-          document.addEventListener("click", function (e) {
-            if (
-              !navbarCollapse.contains(e.target) &&
-              !navbarToggler.contains(e.target)
-            ) {
-              if (navbarCollapse.classList.contains("show")) {
-                navbarToggler.click();
-              }
-            }
-          });
-
-          // Close mobile menu when link is clicked, except for dropdown toggles
-          navbarCollapse
-            .querySelectorAll(".nav-link:not(.dropdown-toggle)")
-            .forEach((link) => {
-              link.addEventListener("click", () => {
-                if (navbarCollapse.classList.contains("show")) {
-                  navbarToggler.click();
-                }
-              });
-            });
-        }
-      });
-
-      // Handle scroll to top
-      document.addEventListener("DOMContentLoaded", function () {
-        const scrollTopBtn = document.createElement("button");
-        scrollTopBtn.className = "scroll-top-btn";
-        scrollTopBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
-        document.body.appendChild(scrollTopBtn);
-
-        window.addEventListener("scroll", function () {
-          if (window.pageYOffset > 100) {
-            scrollTopBtn.classList.add("show");
-          } else {
-            scrollTopBtn.classList.remove("show");
-          }
-        });
-
-        scrollTopBtn.addEventListener("click", function () {
-          window.scrollTo({
-            top: 0,
-            behavior: "smooth",
-          });
-        });
-      });
-
-      // Enhanced form validation
-      document.addEventListener("DOMContentLoaded", function () {
-        const forms = document.querySelectorAll("form");
-        forms.forEach((form) => {
-          if (form.classList.contains("needs-validation")) {
-            form.addEventListener(
-              "submit",
-              function (event) {
-                if (!form.checkValidity()) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }
-                form.classList.add("was-validated");
-              },
-              false
-            );
-          }
-        });
-      });
-
-      // Handle dynamic year in footer
-      document.addEventListener("DOMContentLoaded", function () {
-        const yearElement = document.querySelector(".copyright-year");
-        if (yearElement) {
-          yearElement.textContent = new Date().getFullYear();
-        }
-      });
-    </script>
-
-    <!-- Custom Scripts Block -->
+    <!-- Page-Specific Scripts -->
     {% block extra_scripts %}{% endblock %}
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // List of all required icons
+        const requiredIcons = [
+          // Navigation Icons
+          "fa-university",
+          "fa-home",
+          "fa-info-circle",
+          "fa-envelope",
+          "fa-search",
+          "fa-user-circle",
+          "fa-sign-in-alt",
+          "fa-user-plus",
+          "fa-cog",
+          "fa-sign-out-alt",
+
+          // Feature Icons
+          "fa-database",
+          "fa-bullseye",
+          "fa-chart-line",
+
+          // Institution Type Icons
+          "fa-graduation-cap",
+          "fa-school",
+          "fa-industry",
+          "fa-chalkboard-teacher",
+          "fa-hospital",
+          "fa-microchip",
+          "fa-leaf",
+          "fa-laptop",
+
+          // UI Elements
+          "fa-times",
+          "fa-check",
+          "fa-arrow-right",
+          "fa-arrow-left",
+          "fa-arrow-up",
+          "fa-exclamation-circle",
+          "fa-check-circle",
+          "fa-cookie-bite",
+
+          // Social Media
+          "fa-facebook-f",
+          "fa-twitter",
+          "fa-instagram",
+
+          // Additional UI Icons
+          "fa-chevron-down",
+          "fa-map-marker-alt",
+          "fa-spinner",
+        ];
+
+        // Function to verify icon availability
+        function verifyIcons() {
+          const missingIcons = [];
+
+          requiredIcons.forEach((iconClass) => {
+            // Create a test element
+            const testElement = document.createElement("i");
+            testElement.className = `fas ${iconClass}`;
+            testElement.style.display = "none";
+            document.body.appendChild(testElement);
+
+            // Get computed style
+            const computedStyle = window.getComputedStyle(testElement);
+            const fontFamily = computedStyle.getPropertyValue("font-family");
+
+            // Check if Font Awesome is applied
+            if (!fontFamily.includes("Font Awesome")) {
+              missingIcons.push(iconClass);
+            }
+
+            // Clean up
+            document.body.removeChild(testElement);
+          });
+
+          // Report missing icons
+          if (missingIcons.length > 0) {
+            console.warn("Missing Font Awesome icons:", missingIcons);
+
+            // Create fallback icons object
+            window.iconFallbacks = {
+              "fa-university": "🏛️",
+              "fa-home": "🏠",
+              "fa-info-circle": "ℹ️",
+              "fa-envelope": "✉️",
+              "fa-search": "🔍",
+              "fa-user-circle": "👤",
+              "fa-sign-in-alt": "➡️",
+              "fa-user-plus": "➕",
+              "fa-cog": "⚙️",
+              "fa-sign-out-alt": "⬅️",
+              "fa-database": "💾",
+              "fa-bullseye": "🎯",
+              "fa-chart-line": "📈",
+              "fa-graduation-cap": "🎓",
+              "fa-school": "🏫",
+              "fa-industry": "🏭",
+              "fa-chalkboard-teacher": "👨‍🏫",
+              "fa-hospital": "🏥",
+              "fa-microchip": "💻",
+              "fa-leaf": "🌿",
+              "fa-laptop": "💻",
+              "fa-times": "❌",
+              "fa-check": "✓",
+              "fa-arrow-right": "➡️",
+              "fa-arrow-left": "⬅️",
+              "fa-arrow-up": "⬆️",
+              "fa-exclamation-circle": "❗",
+              "fa-check-circle": "✅",
+              "fa-cookie-bite": "🍪",
+              "fa-facebook-f": "fb",
+              "fa-twitter": "tw",
+              "fa-instagram": "ig",
+              "fa-chevron-down": "▼",
+              "fa-map-marker-alt": "📍",
+              "fa-spinner": "⌛",
+            };
+
+            // Replace missing icons with fallbacks
+            replaceMissingIcons(missingIcons);
+          }
+        }
+
+        // Function to replace missing icons with fallbacks
+        function replaceMissingIcons(missingIcons) {
+          missingIcons.forEach((iconClass) => {
+            const elements = document.querySelectorAll(`.${iconClass}`);
+            elements.forEach((element) => {
+              element.textContent = window.iconFallbacks[iconClass] || "?";
+              element.classList.add("icon-fallback");
+            });
+          });
+        }
+
+        // Add CSS for fallback icons
+        const fallbackStyle = document.createElement("style");
+        fallbackStyle.textContent = `
+        .icon-fallback {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-style: normal;
+            font-size: 1.2em;
+            display: inline-block;
+            vertical-align: middle;
+            line-height: 1;
+        }
+    `;
+        document.head.appendChild(fallbackStyle);
+
+        // Run verification
+        verifyIcons();
+      });
+    </script>
   </body>
 </html>

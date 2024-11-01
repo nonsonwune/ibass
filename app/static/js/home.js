@@ -31,6 +31,12 @@ document.addEventListener("DOMContentLoaded", function () {
     selectedTypesContainer: document.querySelector(".selected-types"),
   };
 
+  // Ensure DOM elements exist
+  if (!DOM.heroSection || !DOM.nextStepBtn || !DOM.locationSelect) {
+    console.warn("Required DOM elements are missing. Exiting script.");
+    return;
+  }
+
   // Program Groups Configuration
   const PROGRAMME_GROUPS = {
     "ALL DEGREE AWARDING INSTITUTIONS": [
@@ -55,9 +61,12 @@ document.addEventListener("DOMContentLoaded", function () {
     ],
   };
 
-  // Utility Functions
+  // Enhanced Utility Functions
   const UTILS = {
     debounce(func, wait) {
+      if (window.debounce) {
+        return window.debounce(func, wait);
+      }
       let timeout;
       return function executedFunction(...args) {
         const later = () => {
@@ -79,6 +88,9 @@ document.addEventListener("DOMContentLoaded", function () {
     },
 
     showLoading(show) {
+      if (window.IconUtils) {
+        IconUtils.setButtonLoading(DOM.findInstitutionBtn, show);
+      }
       DOM.loadingSpinner.style.display = show ? "flex" : "none";
       requestAnimationFrame(() => {
         DOM.loadingSpinner.style.opacity = show ? "1" : "0";
@@ -93,6 +105,12 @@ document.addEventListener("DOMContentLoaded", function () {
       const cleanQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const regex = new RegExp(`(${cleanQuery})`, "gi");
       return text.replace(regex, "<strong>$1</strong>");
+    },
+
+    createLoadingSpinner() {
+      return `<div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>`;
     },
   };
 
@@ -147,7 +165,7 @@ document.addEventListener("DOMContentLoaded", function () {
     },
   };
 
-  // Initialize background image loading
+  // Background Image Loading
   const preloadHeroImage = () => {
     const img = new Image();
     img.src = "/static/images/hero.png";
@@ -167,11 +185,13 @@ document.addEventListener("DOMContentLoaded", function () {
   // Location Handler Implementation
   const LOCATION_HANDLER = {
     async loadLocations() {
+      console.log("loadLocations called");
       try {
         const response = await fetch("/api/locations");
         if (!response.ok) throw new Error("Failed to load locations");
-
+  
         const locations = await response.json();
+        console.log("Locations fetched:", locations);
         this.populateLocations(locations);
       } catch (error) {
         console.error("Error loading locations:", error);
@@ -253,24 +273,31 @@ document.addEventListener("DOMContentLoaded", function () {
     },
 
     renderTypeCards(types) {
+      const getIcon = (type) => {
+        if (window.IconUtils) {
+          return IconUtils.getInstitutionIcon(type);
+        }
+        return this.getInstitutionIcon(type);
+      };
+
       DOM.institutionTypesGrid.innerHTML = types
         .map(
           (type) => `
-              <div 
-                  class="institution-card" 
-                  data-type="${type}"
-                  role="button"
-                  tabindex="0"
-                  aria-pressed="false"
-                  aria-label="${this.formatInstitutionType(type)}"
-              >
-                  <i class="fas ${this.getInstitutionIcon(
-                    type
-                  )} mb-3 fa-2x" aria-hidden="true"></i>
-                  <h5 class="mb-2">${this.formatInstitutionType(type)}</h5>
-                  <p class="mb-0 small text-muted">Click to select</p>
-              </div>
-          `
+            <div 
+                class="institution-card" 
+                data-type="${type}"
+                role="button"
+                tabindex="0"
+                aria-pressed="false"
+                aria-label="${this.formatInstitutionType(type)}"
+            >
+                <i class="fas ${getIcon(
+                  type
+                )} mb-3 fa-2x" aria-hidden="true"></i>
+                <h5 class="mb-2">${this.formatInstitutionType(type)}</h5>
+                <p class="mb-0 small text-muted">Click to select</p>
+            </div>
+        `
         )
         .join("");
     },
@@ -340,14 +367,14 @@ document.addEventListener("DOMContentLoaded", function () {
       badge.dataset.type = type;
       badge.setAttribute("role", "status");
       badge.innerHTML = `
-            ${this.formatInstitutionType(type)}
-            <button 
-                onclick="removeInstitutionType('${type}')"
-                aria-label="Remove ${this.formatInstitutionType(type)}"
-            >
-                <i class="fas fa-times" aria-hidden="true"></i>
-            </button>
-        `;
+          ${this.formatInstitutionType(type)}
+          <button 
+              onclick="removeInstitutionType('${type}')"
+              aria-label="Remove ${this.formatInstitutionType(type)}"
+          >
+              <i class="fas fa-times" aria-hidden="true"></i>
+          </button>
+      `;
       DOM.selectedTypesContainer.appendChild(badge);
     },
 
@@ -369,8 +396,11 @@ document.addEventListener("DOMContentLoaded", function () {
     },
 
     getInstitutionIcon(type) {
-      const typeUpper = type.toUpperCase();
+      if (window.IconUtils) {
+        return IconUtils.getInstitutionIcon(type);
+      }
 
+      const typeUpper = type.toUpperCase();
       if (typeUpper.includes("EDUCATION") && typeUpper.includes("TECHNICAL")) {
         return "fa-cog";
       }
@@ -380,15 +410,12 @@ document.addEventListener("DOMContentLoaded", function () {
       if (typeUpper.includes("HEALTH") || typeUpper.includes("MEDICAL")) {
         return "fa-hospital";
       }
-      if (typeUpper.includes("TECHNOLOGY") || typeUpper.includes("TECHNICAL")) {
-        return "fa-microchip";
-      }
+      if (typeUpper.includes("TECHNOLOGY")) return "fa-microchip";
       if (typeUpper.includes("AGRICULTURE")) return "fa-leaf";
       if (typeUpper.includes("DISTANCE") || typeUpper.includes("E-LEARNING")) {
         return "fa-laptop";
       }
       if (typeUpper.includes("COLLEGES")) return "fa-school";
-
       return "fa-graduation-cap";
     },
   };
@@ -443,7 +470,6 @@ document.addEventListener("DOMContentLoaded", function () {
       const coursesMap = new Map();
 
       courses.forEach((course) => {
-        // Skip processing the "ALL" course option as it's handled separately
         if (course.course_name === "ALL") return;
 
         const courseKey = course.course_name.toUpperCase();
@@ -473,7 +499,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       });
 
-      // Convert Map to array and sort
       return Array.from(coursesMap.values()).sort((a, b) =>
         a.name.localeCompare(b.name)
       );
@@ -498,13 +523,11 @@ document.addEventListener("DOMContentLoaded", function () {
     },
 
     populateCourseSelect(courses) {
-      // Start with default and "All Courses" options
       DOM.courseSelect.innerHTML = `
-            <option value="">Select a Course</option>
-            <option value="ALL">ANY COURSE</option>
-        `;
+      <option value="">Select a Course</option>
+      <option value="ALL">ANY COURSE</option>
+    `;
 
-      // Add the rest of the courses
       courses.forEach((course) => {
         const option = document.createElement("option");
         option.value = course.name;
@@ -612,26 +635,29 @@ document.addEventListener("DOMContentLoaded", function () {
       const html = suggestions
         .map(
           (course, index) => `
-                <div 
-                    class="course-suggestion-item" 
-                    data-index="${index}" 
-                    data-value="${course.name}"
-                    data-institutions='${JSON.stringify(
-                      Array.from(course.institutions)
-                    )}'
-                    role="option"
-                    aria-selected="false"
-                >
-                    <div class="course-name">
-                        ${UTILS.highlightMatch(course.name, query)}
-                    </div>
-                    <div class="institution-count">
-                        ${course.institutions.size} ${
-            course.institutions.size === 1 ? "institution" : "institutions"
-          } available
-                    </div>
-                </div>
-            `
+          <div 
+              class="course-suggestion-item" 
+              data-index="${index}" 
+              data-value="${course.name}"
+              data-institutions='${JSON.stringify(
+                Array.from(course.institutions)
+              )}'
+              role="option"
+              aria-selected="false"
+          >
+              <div class="course-name">
+                  ${UTILS.highlightMatch(course.name, query)}
+              </div>
+              <div class="institution-count">
+                  ${course.institutions.size} 
+                  ${
+                    course.institutions.size === 1
+                      ? "institution"
+                      : "institutions"
+                  } available
+              </div>
+          </div>
+        `
         )
         .join("");
 
@@ -799,7 +825,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       });
 
-      // Enhanced keyboard navigation for dropdowns
       [DOM.locationSelect, DOM.courseSelect].forEach((select) => {
         select.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
@@ -815,7 +840,6 @@ document.addEventListener("DOMContentLoaded", function () {
         this.trapFocus(step);
       });
 
-      // Restore focus after step transitions
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.attributeName === "class") {
@@ -883,7 +907,7 @@ document.addEventListener("DOMContentLoaded", function () {
     PARALLAX.init();
     preloadHeroImage();
 
-    // Set up scroll event listener with passive flag for better performance
+    // Set up scroll event listener
     window.addEventListener("scroll", handleScroll, { passive: true });
 
     // Load initial data

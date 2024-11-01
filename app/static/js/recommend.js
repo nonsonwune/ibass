@@ -2,10 +2,10 @@
 
 document.addEventListener("DOMContentLoaded", function () {
   // Initialize application features
+  initializeInstitutionModal();
   initializeModals();
   initializeFilterForm();
   initializePagination();
-  initializeInstitutionModal();
   initializeBookmarkSystem();
 
   if (window.isAuthenticated) {
