@@ -131,6 +131,28 @@ Finder{% endblock %} {% block extra_head %}
                               >({{ comment.dislikes }})</span
                             >
                           </button>
+                          <button
+                            class="btn btn-sm btn-outline-secondary reply-btn"
+                            data-comment-id="{{ comment.id }}"
+                          >
+                            <i class="fas fa-reply me-1"></i>Reply
+                          </button>
+                          <div
+                            class="reply-form-container"
+                            id="reply-form-{{ comment.id }}"
+                            style="display: none"
+                          >
+                            <textarea
+                              class="form-control reply-textarea"
+                              placeholder="Write your reply"
+                            ></textarea>
+                            <button
+                              class="btn btn-primary post-reply-btn"
+                              data-parent-id="{{ comment.id }}"
+                            >
+                              Post Reply
+                            </button>
+                          </div>
                         </div>
 
                         {% if current_user.is_authenticated and (current_user.id
@@ -306,7 +328,45 @@ Finder{% endblock %} {% block extra_head %}
       </div>
     </div>
     {% endif %}
-
+<div class="modal fade" id="replyModal" tabindex="-1" aria-labelledby="replyModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="replyModalLabel">
+          <i class="fas fa-reply me-2"></i>Reply to Comment
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="original-comment mb-3">
+          <h6 class="text-muted mb-2">Original Comment:</h6>
+          <div class="parent-comment bg-light p-3 rounded"></div>
+        </div>
+        <div class="form-floating">
+          <textarea 
+            class="form-control reply-textarea" 
+            placeholder="Write your reply" 
+            style="height: 100px"
+            maxlength="200"
+            required
+          ></textarea>
+          <label>Your Reply</label>
+          <div class="form-text text-end">
+            <span class="reply-char-count">200</span> characters remaining
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-2"></i>Cancel
+        </button>
+        <button type="button" class="btn btn-primary submit-reply">
+          <i class="fas fa-paper-plane me-2"></i>Post Reply
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
     <!-- Toast Container -->
     <div
       class="toast-container position-fixed bottom-0 end-0 p-3"

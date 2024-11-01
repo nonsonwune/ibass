@@ -3,7 +3,6 @@
 from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
 from contextlib import contextmanager
-from sqlalchemy import exc
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from ..models.university import University, Course
@@ -12,8 +11,15 @@ from ..models.user import User
 from ..extensions import db
 from ..config import Config
 from ..utils.decorators import admin_required
+import bleach
 
 bp = Blueprint('api', __name__)
+
+# Define allowed tags and attributes for sanitization
+ALLOWED_TAGS = ['b', 'i', 'u', 'em', 'strong', 'a']
+ALLOWED_ATTRIBUTES = {
+    'a': ['href', 'title']
+}
 
 @bp.route('/locations')
 def get_locations():
@@ -73,15 +79,19 @@ def get_programme_types():
 @bp.route('/universities', methods=['GET'])
 def get_universities():
     state = request.args.get('state')
-    if state:
-        universities = University.query.filter_by(state=state).all()
-    else:
-        universities = University.query.all()
-    return jsonify([{
-        "university_name": uni.university_name,
-        "state": uni.state,
-        "program_type": uni.program_type,
-    } for uni in universities])
+    try:
+        if state:
+            universities = University.query.filter_by(state=state).all()
+        else:
+            universities = University.query.all()
+        return jsonify([{
+            "university_name": uni.university_name,
+            "state": uni.state,
+            "program_type": uni.program_type,
+        } for uni in universities])
+    except Exception as e:
+        current_app.logger.error(f"Error retrieving universities: {str(e)}")
+        return jsonify({"error": "Failed to retrieve universities."}), 500
 
 @bp.route('/courses', methods=['GET'])
 def get_courses():
@@ -189,15 +199,15 @@ def add_bookmark():
     if not university_id:
         return jsonify({"success": False, "message": "Invalid university."}), 400
 
-    existing_bookmark = Bookmark.query.filter_by(
-        user_id=current_user.id,
-        university_id=university_id
-    ).first()
-    
-    if existing_bookmark:
-        return jsonify({"success": True, "message": "Already bookmarked"}), 200
-
     try:
+        existing_bookmark = Bookmark.query.filter_by(
+            user_id=current_user.id,
+            university_id=university_id
+        ).first()
+        
+        if existing_bookmark:
+            return jsonify({"success": True, "message": "Already bookmarked"}), 200
+
         bookmark = Bookmark(user_id=current_user.id, university_id=university_id)
         db.session.add(bookmark)
         db.session.commit()
@@ -207,6 +217,7 @@ def add_bookmark():
         }), 200
     except SQLAlchemyError as e:
         db.session.rollback()
+        current_app.logger.error(f"Error adding bookmark: {str(e)}")
         return jsonify({
             "success": False,
             "message": "An error occurred while bookmarking. Please try again."
@@ -336,6 +347,7 @@ def vote(comment_id, vote_type):
 
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"Error processing vote: {str(e)}")
         return jsonify({
             'success': False,
             'message': f'Error processing vote: {str(e)}'
@@ -488,3 +500,69 @@ def get_course_details(course_id):
     except Exception as e:
         current_app.logger.error(f"Error fetching course details: {str(e)}")
         return jsonify({'error': 'An error occurred while fetching course details.'}), 500
+
+@bp.route('/reply_comment', methods=['POST'])
+@login_required
+def reply_comment():
+    data = request.get_json()
+    raw_content = data.get("reply", "").strip()
+    parent_id = data.get("parent_comment_id", None)
+
+    if not raw_content:
+        return jsonify({"success": False, "message": "Reply content cannot be empty."}), 400
+
+    if not parent_id:
+        return jsonify({"success": False, "message": "Invalid parent comment."}), 400
+
+    # Sanitize the reply content
+    content = bleach.clean(raw_content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES)
+
+    try:
+        parent_comment = Comment.query.get_or_404(parent_id)
+        reply_comment = Comment(content=content, user_id=current_user.id, parent_id=parent_id)
+        db.session.add(reply_comment)
+        db.session.commit()
+        # Return the reply data
+        return jsonify({
+            "success": True,
+            "message": "Reply added successfully.",
+            "reply": {
+                "id": reply_comment.id,
+                "content": reply_comment.content,
+                "user_id": reply_comment.user_id,
+                "username": current_user.username,
+                "date_posted": reply_comment.date_posted.strftime('%B %d, %Y at %H:%M')
+            }
+        }), 200
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error adding reply: {str(e)}")
+        return jsonify({"success": False, "message": "Error adding reply."}), 500
+
+@bp.route('/comments_with_replies', methods=['GET'])
+def comments_with_replies():
+    try:
+        comments = Comment.query.filter_by(parent_id=None).options(joinedload('replies')).all()
+        comments_data = []
+        for comment in comments:
+            replies = [{
+                "id": reply.id,
+                "content": reply.content,
+                "user_id": reply.user_id,
+                "username": reply.author.username,
+                "date_posted": reply.date_posted.strftime('%B %d, %Y at %H:%M')
+            } for reply in comment.replies]
+            comments_data.append({
+                "id": comment.id,
+                "content": comment.content,
+                "user_id": comment.user_id,
+                "username": comment.author.username,
+                "date_posted": comment.date_posted.strftime('%B %d, %Y at %H:%M'),
+                "likes": comment.likes,
+                "dislikes": comment.dislikes,
+                "replies": replies
+            })
+        return jsonify(comments_data), 200
+    except Exception as e:
+        current_app.logger.error(f"Error fetching comments with replies: {str(e)}")
+        return jsonify({"error": "Failed to retrieve comments with replies."}), 500

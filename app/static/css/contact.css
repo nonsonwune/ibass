@@ -161,3 +161,21 @@
       padding-left: 0.5rem;
   }
 }
+
+.reply-form-container {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.comment-replies {
+  margin-left: 2rem;
+  border-left: 2px solid #ccc;
+  padding-left: 1rem;
+}
+
+.reply-card {
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 5px;
+  margin-bottom: 1rem;
+}
