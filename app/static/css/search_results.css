@@ -250,19 +250,6 @@
     }
 }
 
-/* Utility Classes */
-.text-primary {
-    color: var(--primary-color) !important;
-}
-
-.bg-primary {
-    background-color: var(--primary-color) !important;
-}
-
-.text-muted {
-    color: var(--text-secondary) !important;
-}
-
 /* Tab Filter Buttons - Base Style with increased specificity */
 .col-lg-9 .nav-tabs .nav-link,
 .col-lg-9 .nav-tabs button.nav-link {
