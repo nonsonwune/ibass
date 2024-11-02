@@ -23,7 +23,8 @@ class Comment(BaseModel):
             remote_side='Comment.id'
         ),
         lazy='dynamic',
-        cascade='all, delete-orphan'
+        cascade='all, delete-orphan',
+        order_by='Comment.date_posted.asc()'
     )
     
     votes = db.relationship(

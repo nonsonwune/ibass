@@ -548,17 +548,14 @@ def comments_with_replies():
         # Get parent comments ordered by newest first
         comments = (Comment.query
             .filter_by(parent_id=None)
-            .order_by(Comment.date_posted.desc())
-            .options(joinedload('replies'))
-            .options(joinedload('author'))  # Ensure author data is loaded efficiently
+            .order_by(Comment.date_posted.desc())  # This sorts main comments newest first
+            .options(joinedload('replies').order_by(Comment.date_posted.asc()))  # This sorts replies oldest first
+            .options(joinedload('author'))
             .all())
 
         comments_data = []
         for comment in comments:
-            # Sort replies by oldest first
-            sorted_replies = sorted(comment.replies, key=lambda x: x.date_posted)
-            
-            # Create reply data with all necessary fields
+            # No need for Python sorting since we're using SQL ordering
             replies = [{
                 "id": reply.id,
                 "content": reply.content,
@@ -569,9 +566,8 @@ def comments_with_replies():
                 "dislikes": reply.dislikes,
                 "score": reply.author.score,
                 "is_admin": reply.author.is_admin
-            } for reply in sorted_replies]
+            } for reply in comment.replies]  # replies will already be sorted
             
-            # Create comment data with all necessary fields
             comments_data.append({
                 "id": comment.id,
                 "content": comment.content,
@@ -582,11 +578,10 @@ def comments_with_replies():
                 "dislikes": comment.dislikes,
                 "score": comment.author.score,
                 "is_admin": comment.author.is_admin,
-                "reply_count": len(replies),  # Use actual count of replies
+                "reply_count": len(replies),
                 "replies": replies
             })
 
-        current_app.logger.info(f"Successfully retrieved {len(comments_data)} comments with their replies")
         return jsonify(comments_data), 200
         
     except Exception as e:
