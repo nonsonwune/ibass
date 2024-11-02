@@ -1,6 +1,7 @@
 // app/static/js/comments.js
 
 document.addEventListener("DOMContentLoaded", function () {
+  // First initialize systems
   initializeCommentSystem();
   initializeVoting();
   initializeTooltips();
@@ -9,8 +10,48 @@ document.addEventListener("DOMContentLoaded", function () {
     fetchUserVotes();
   }
 
-  initializeReplySystem(); // Ensure it's called only once here
+  // Then set up replies
+  initializeReplySystem();
+  
+  // Finally, update counts and sort
+  setTimeout(() => {
+    updateAllReplyCountsOnLoad();
+    sortComments();
+  }, 100);
 });
+/**
+ * Updates reply counts for all comments on initial page load
+ */
+function updateAllReplyCountsOnLoad() {
+  document.querySelectorAll(".comment-card").forEach((commentCard) => {
+    const commentId = commentCard.id.replace("comment-", "");
+    const repliesContainer = commentCard.querySelector(".comment-replies");
+    if (repliesContainer) {
+      const replyCount = repliesContainer.querySelectorAll(".reply-card").length;
+      updateReplyCount(commentId, replyCount);
+      console.log(`Updated reply count for comment ${commentId}: ${replyCount}`); // Debug line
+    }
+  });
+}
+
+/**
+ * Sorts comments by date in descending order (newest first)
+ */
+function sortComments() {
+  const commentList = document.querySelector(".comment-list");
+  if (!commentList) return;
+
+  const comments = Array.from(commentList.querySelectorAll(".comment-card"));
+  comments.sort((a, b) => {
+    const dateA = new Date(a.querySelector(".text-muted").textContent);
+    const dateB = new Date(b.querySelector(".text-muted").textContent);
+    return dateB - dateA;
+  });
+
+  comments.forEach((comment) => {
+    commentList.appendChild(comment);
+  });
+}
 
 /**
  * Initializes the comment system by setting up character count and form validation.
@@ -39,6 +80,33 @@ function initializeCommentSystem() {
       }
     });
   }
+}
+
+/**
+ * Updates the reply count display on the reply button
+ * @param {string} commentId - The ID of the comment
+ * @param {number} newCount - The new reply count
+ */
+function updateReplyCount(commentId, newCount) {
+  const replyButton = document.querySelector(
+    `.reply-btn[data-comment-id='${commentId}']`
+  );
+  if (replyButton) {
+    replyButton.innerHTML = `
+      <i class="fas fa-reply me-1"></i>Reply (${newCount})
+    `;
+  }
+}
+
+/**
+ * Escapes HTML to prevent XSS attacks when inserting user-generated content.
+ * @param {string} str - The string to escape.
+ * @returns {string} - The escaped string.
+ */
+function escapeHTML(str) {
+  const div = document.createElement("div");
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
 }
 
 /**
@@ -71,7 +139,7 @@ function vote(commentId, action, buttonElement) {
     return;
   }
 
-  const commentElement = buttonElement.closest(".comment-card");
+  const commentElement = buttonElement.closest(".comment-card, .reply-card");
   if (!commentElement) {
     showToast("Error finding comment element", "danger");
     return;
@@ -275,6 +343,61 @@ function showToast(message, type = "info") {
 }
 
 /**
+ * Initialize the reply button functionality for a comment or reply card
+ * @param {HTMLElement} card - The card element to initialize the reply button for
+ * @param {number} parentLevel - The nesting level of the parent
+ */
+function initializeReplyButtonForCard(card, parentLevel) {
+  const replyButton = card.querySelector(".reply-btn");
+  if (replyButton) {
+    replyButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      if (!window.isAuthenticated) {
+        window.location.href = "/auth/login";
+        return;
+      }
+
+      const commentId = this.getAttribute("data-comment-id");
+      const currentParentLevel = parseInt(
+        this.getAttribute("data-parent-level") || "0"
+      );
+
+      if (currentParentLevel >= 3) {
+        showToast("Maximum reply depth reached", "warning");
+        return;
+      }
+
+      const contentElement = card.querySelector(
+        ".comment-content, .reply-content"
+      );
+      if (!contentElement) {
+        console.error("Content element not found");
+        return;
+      }
+
+      const replyModal = document.getElementById("replyModal");
+      if (!replyModal) {
+        console.error("Reply modal not found");
+        return;
+      }
+
+      const modal = new bootstrap.Modal(replyModal);
+      const parentComment = replyModal.querySelector(".parent-comment");
+
+      if (parentComment) {
+        parentComment.innerHTML = escapeHTML(contentElement.textContent.trim());
+      }
+
+      const submitButton = replyModal.querySelector(".submit-reply");
+      submitButton.setAttribute("data-parent-id", commentId);
+      submitButton.setAttribute("data-parent-level", currentParentLevel);
+
+      modal.show();
+    });
+  }
+}
+
+/**
  * Initializes the reply system by setting up event listeners for reply buttons and reply submissions.
  */
 function initializeReplySystem() {
@@ -303,7 +426,6 @@ function initializeReplySystem() {
         this.getAttribute("data-parent-level") || "0"
       );
 
-      // Limit nesting depth to 3 levels
       if (parentLevel >= 3) {
         showToast("Maximum reply depth reached", "warning");
         return;
@@ -335,7 +457,7 @@ function initializeReplySystem() {
     });
   });
 
-  // Handle character count
+  // Handle character count for replies
   const replyTextarea = replyModal.querySelector(".reply-textarea");
   const charCount = replyModal.querySelector(".reply-char-count");
 
@@ -350,57 +472,105 @@ function initializeReplySystem() {
   // Handle reply submission
   const submitButton = replyModal.querySelector(".submit-reply");
   if (submitButton) {
-    submitButton.addEventListener("click", function () {
-      if (!currentCommentId) {
-        console.error("No comment ID found for reply");
-        return;
-      }
-
-      const replyText = replyTextarea.value.trim();
-      if (!replyText) {
-        showToast("Reply cannot be empty", "warning");
-        return;
-      }
-
-      const originalText = this.innerHTML;
-      this.innerHTML =
-        '<span class="spinner-border spinner-border-sm me-1"></span>Posting...';
-      this.disabled = true;
-
-      fetch("/api/reply_comment", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": window.csrfToken,
-        },
-        body: JSON.stringify({
-          parent_comment_id: currentCommentId,
-          reply: replyText,
-          parent_level: currentParentLevel,
-        }),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success) {
-            appendReplyToDOM(currentCommentId, data.reply, currentParentLevel);
-            showToast(data.message, "success");
-            modal.hide();
-            replyTextarea.value = "";
-            charCount.textContent = "200";
-          } else {
-            showToast(data.message, "danger");
-          }
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          showToast("An error occurred while posting your reply", "danger");
-        })
-        .finally(() => {
-          this.innerHTML = originalText;
-          this.disabled = false;
-        });
-    });
+    submitButton.addEventListener("click", handleReplySubmission);
   }
+}
+
+/**
+ * Handles the submission of a reply
+ */
+function handleReplySubmission() {
+  const replyModal = document.getElementById("replyModal");
+  const replyTextarea = replyModal.querySelector(".reply-textarea");
+  const currentCommentId = this.getAttribute("data-parent-id");
+  const currentParentLevel = parseInt(
+    this.getAttribute("data-parent-level") || "0"
+  );
+
+  if (!currentCommentId) {
+    console.error("No comment ID found for reply");
+    return;
+  }
+
+  const replyText = replyTextarea.value.trim();
+  if (!replyText) {
+    showToast("Reply cannot be empty", "warning");
+    return;
+  }
+
+  const originalText = this.innerHTML;
+  this.innerHTML =
+    '<span class="spinner-border spinner-border-sm me-1"></span>Posting...';
+  this.disabled = true;
+
+  submitReplyToServer(
+    currentCommentId,
+    replyText,
+    currentParentLevel,
+    this,
+    originalText
+  );
+}
+
+/**
+ * Submits the reply to the server
+ * @param {string} commentId - The ID of the parent comment
+ * @param {string} replyText - The reply content
+ * @param {number} parentLevel - The nesting level of the parent
+ * @param {HTMLElement} submitButton - The submit button element
+ * @param {string} originalButtonText - The original button text
+ */
+function submitReplyToServer(
+  commentId,
+  replyText,
+  parentLevel,
+  submitButton,
+  originalButtonText
+) {
+  fetch("/api/reply_comment", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": window.csrfToken,
+    },
+    body: JSON.stringify({
+      parent_comment_id: commentId,
+      reply: replyText,
+      parent_level: parentLevel,
+    }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        appendReplyToDOM(commentId, data.reply, parentLevel);
+        showToast(data.message, "success");
+        resetReplyModal();
+      } else {
+        showToast(data.message, "danger");
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      showToast("An error occurred while posting your reply", "danger");
+    })
+    .finally(() => {
+      submitButton.innerHTML = originalButtonText;
+      submitButton.disabled = false;
+    });
+}
+
+/**
+ * Resets the reply modal to its initial state
+ */
+function resetReplyModal() {
+  const replyModal = document.getElementById("replyModal");
+  const modal = bootstrap.Modal.getInstance(replyModal);
+  const replyTextarea = replyModal.querySelector(".reply-textarea");
+  const charCount = replyModal.querySelector(".reply-char-count");
+
+  modal.hide();
+  replyTextarea.value = "";
+  charCount.textContent = "200";
 }
 
 /**
@@ -424,6 +594,29 @@ function appendReplyToDOM(parentId, reply, parentLevel) {
     parentElement.appendChild(repliesContainer);
   }
 
+  const replyCard = createReplyCard(reply, parentLevel);
+  repliesContainer.appendChild(replyCard);
+
+  // Update reply count
+  const replyCount = repliesContainer.querySelectorAll(".reply-card").length;
+  updateReplyCount(parentId, replyCount);
+
+  // Initialize interactive elements
+  initializeVoting();
+  initializeTooltips();
+  initializeReplyButtonForCard(replyCard, parentLevel);
+
+  // Scroll the new reply into view smoothly
+  replyCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/**
+ * Creates a reply card element
+ * @param {Object} reply - The reply data
+ * @param {number} parentLevel - The nesting level of the parent
+ * @returns {HTMLElement} The created reply card element
+ */
+function createReplyCard(reply, parentLevel) {
   const replyCard = document.createElement("div");
   replyCard.className = "reply-card animate__animated animate__fadeIn";
   replyCard.id = `comment-${reply.id}`;
@@ -470,102 +663,37 @@ function appendReplyToDOM(parentId, reply, parentLevel) {
           <i class="fas fa-reply me-1"></i>Reply
         </button>
       </div>
-      ${
-        window.isAuthenticated &&
-        (reply.user_id === window.currentUserId || window.isAdmin)
-          ? `
-        <div class="reply-actions">
-          <form action="/delete_comment/${reply.id}" method="POST" class="d-inline delete-comment-form">
-            <input type="hidden" name="csrf_token" value="${window.csrfToken}">
-            <button type="submit"
-                    class="btn btn-sm btn-danger"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"
-                    title="Delete reply">
-              <i class="fas fa-trash-alt"></i>
-            </button>
-          </form>
-        </div>
-      `
-          : ""
-      }
+      ${getDeleteButtonHTML(reply)}
     </div>
   `;
 
-  repliesContainer.appendChild(replyCard);
-
-  // Initialize all interactive elements
-  initializeVoting();
-  initializeTooltips();
-
-  // Initialize reply functionality for the new reply card
-  const replyButton = replyCard.querySelector(".reply-btn");
-  if (replyButton) {
-    replyButton.addEventListener("click", function (e) {
-      e.preventDefault();
-      if (!window.isAuthenticated) {
-        window.location.href = "/auth/login";
-        return;
-      }
-
-      const commentId = this.getAttribute("data-comment-id");
-      const currentParentLevel = parseInt(
-        this.getAttribute("data-parent-level") || "0"
-      );
-
-      if (currentParentLevel >= 3) {
-        showToast("Maximum reply depth reached", "warning");
-        return;
-      }
-
-      const contentElement =
-        this.closest(".reply-card").querySelector(".reply-content");
-      if (!contentElement) {
-        console.error("Content element not found");
-        return;
-      }
-
-      const replyModal = document.getElementById("replyModal");
-      if (!replyModal) {
-        console.error("Reply modal not found");
-        return;
-      }
-
-      const modal = new bootstrap.Modal(replyModal);
-      const parentComment = replyModal.querySelector(".parent-comment");
-
-      if (parentComment) {
-        parentComment.innerHTML = escapeHTML(contentElement.textContent.trim());
-      }
-
-      const submitButton = replyModal.querySelector(".submit-reply");
-      submitButton.setAttribute("data-parent-id", commentId);
-      submitButton.setAttribute("data-parent-level", currentParentLevel);
-
-      modal.show();
-    });
-  }
-
-  // Scroll the new reply into view smoothly
-  replyCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
-function updateReplyCount(commentId, newCount) {
-  const replyButton = document.querySelector(
-    `.reply-btn[data-comment-id='${commentId}']`
-  );
-  if (replyButton) {
-    replyButton.innerHTML = `<i class="fas fa-reply me-1"></i> Reply (${newCount})`;
-  }
+  return replyCard;
 }
 
 /**
- * Escapes HTML to prevent XSS attacks when inserting user-generated content.
- * @param {string} str - The string to escape.
- * @returns {string} - The escaped string.
+ * Gets the HTML for the delete button if the user has permission
+ * @param {Object} reply - The reply data
+ * @returns {string} The delete button HTML or empty string
  */
-function escapeHTML(str) {
-  const div = document.createElement("div");
-  div.appendChild(document.createTextNode(str));
-  return div.innerHTML;
+function getDeleteButtonHTML(reply) {
+  if (
+    window.isAuthenticated &&
+    (reply.user_id === window.currentUserId || window.isAdmin)
+  ) {
+    return `
+      <div class="reply-actions">
+        <form action="/delete_comment/${reply.id}" method="POST" class="d-inline delete-comment-form">
+          <input type="hidden" name="csrf_token" value="${window.csrfToken}">
+          <button type="submit"
+                  class="btn btn-sm btn-danger"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="top"
+                  title="Delete reply">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+        </form>
+      </div>
+    `;
+  }
+  return "";
 }

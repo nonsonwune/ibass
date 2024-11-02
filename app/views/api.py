@@ -514,7 +514,6 @@ def reply_comment():
     if not parent_id:
         return jsonify({"success": False, "message": "Invalid parent comment."}), 400
 
-    # Sanitize the reply content
     content = bleach.clean(raw_content, tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES)
 
     try:
@@ -522,7 +521,7 @@ def reply_comment():
         reply_comment = Comment(content=content, user_id=current_user.id, parent_id=parent_id)
         db.session.add(reply_comment)
         db.session.commit()
-        # Return the reply data
+
         return jsonify({
             "success": True,
             "message": "Reply added successfully.",
@@ -531,7 +530,11 @@ def reply_comment():
                 "content": reply_comment.content,
                 "user_id": reply_comment.user_id,
                 "username": current_user.username,
-                "date_posted": reply_comment.date_posted.strftime('%B %d, %Y at %H:%M')
+                "date_posted": reply_comment.date_posted.strftime('%B %d, %Y at %H:%M'),
+                "likes": 0,
+                "dislikes": 0,
+                "score": current_user.score,
+                "is_admin": current_user.is_admin
             }
         }), 200
     except SQLAlchemyError as e:
@@ -542,16 +545,33 @@ def reply_comment():
 @bp.route('/comments_with_replies', methods=['GET'])
 def comments_with_replies():
     try:
-        comments = Comment.query.filter_by(parent_id=None).options(joinedload('replies')).all()
+        # Get parent comments ordered by newest first
+        comments = (Comment.query
+            .filter_by(parent_id=None)
+            .order_by(Comment.date_posted.desc())
+            .options(joinedload('replies'))
+            .options(joinedload('author'))  # Ensure author data is loaded efficiently
+            .all())
+
         comments_data = []
         for comment in comments:
+            # Sort replies by oldest first
+            sorted_replies = sorted(comment.replies, key=lambda x: x.date_posted)
+            
+            # Create reply data with all necessary fields
             replies = [{
                 "id": reply.id,
                 "content": reply.content,
                 "user_id": reply.user_id,
                 "username": reply.author.username,
-                "date_posted": reply.date_posted.strftime('%B %d, %Y at %H:%M')
-            } for reply in comment.replies]
+                "date_posted": reply.date_posted.strftime('%B %d, %Y at %H:%M'),
+                "likes": reply.likes,
+                "dislikes": reply.dislikes,
+                "score": reply.author.score,
+                "is_admin": reply.author.is_admin
+            } for reply in sorted_replies]
+            
+            # Create comment data with all necessary fields
             comments_data.append({
                 "id": comment.id,
                 "content": comment.content,
@@ -560,9 +580,18 @@ def comments_with_replies():
                 "date_posted": comment.date_posted.strftime('%B %d, %Y at %H:%M'),
                 "likes": comment.likes,
                 "dislikes": comment.dislikes,
+                "score": comment.author.score,
+                "is_admin": comment.author.is_admin,
+                "reply_count": len(replies),  # Use actual count of replies
                 "replies": replies
             })
+
+        current_app.logger.info(f"Successfully retrieved {len(comments_data)} comments with their replies")
         return jsonify(comments_data), 200
+        
     except Exception as e:
         current_app.logger.error(f"Error fetching comments with replies: {str(e)}")
-        return jsonify({"error": "Failed to retrieve comments with replies."}), 500
+        return jsonify({
+            "error": "Failed to retrieve comments with replies",
+            "message": str(e) if current_app.debug else "An error occurred while retrieving comments."
+        }), 500
