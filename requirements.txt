@@ -1,5 +1,6 @@
 alembic==1.13.3
 bandit==1.7.10
+bleach==6.2.0
 blinker==1.8.2
 cachelib
 certifi==2024.8.30
