@@ -176,3 +176,6 @@ uni_match.py
 transfer_data.py
 import_data.py
 xtr_pdf.py
+drop_tables.sql
+production_dump.sql
+*.json
