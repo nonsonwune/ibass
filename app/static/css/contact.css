@@ -15,14 +15,35 @@
   --bg-white: #ffffff;
 }
 
+/* Fix container hierarchy */
+.wrapper {
+  min-height: 100vh !important;
+  height: auto !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-content {
+  flex: 1 1 auto !important;
+  height: auto !important;
+  overflow: visible !important;
+}
+
 /* Background and Container Styles */
 .contact-background {
   background: url("/static/images/contact-bg.png") no-repeat center center fixed;
   background-size: cover;
-  min-height: 100vh;
+  min-height: 100% !important;
+  height: auto !important;
   display: flex;
   align-items: center;
   padding: 3rem 0;
+  overflow: visible !important;
+}
+
+.container {
+  height: auto !important;
+  overflow: visible !important;
 }
 
 .content-wrapper {
@@ -31,11 +52,17 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   padding: 2rem;
   backdrop-filter: blur(10px);
+  height: auto !important;
+  overflow: visible !important;
 }
 
 /* Text Styles */
 .text-gradient {
-  background: linear-gradient(45deg, var(--secondary-color), var(--primary-color));
+  background: linear-gradient(
+    45deg,
+    var(--secondary-color),
+    var(--primary-color)
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -47,10 +74,24 @@
   line-height: 1.6;
 }
 
+/* Row and Column fixes */
+.row {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.col-lg-7 {
+  height: auto !important;
+  overflow: visible !important;
+}
+
 /* Card Styles */
 .card {
   border: none;
   background: var(--bg-white);
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
 }
 
 .shadow-hover {
@@ -67,40 +108,86 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+.card-body {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.card-body.p-0 {
+  height: auto !important;
+  overflow: visible !important;
+}
+
 /* Comments Section Styles */
 .comments-section {
-  color: var(--text-primary);
-  max-height: 600px;
-  overflow-y: auto;
+  max-height: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  padding: 1rem;
 }
 
-.comments-section::-webkit-scrollbar {
-  width: 6px;
-}
-
-.comments-section::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 10px;
-}
-
-.comments-section::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 10px;
-}
-
-.comments-section::-webkit-scrollbar-thumb:hover {
-  background: #555;
+.comment-list {
+  height: auto !important;
+  overflow: visible !important;
+  padding: 1rem;
 }
 
 .comment-card {
+  height: auto !important;
+  overflow: visible !important;
   margin-bottom: 1.5rem;
-  color: var(--text-primary);
+  background: var(--bg-white);
 }
 
 .comment-content {
   background: var(--bg-light);
   padding: 1rem;
   border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+/* Reply System Styles */
+.comment-replies {
+  height: auto !important;
+  overflow: visible !important;
+  margin-left: 2rem;
+  border-left: 2px solid var(--border-color);
+  padding-left: 1rem;
+  margin-top: 1rem;
+}
+
+.reply-card {
+  height: auto !important;
+  overflow: visible !important;
+  background: #f9f9f9;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.reply-content {
+  margin-bottom: 1rem;
+}
+
+.nested-replies {
+  height: auto !important;
+  overflow: visible !important;
+  margin-left: 1.5rem;
+  border-left: 2px solid var(--border-color);
+  padding-left: 1rem;
+}
+
+.nested-reply-card {
+  background: var(--bg-light);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* Limit nesting levels */
+.nested-replies .nested-replies {
+  margin-left: 1rem;
 }
 
 /* User Score Badge */
@@ -123,22 +210,7 @@
   font-weight: 600;
 }
 
-/* Reply System Styles */
-.comment-replies {
-  margin-left: 2rem;
-  border-left: 2px solid var(--border-color);
-  padding-left: 1rem;
-  margin-top: 1rem;
-}
-
-.reply-card {
-  background: #f9f9f9;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
+/* Reply Form */
 .reply-form-container {
   margin-top: 1rem;
   padding: 1rem;
@@ -166,6 +238,11 @@
 .btn-outline-primary:hover {
   background-color: var(--primary-color);
   color: var(--bg-white);
+}
+
+.reply-card .btn-group-sm .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
 }
 
 /* Form Styles */
@@ -211,8 +288,14 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Responsive Adjustments */
@@ -230,12 +313,12 @@
     margin-left: 1rem;
     padding-left: 0.5rem;
   }
-  
+
   .btn-group {
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.25rem;
   }
-  
+
   .btn-group .btn {
     flex: 1;
     min-width: calc(50% - 0.5rem);

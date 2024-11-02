@@ -171,10 +171,7 @@ function updateVoteUI(commentElement, data) {
     }
   }
 
-  if (
-    typeof data.user_id === "number" &&
-    typeof data.user_score === "number"
-  ) {
+  if (typeof data.user_id === "number" && typeof data.user_score === "number") {
     document
       .querySelectorAll(`.user-score[data-user-id="${data.user_id}"]`)
       .forEach((el) => (el.textContent = data.user_score));
@@ -281,43 +278,57 @@ function showToast(message, type = "info") {
  * Initializes the reply system by setting up event listeners for reply buttons and reply submissions.
  */
 function initializeReplySystem() {
-  const replyModal = document.getElementById('replyModal');
-  
+  const replyModal = document.getElementById("replyModal");
+
   if (!replyModal) {
-    console.error('Reply modal not found in DOM');
+    console.error("Reply modal not found in DOM");
     return;
   }
 
   const modal = new bootstrap.Modal(replyModal);
   let currentCommentId = null;
+  let currentParentLevel = 0;
 
   // Handle reply button clicks
-  document.querySelectorAll('.reply-btn').forEach(button => {
-    button.addEventListener('click', function(e) {
+  document.querySelectorAll(".reply-btn").forEach((button) => {
+    button.addEventListener("click", function (e) {
       e.preventDefault();
       if (!window.isAuthenticated) {
         window.location.href = "/auth/login";
         return;
       }
 
-      const commentId = this.getAttribute('data-comment-id');
-      const commentCard = this.closest('.comment-card');
-      
-      if (!commentCard) {
-        console.error('Parent comment card not found');
+      const commentId = this.getAttribute("data-comment-id");
+      const parentLevel = parseInt(
+        this.getAttribute("data-parent-level") || "0"
+      );
+
+      // Limit nesting depth to 3 levels
+      if (parentLevel >= 3) {
+        showToast("Maximum reply depth reached", "warning");
         return;
       }
 
-      const commentContent = commentCard.querySelector('.comment-content');
-      if (!commentContent) {
-        console.error('Comment content not found');
+      const commentCard = this.closest(".comment-card, .reply-card");
+      if (!commentCard) {
+        console.error("Parent comment/reply card not found");
+        return;
+      }
+
+      const contentElement = commentCard.querySelector(
+        ".comment-content, .reply-content"
+      );
+      if (!contentElement) {
+        console.error("Content element not found");
         return;
       }
 
       currentCommentId = commentId;
-      const parentComment = replyModal.querySelector('.parent-comment');
+      currentParentLevel = parentLevel;
+
+      const parentComment = replyModal.querySelector(".parent-comment");
       if (parentComment) {
-        parentComment.innerHTML = escapeHTML(commentContent.textContent);
+        parentComment.innerHTML = escapeHTML(contentElement.textContent.trim());
       }
 
       modal.show();
@@ -325,130 +336,228 @@ function initializeReplySystem() {
   });
 
   // Handle character count
-  const replyTextarea = replyModal.querySelector('.reply-textarea');
-  const charCount = replyModal.querySelector('.reply-char-count');
-  
+  const replyTextarea = replyModal.querySelector(".reply-textarea");
+  const charCount = replyModal.querySelector(".reply-char-count");
+
   if (replyTextarea && charCount) {
-    replyTextarea.addEventListener('input', function() {
+    replyTextarea.addEventListener("input", function () {
       const remaining = 200 - this.value.length;
       charCount.textContent = remaining;
-      charCount.classList.toggle('text-danger', remaining < 20);
+      charCount.classList.toggle("text-danger", remaining < 20);
     });
   }
 
   // Handle reply submission
-  const submitButton = replyModal.querySelector('.submit-reply');
+  const submitButton = replyModal.querySelector(".submit-reply");
   if (submitButton) {
-    submitButton.addEventListener('click', function() {
+    submitButton.addEventListener("click", function () {
       if (!currentCommentId) {
-        console.error('No comment ID found for reply');
+        console.error("No comment ID found for reply");
         return;
       }
 
       const replyText = replyTextarea.value.trim();
       if (!replyText) {
-        showToast('Reply cannot be empty', 'warning');
+        showToast("Reply cannot be empty", "warning");
         return;
       }
 
       const originalText = this.innerHTML;
-      this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Posting...';
+      this.innerHTML =
+        '<span class="spinner-border spinner-border-sm me-1"></span>Posting...';
       this.disabled = true;
 
-      fetch('/api/reply_comment', {
-        method: 'POST',
+      fetch("/api/reply_comment", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': window.csrfToken
+          "Content-Type": "application/json",
+          "X-CSRFToken": window.csrfToken,
         },
         body: JSON.stringify({
           parent_comment_id: currentCommentId,
-          reply: replyText
+          reply: replyText,
+          parent_level: currentParentLevel,
+        }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            appendReplyToDOM(currentCommentId, data.reply, currentParentLevel);
+            showToast(data.message, "success");
+            modal.hide();
+            replyTextarea.value = "";
+            charCount.textContent = "200";
+          } else {
+            showToast(data.message, "danger");
+          }
         })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          appendReplyToDOM(currentCommentId, data.reply);
-          showToast(data.message, 'success');
-          modal.hide();
-          replyTextarea.value = '';
-          charCount.textContent = '200';
-        } else {
-          showToast(data.message, 'danger');
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        showToast('An error occurred while posting your reply', 'danger');
-      })
-      .finally(() => {
-        this.innerHTML = originalText;
-        this.disabled = false;
-      });
+        .catch((error) => {
+          console.error("Error:", error);
+          showToast("An error occurred while posting your reply", "danger");
+        })
+        .finally(() => {
+          this.innerHTML = originalText;
+          this.disabled = false;
+        });
     });
   }
 }
 
 /**
  * Appends the new reply to the DOM without reloading the page.
- * @param {number} parentId - The ID of the parent comment.
+ * @param {number} parentId - The ID of the parent comment/reply.
  * @param {Object} reply - The reply data returned from the backend.
+ * @param {number} parentLevel - The nesting level of the parent.
  */
-function appendReplyToDOM(parentId, reply) {
-  const commentCard = document.getElementById(`comment-${parentId}`);
-  if (!commentCard) return;
-
-  let repliesContainer = commentCard.querySelector(".comment-replies");
-  if (!repliesContainer) {
-    repliesContainer = document.createElement("div");
-    repliesContainer.className = "comment-replies";
-    commentCard.appendChild(repliesContainer);
+function appendReplyToDOM(parentId, reply, parentLevel) {
+  const parentElement = document.getElementById(`comment-${parentId}`);
+  if (!parentElement) {
+    console.error(`Parent element not found for ID ${parentId}`);
+    return;
   }
 
-  if (repliesContainer.children.length >= 2) {
-    const seeMoreReplies = commentCard.querySelector(".see-more-replies");
-    if (!seeMoreReplies) {
-      const seeMoreButton = document.createElement("button");
-      seeMoreButton.className = "see-more-replies btn btn-link";
-      seeMoreButton.textContent = "See more replies";
-      seeMoreButton.addEventListener("click", () => {
-        Array.from(repliesContainer.children).forEach(child => child.style.display = 'block');
-        seeMoreButton.style.display = 'none';
-      });
-      commentCard.appendChild(seeMoreButton);
-    }
+  let repliesContainer = parentElement.querySelector(".comment-replies");
+  if (!repliesContainer) {
+    repliesContainer = document.createElement("div");
+    repliesContainer.className = "comment-replies mt-3";
+    repliesContainer.id = `replies-${parentId}`;
+    parentElement.appendChild(repliesContainer);
   }
 
   const replyCard = document.createElement("div");
-  replyCard.className = "reply-card mb-3 fade-in";
-  replyCard.style.display = repliesContainer.children.length >= 2 ? 'none' : 'block';
+  replyCard.className = "reply-card animate__animated animate__fadeIn";
+  replyCard.id = `comment-${reply.id}`;
+
   replyCard.innerHTML = `
     <div class="d-flex justify-content-between align-items-center mb-2">
       <div class="d-flex align-items-center">
         <div class="user-avatar me-2">
-          <i class="fas fa-user-circle fa-2x text-primary"></i>
+          <i class="fas fa-user-circle text-primary"></i>
         </div>
         <div>
-          <h6 class="mb-0">${escapeHTML(reply.username)}</h6>
+          <h6 class="mb-0 ${reply.is_admin ? "admin-username" : ""}">
+            ${escapeHTML(reply.username)}
+            <span class="badge bg-primary-soft ms-1 user-score" data-user-id="${
+              reply.user_id
+            }">
+              ${reply.score || 0}
+            </span>
+          </h6>
           <small class="text-muted">${escapeHTML(reply.date_posted)}</small>
         </div>
       </div>
     </div>
-    <div class="comment-content mb-3">
+    <div class="reply-content mb-2">
       <p class="mb-0">${escapeHTML(reply.content)}</p>
     </div>
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="btn-group btn-group-sm">
+        <button class="btn btn-sm btn-outline-primary vote-btn"
+                data-comment-id="${reply.id}"
+                data-vote-type="like">
+          <i class="fas fa-thumbs-up me-1"></i>
+          <span class="like-count">(${reply.likes || 0})</span>
+        </button>
+        <button class="btn btn-sm btn-outline-danger vote-btn"
+                data-comment-id="${reply.id}"
+                data-vote-type="dislike">
+          <i class="fas fa-thumbs-down me-1"></i>
+          <span class="dislike-count">(${reply.dislikes || 0})</span>
+        </button>
+        <button class="btn btn-sm btn-outline-secondary reply-btn"
+                data-comment-id="${reply.id}"
+                data-parent-level="${parentLevel + 1}">
+          <i class="fas fa-reply me-1"></i>Reply
+        </button>
+      </div>
+      ${
+        window.isAuthenticated &&
+        (reply.user_id === window.currentUserId || window.isAdmin)
+          ? `
+        <div class="reply-actions">
+          <form action="/delete_comment/${reply.id}" method="POST" class="d-inline delete-comment-form">
+            <input type="hidden" name="csrf_token" value="${window.csrfToken}">
+            <button type="submit"
+                    class="btn btn-sm btn-danger"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    title="Delete reply">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </form>
+        </div>
+      `
+          : ""
+      }
+    </div>
   `;
+
   repliesContainer.appendChild(replyCard);
+
+  // Initialize all interactive elements
+  initializeVoting();
+  initializeTooltips();
+
+  // Initialize reply functionality for the new reply card
+  const replyButton = replyCard.querySelector(".reply-btn");
+  if (replyButton) {
+    replyButton.addEventListener("click", function (e) {
+      e.preventDefault();
+      if (!window.isAuthenticated) {
+        window.location.href = "/auth/login";
+        return;
+      }
+
+      const commentId = this.getAttribute("data-comment-id");
+      const currentParentLevel = parseInt(
+        this.getAttribute("data-parent-level") || "0"
+      );
+
+      if (currentParentLevel >= 3) {
+        showToast("Maximum reply depth reached", "warning");
+        return;
+      }
+
+      const contentElement =
+        this.closest(".reply-card").querySelector(".reply-content");
+      if (!contentElement) {
+        console.error("Content element not found");
+        return;
+      }
+
+      const replyModal = document.getElementById("replyModal");
+      if (!replyModal) {
+        console.error("Reply modal not found");
+        return;
+      }
+
+      const modal = new bootstrap.Modal(replyModal);
+      const parentComment = replyModal.querySelector(".parent-comment");
+
+      if (parentComment) {
+        parentComment.innerHTML = escapeHTML(contentElement.textContent.trim());
+      }
+
+      const submitButton = replyModal.querySelector(".submit-reply");
+      submitButton.setAttribute("data-parent-id", commentId);
+      submitButton.setAttribute("data-parent-level", currentParentLevel);
+
+      modal.show();
+    });
+  }
+
+  // Scroll the new reply into view smoothly
+  replyCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 function updateReplyCount(commentId, newCount) {
-  const replyButton = document.querySelector(`.reply-btn[data-comment-id='${commentId}']`);
+  const replyButton = document.querySelector(
+    `.reply-btn[data-comment-id='${commentId}']`
+  );
   if (replyButton) {
     replyButton.innerHTML = `<i class="fas fa-reply me-1"></i> Reply (${newCount})`;
   }
 }
-
 
 /**
  * Escapes HTML to prevent XSS attacks when inserting user-generated content.
