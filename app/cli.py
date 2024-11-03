@@ -5,6 +5,26 @@ from .utils.search import init_search_vectors
 from .extensions import db
 from sqlalchemy import text
 import logging
+import json
+import os
+from .utils.extract_normalize import (
+    SubjectExtractor, 
+    RequirementExtractor,
+    populate_subjects_and_categories,
+    create_course_templates
+)
+from .utils.data_migration_manager import DataMigrationManager
+from .models.requirement import (
+    CourseRequirementTemplates,
+    TemplateSubjectRequirements,
+    InstitutionRequirements,
+    InstitutionSubjectRequirements
+)
+from .models.subject import (
+    SubjectCategories,
+    Subjects
+)
+
 
 def wait_for_db_cli(retries=5, interval=5):
     """Ensure database is available before running CLI commands"""
@@ -753,6 +773,376 @@ def init_app(app):
                 
         except Exception as e:
             click.echo(f"Error analyzing education patterns: {str(e)}")
+            db.session.rollback()
+            raise
+        finally:
+            db.session.close()
+            
+    @app.cli.command('db-migrate-requirements')
+    @with_appcontext
+    def migrate_requirements():
+        """Migrate course requirements to new schema"""
+        if not wait_for_db_cli():
+            click.echo("Could not establish database connection")
+            return
+
+        try:
+            click.echo('Starting requirements migration...')
+            
+            # Load JSON data
+            json_path = os.path.join(app.root_path, 'data', 'inst_data.json')
+            with open(json_path, 'r') as f:
+                json_data = json.load(f)
+
+            # Initialize migration manager
+            manager = DataMigrationManager(db, json_data)
+
+            # Execute migration
+            manager.migrate_all()
+            
+            # Validate migration
+            if manager.validate_migration():
+                click.echo('Migration completed successfully.')
+            else:
+                click.echo('Migration completed with validation warnings.')
+
+        except Exception as e:
+            click.echo(f"Error during migration: {str(e)}")
+            db.session.rollback()
+            raise
+        finally:
+            db.session.close()
+
+    @app.cli.command('db-requirements-stats')
+    @with_appcontext
+    def requirements_stats():
+        """Show statistics about course requirements"""
+        if not wait_for_db_cli():
+            click.echo("Could not establish database connection")
+            return
+
+        try:
+            click.echo("\nRequirements Statistics:")
+            
+            # Get basic counts
+            template_count = db.session.query(
+                CourseRequirementTemplates
+            ).count()
+            
+            subject_count = db.session.query(
+                Subjects
+            ).count()
+            
+            inst_req_count = db.session.query(
+                InstitutionRequirements
+            ).count()
+
+            click.echo(f"\nTotal course templates: {template_count}")
+            click.echo(f"Total subjects: {subject_count}")
+            click.echo(f"Total institution-specific requirements: {inst_req_count}")
+
+            # Get subject statistics
+            subject_stats = db.session.execute(text("""
+                SELECT 
+                    category_id,
+                    COUNT(*) as subject_count,
+                    SUM(CASE WHEN is_core THEN 1 ELSE 0 END) as core_subjects
+                FROM subjects
+                GROUP BY category_id
+            """)).fetchall()
+
+            click.echo("\nSubject Distribution:")
+            for stat in subject_stats:
+                category = SubjectCategories.query.get(stat[0])
+                click.echo(f"{category.name}:")
+                click.echo(f"  Total subjects: {stat[1]}")
+                click.echo(f"  Core subjects: {stat[2]}")
+
+            # Get template statistics
+            template_stats = db.session.execute(text("""
+                SELECT 
+                    min_credits,
+                    COUNT(*) as template_count
+                FROM course_requirement_templates
+                GROUP BY min_credits
+                ORDER BY min_credits
+            """)).fetchall()
+
+            click.echo("\nTemplate Credit Requirements:")
+            for stat in template_stats:
+                click.echo(f"{stat[0]} credits: {stat[1]} templates")
+
+        except Exception as e:
+            click.echo(f"Error getting statistics: {str(e)}")
+            db.session.rollback()
+            raise
+        finally:
+            db.session.close()
+
+    @app.cli.command('db-requirements-verify')
+    @with_appcontext
+    def verify_requirements():
+        """Verify integrity of course requirements"""
+        if not wait_for_db_cli():
+            click.echo("Could not establish database connection")
+            return
+
+        try:
+            click.echo("\nVerifying requirements integrity...")
+
+            # Check for orphaned records
+            orphaned = db.session.execute(text("""
+                SELECT 'template_requirements' as type, COUNT(*) 
+                FROM template_subject_requirements tsr
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM course_requirement_templates crt 
+                    WHERE crt.id = tsr.template_id
+                )
+                UNION ALL
+                SELECT 'institution_requirements' as type, COUNT(*)
+                FROM institution_requirements ir
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM university u WHERE u.id = ir.institution_id
+                )
+                UNION ALL
+                SELECT 'subject_requirements' as type, COUNT(*)
+                FROM institution_subject_requirements isr
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM institution_requirements ir 
+                    WHERE ir.id = isr.institution_requirement_id
+                )
+            """)).fetchall()
+
+            click.echo("\nOrphaned Records Check:")
+            for check in orphaned:
+                click.echo(f"{check[0]}: {check[1]} orphaned records")
+
+            # Check for duplicate requirements
+            duplicates = db.session.execute(text("""
+                SELECT template_id, subject_id, COUNT(*)
+                FROM template_subject_requirements
+                GROUP BY template_id, subject_id
+                HAVING COUNT(*) > 1
+            """)).fetchall()
+
+            if duplicates:
+                click.echo("\nFound duplicate template requirements:")
+                for dup in duplicates:
+                    click.echo(f"Template {dup[0]}, Subject {dup[1]}: {dup[2]} occurrences")
+
+            # Check template coverage
+            coverage = db.session.execute(text("""
+                SELECT 
+                    COUNT(DISTINCT c.course_name) as total_courses,
+                    COUNT(DISTINCT crt.name) as templates,
+                    (COUNT(DISTINCT crt.name)::float / 
+                    COUNT(DISTINCT c.course_name)::float * 100) as coverage
+                FROM course c
+                LEFT JOIN course_requirement_templates crt 
+                    ON c.course_name = crt.name
+            """)).fetchone()
+
+            click.echo("\nTemplate Coverage:")
+            click.echo(f"Total unique courses: {coverage[0]}")
+            click.echo(f"Courses with templates: {coverage[1]}")
+            click.echo(f"Coverage percentage: {coverage[2]:.2f}%")
+
+        except Exception as e:
+            click.echo(f"Error verifying requirements: {str(e)}")
+            db.session.rollback()
+            raise
+        finally:
+            db.session.close()
+            
+    @app.cli.command('db-migrate-subjects')
+    @with_appcontext
+    def migrate_subjects():
+        """Extract and migrate subjects from existing data"""
+        if not wait_for_db_cli():
+            click.echo("Could not establish database connection")
+            return
+
+        try:
+            click.echo('Starting subject migration...')
+            
+            # Load JSON data
+            json_path = os.path.join(current_app.root_path, 'data', 'inst_data.json')
+            try:
+                with open(json_path, 'r') as f:
+                    json_data = json.load(f)
+                click.echo('Loaded JSON data successfully')
+            except Exception as e:
+                click.echo(f'Error loading JSON data: {str(e)}')
+                return
+
+            # Get existing courses
+            from .models.university import Course
+            courses = Course.query.all()
+            click.echo(f'Found {len(courses)} existing courses')
+
+            # Populate subjects and categories
+            click.echo('Populating subjects and categories...')
+            populate_subjects_and_categories(db, json_data, courses)
+            
+            # Create course templates
+            click.echo('Creating course templates...')
+            create_course_templates(db, courses)
+
+            # Verify migration
+            subject_count = db.session.execute(text(
+                "SELECT COUNT(*) FROM subjects"
+            )).scalar()
+            category_count = db.session.execute(text(
+                "SELECT COUNT(*) FROM subject_categories"
+            )).scalar()
+            template_count = db.session.execute(text(
+                "SELECT COUNT(*) FROM course_requirement_templates"
+            )).scalar()
+
+            click.echo('\nMigration Summary:')
+            click.echo(f'Created {category_count} subject categories')
+            click.echo(f'Created {subject_count} subjects')
+            click.echo(f'Created {template_count} course templates')
+
+        except Exception as e:
+            click.echo(f"Error during migration: {str(e)}")
+            db.session.rollback()
+            raise
+        finally:
+            db.session.close()
+
+    @app.cli.command('db-subjects-verify')
+    @with_appcontext
+    def verify_subjects():
+        """Verify subject data migration"""
+        if not wait_for_db_cli():
+            click.echo("Could not establish database connection")
+            return
+
+        try:
+            click.echo('\nVerifying subject data...')
+
+            # Check categories
+            categories = db.session.execute(text("""
+                SELECT name, 
+                    (SELECT COUNT(*) FROM subjects WHERE category_id = c.id) as subject_count
+                FROM subject_categories c
+                ORDER BY name
+            """)).fetchall()
+
+            click.echo('\nSubject Categories:')
+            for cat in categories:
+                click.echo(f'{cat[0]}: {cat[1]} subjects')
+
+            # Check core subjects
+            core_subjects = db.session.execute(text("""
+                SELECT name, 
+                    (SELECT name FROM subject_categories WHERE id = s.category_id) as category
+                FROM subjects s
+                WHERE is_core = true
+                ORDER BY name
+            """)).fetchall()
+
+            click.echo('\nCore Subjects:')
+            for subj in core_subjects:
+                click.echo(f'{subj[0]} ({subj[1]})')
+
+            # Check course templates
+            templates = db.session.execute(text("""
+                SELECT 
+                    t.name,
+                    COUNT(DISTINCT r.subject_id) as subject_count,
+                    t.min_credits,
+                    t.max_sittings
+                FROM course_requirement_templates t
+                LEFT JOIN template_subject_requirements r ON r.template_id = t.id
+                GROUP BY t.id, t.name
+                ORDER BY subject_count DESC
+                LIMIT 10
+            """)).fetchall()
+
+            click.echo('\nTop 10 Course Templates by Subject Count:')
+            for tmpl in templates:
+                click.echo(f'{tmpl[0]}: {tmpl[1]} subjects (min credits: {tmpl[2]}, max sittings: {tmpl[3]})')
+
+        except Exception as e:
+            click.echo(f"Error during verification: {str(e)}")
+            db.session.rollback()
+            raise
+        finally:
+            db.session.close()
+
+    @app.cli.command('db-subjects-analyze')
+    @with_appcontext
+    def analyze_subjects():
+        """Analyze subject patterns and relationships"""
+        if not wait_for_db_cli():
+            click.echo("Could not establish database connection")
+            return
+
+        try:
+            click.echo('\nAnalyzing subject patterns...')
+
+            # Analyze subject frequency in requirements
+            subject_freq = db.session.execute(text("""
+                WITH requirement_counts AS (
+                    SELECT subject_id, 
+                        COUNT(*) as total_uses,
+                        SUM(CASE WHEN is_mandatory THEN 1 ELSE 0 END) as mandatory_uses
+                    FROM template_subject_requirements
+                    GROUP BY subject_id
+                )
+                SELECT 
+                    s.name,
+                    c.name as category,
+                    r.total_uses,
+                    r.mandatory_uses,
+                    s.is_core
+                FROM requirement_counts r
+                JOIN subjects s ON s.id = r.subject_id
+                JOIN subject_categories c ON c.id = s.category_id
+                ORDER BY r.total_uses DESC
+                LIMIT 20
+            """)).fetchall()
+
+            click.echo('\nTop 20 Most Used Subjects:')
+            for subj in subject_freq:
+                click.echo(
+                    f'{subj[0]} ({subj[1]}): {subj[2]} total uses, '
+                    f'{subj[3]} as mandatory {" (Core)" if subj[4] else ""}'
+                )
+
+            # Analyze subject combinations
+            combinations = db.session.execute(text("""
+                WITH subject_pairs AS (
+                    SELECT 
+                        t1.template_id,
+                        t1.subject_id as subject1,
+                        t2.subject_id as subject2
+                    FROM template_subject_requirements t1
+                    JOIN template_subject_requirements t2 
+                        ON t1.template_id = t2.template_id 
+                        AND t1.subject_id < t2.subject_id
+                    WHERE t1.is_mandatory AND t2.is_mandatory
+                )
+                SELECT 
+                    s1.name as subject1,
+                    s2.name as subject2,
+                    COUNT(*) as frequency
+                FROM subject_pairs p
+                JOIN subjects s1 ON s1.id = p.subject1
+                JOIN subjects s2 ON s2.id = p.subject2
+                GROUP BY s1.name, s2.name
+                ORDER BY frequency DESC
+                LIMIT 10
+            """)).fetchall()
+
+            click.echo('\nTop 10 Mandatory Subject Combinations:')
+            for combo in combinations:
+                click.echo(f'{combo[0]} + {combo[1]}: appears in {combo[2]} templates')
+
+        except Exception as e:
+            click.echo(f"Error during analysis: {str(e)}")
             db.session.rollback()
             raise
         finally:

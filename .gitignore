@@ -179,3 +179,5 @@ xtr_pdf.py
 drop_tables.sql
 production_dump.sql
 *.json
+/data
+/data/
