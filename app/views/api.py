@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
-from ..models.university import University, Course, CourseRequirement, SubjectRequirement
+from ..models.university import University, Course, CourseRequirement
 from ..models.interaction import Bookmark, Comment, Vote
 from ..models.user import User
 from ..extensions import db

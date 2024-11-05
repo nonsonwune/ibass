@@ -1,3 +1,4 @@
+# app/utils/data_migration_manager.py
 from typing import Dict, List, Set, Tuple, Optional
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, ProgrammingError
 from datetime import datetime
@@ -9,12 +10,7 @@ from ..models.subject import (
     SubjectCategories,
     Subjects
 )
-from ..models.requirement import (
-    CourseRequirementTemplates,
-    TemplateSubjectRequirements,
-    InstitutionRequirements,
-    InstitutionSubjectRequirements
-)
+from ..models.requirement import CourseRequirement
 from ..models.university import Course, University
 from contextlib import contextmanager
 from sqlalchemy import inspect, text
@@ -201,120 +197,83 @@ class DataMigrationManager:
                 if i % (self.BATCH_SIZE * 5) == 0:
                     self.db.session.flush()
 
-    def _process_json_templates(self) -> None:
-        """Process course templates from JSON data with enhanced logging."""
-        self.logger.info(f"JSON data keys: {list(self.json_data.keys())}")
-        programs = self.json_data.get('professional_programs', {})
-        self.logger.info(f"Found {len(programs)} professional programs")
-        self.logger.debug(f"Program names: {list(programs.keys())}")
-        
-        processed_templates = set()
-        
-        for program_name, program_data in programs.items():
-            self.logger.debug(f"Processing program: {program_name}")
-            
-            if program_name in processed_templates:
-                continue
-                
-            try:
-                o_level_reqs = program_data.get('o_level_requirements', {})
-                
-                existing_template = CourseRequirementTemplates.query.filter_by(
-                    name=program_name
-                ).first()
-                
-                if existing_template:
-                    self._update_existing_template(
-                        existing_template, 
-                        program_name, 
-                        o_level_reqs
-                    )
-                    self.stats.templates_updated += 1
-                else:
-                    template = self._create_new_template(
-                        program_name, 
-                        o_level_reqs
-                    )
-                    self.db.session.add(template)
-                    self.stats.templates_created += 1
-                
-                processed_templates.add(program_name)
-                
-            except Exception as e:
-                self.logger.warning(
-                    f"Error processing program template {program_name}: {str(e)}"
-                )
-                continue
-        
-        self.logger.info(
-            f"Processed {len(processed_templates)} templates "
-            f"(Created: {self.stats.templates_created}, "
-            f"Updated: {self.stats.templates_updated})"
-        )
-
-    def _create_course_templates(self) -> None:
-        """Create course templates with enhanced error handling and stats tracking."""
-        with self.batch_operation("course template creation"):
-            # Process JSON templates
-            self._process_json_templates()
-            
-            # Process course templates
-            processed_courses = set()
-            template_batch = []
-            
-            for courses in self.yield_course_batches():
-                for course in courses:
-                    if course.course_name in processed_courses or not course.utme_requirements:
-                        continue
-                        
-                    template = self._create_template_from_course(course)
-                    if template:
-                        template_batch.append(template)
-                        self.stats.templates_created += 1
-                        
-                    processed_courses.add(course.course_name)
-                    
-                    if len(template_batch) >= self.BATCH_SIZE:
-                        self.db.session.bulk_save_objects(template_batch)
-                        template_batch = []
-                        self.db.session.flush()
-            
-            if template_batch:
-                self.db.session.bulk_save_objects(template_batch)
-                self.db.session.flush()
 
     def _create_institution_requirements(self) -> None:
-        """Create institution requirements with improved error handling."""
+        """Create or update institution requirements with enhanced error handling."""
         with self.batch_operation("institution requirements creation"):
+            initial_req_count = CourseRequirement.query.count()
             processed = set()
             
             for course in Course.query.all():
+                # Skip invalid courses
                 if not course.utme_requirements or not course.course_name:
                     continue
 
+                # Create composite key for tracking
                 inst_template_key = (course.university_name, course.course_name)
                 if inst_template_key in processed:
                     continue
                     
                 processed.add(inst_template_key)
 
+                # Find institution with error handling
+                institution = University.query.filter_by(
+                    university_name=course.university_name
+                ).first()
+
+                if not institution:
+                    self.errors.append(f"Institution not found: {course.university_name}")
+                    continue
+
                 try:
-                    self._process_single_institution_requirement(course)
+                    # Parse requirements
+                    requirements = self.requirement_extractor.parse_requirements(
+                        course.utme_requirements
+                    )
+
+                    # Check for existing requirement
+                    existing_req = CourseRequirement.query.filter_by(
+                        university_id=institution.id,
+                        course_id=course.id
+                    ).first()
+
+                    if existing_req:
+                        # Update existing requirement
+                        existing_req.utme_template_id = requirements.get('utme_template_id')
+                        existing_req.de_template_id = requirements.get('de_template_id')
+                        existing_req.updated_at = datetime.utcnow()
+                    else:
+                        # Create new requirement
+                        new_req = CourseRequirement(
+                            university_id=institution.id,
+                            course_id=course.id,
+                            utme_template_id=requirements.get('utme_template_id'),
+                            de_template_id=requirements.get('de_template_id'),
+                            created_at=datetime.utcnow(),
+                            updated_at=datetime.utcnow()
+                        )
+                        self.db.session.add(new_req)
+                        self.stats.requirements_created += 1
+
+                    # Commit periodically to avoid large transactions
+                    if self.stats.requirements_created % 1000 == 0:
+                        self.db.session.flush()
+
                 except Exception as e:
-                    self.logger.warning(
+                    logger.warning(
                         f"Error processing requirement for {course.university_name} - "
                         f"{course.course_name}: {str(e)}"
                     )
                     continue
 
-                if len(self.stats.errors) >= self.MAX_ERRORS:
-                    raise Exception(f"Maximum error limit ({self.MAX_ERRORS}) reached")
+            self.db.session.flush()
+            
+            final_req_count = CourseRequirement.query.count()
+            self.stats.requirements_created = final_req_count - initial_req_count
+            logger.info(f"Created/updated {self.stats.requirements_created} institution requirements")
 
     def _process_single_institution_requirement(self, course: Course) -> None:
         """Process a single institution requirement with proper error handling."""
-        template = CourseRequirementTemplates.query.filter_by(
-            name=course.course_name
-        ).first()
         
         if not template:
             self.stats.errors.append(f"Template not found for course: {course.course_name}")
@@ -361,7 +320,6 @@ class DataMigrationManager:
 
             migration_steps = [
                 self._create_subjects,
-                self._create_course_templates,
                 self._create_institution_requirements
             ]
             
@@ -436,126 +394,7 @@ class DataMigrationManager:
                 )
                 self.db.session.add(subcat)
 
-    def _create_course_templates(self):
-        """Create course templates with efficient batch processing."""
-        with self.batch_operation("course template creation"):
-            initial_template_count = CourseRequirementTemplates.query.count()
-            # Process JSON templates
-            self._process_json_templates()
-            
-            # Process course templates in batches
-            processed_courses = set()
-            for courses in self.yield_course_batches():
-                template_batch = []
-                for course in courses:
-                    if course.course_name in processed_courses or not course.utme_requirements:
-                        continue
-                        
-                    processed_courses.add(course.course_name)
-                    template = self._create_template_from_course(course)
-                    if template:
-                        template_batch.append(template)
-                        
-                if template_batch:
-                    self.db.session.bulk_save_objects(template_batch)
-                    self.stats.templates_created += len(template_batch)
-                    self.db.session.flush()
 
-        final_template_count = CourseRequirementTemplates.query.count()
-        self.stats.templates_created = final_template_count - initial_template_count
-
-
-    def _create_institution_requirements(self):
-        """Create or update institution requirements with enhanced error handling."""
-        try:
-            initial_req_count = InstitutionRequirements.query.count()
-            processed = set()
-            
-            for course in Course.query.all():
-                # Skip invalid courses
-                if not course.utme_requirements or not course.course_name:
-                    continue
-
-                # Create composite key for tracking
-                inst_template_key = (course.university_name, course.course_name)
-                if inst_template_key in processed:
-                    continue
-                    
-                processed.add(inst_template_key)
-
-                # Find template with error handling
-                template = CourseRequirementTemplates.query.filter_by(
-                    name=course.course_name
-                ).first()
-                
-                if not template:
-                    self.errors.append(f"Template not found for course: {course.course_name}")
-                    continue
-
-                # Find institution with error handling
-                institution = University.query.filter_by(
-                    university_name=course.university_name
-                ).first()
-
-                if not institution:
-                    self.errors.append(f"Institution not found: {course.university_name}")
-                    continue
-
-                try:
-                    # Parse requirements
-                    requirements = self.requirement_extractor.parse_requirements(
-                        course.utme_requirements
-                    )
-
-                    # Check for existing requirement
-                    existing_req = InstitutionRequirements.query.filter_by(
-                        institution_id=institution.id,
-                        template_id=template.id
-                    ).first()
-
-                    if existing_req:
-                        # Update existing requirement
-                        existing_req.override_min_credits = requirements.get('min_credits', 5)
-                        existing_req.override_max_sittings = requirements.get('max_sittings', 2)
-                        existing_req.additional_requirements = course.utme_requirements
-                        existing_req.updated_at = datetime.utcnow()
-                    else:
-                        # Create new requirement
-                        new_req = InstitutionRequirements(
-                            institution_id=institution.id,
-                            template_id=template.id,
-                            override_min_credits=requirements.get('min_credits', 5),
-                            override_max_sittings=requirements.get('max_sittings', 2),
-                            additional_requirements=course.utme_requirements,
-                            created_at=datetime.utcnow(),
-                            updated_at=datetime.utcnow()
-                        )
-                        self.db.session.add(new_req)
-                        self.stats.requirements_created += 1
-
-                    # Commit periodically to avoid large transactions
-                    if self.stats.requirements_created % 1000 == 0:
-                        self.db.session.flush()
-
-                except Exception as e:
-                    logger.warning(
-                        f"Error processing requirement for {course.university_name} - "
-                        f"{course.course_name}: {str(e)}"
-                    )
-                    continue
-
-            self.db.session.flush()
-            
-            final_req_count = InstitutionRequirements.query.count()
-            self.stats.requirements_created = final_req_count - initial_req_count
-            logger.info(f"Created/updated {self.stats.requirements_created} institution requirements")
-
-        except SQLAlchemyError as e:
-            logger.error(f"Database error in institution requirements: {str(e)}")
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected error in institution requirements: {str(e)}")
-            raise
 
     def validate_migration(self):
         """Validate the migrated data with proper transaction handling."""
@@ -563,7 +402,6 @@ class DataMigrationManager:
             with self.db.session.begin_nested():
                 # Basic count validations
                 subject_count = Subjects.query.count()
-                template_count = CourseRequirementTemplates.query.count()
                 inst_req_count = InstitutionRequirements.query.count()
 
                 logger.info(f"Total subjects created: {subject_count}")
@@ -585,12 +423,6 @@ class DataMigrationManager:
                     self.errors.append(f"Found {orphaned_requirements} orphaned institution requirements")
                     return False
 
-                # Validate relationships
-                invalid_templates = self.db.session.query(InstitutionRequirements).filter(
-                    ~InstitutionRequirements.template_id.in_(
-                        self.db.session.query(CourseRequirementTemplates.id)
-                    )
-                ).count()
 
                 if invalid_templates > 0:
                     self.errors.append(f"Found {invalid_templates} invalid template references")
@@ -603,110 +435,6 @@ class DataMigrationManager:
             self.errors.append(str(e))
             return False
         
-    def _process_json_templates(self):
-        logger.info(f"JSON data keys: {list(self.json_data.keys())}")
-        programs = self.json_data.get('professional_programs', {})
-        logger.info(f"Found {len(programs)} professional programs")
-        logger.debug(f"Program names: {list(programs.keys())}")
-        """Process course templates from JSON data with upsert handling."""
-        try:
-            # Track processed templates to avoid duplicates
-            processed_templates = set()
-            templates_before = self.stats.templates_created
-            
-            # Process professional programs
-            logger.info("Processing professional program templates...")
-            for program_name, program_data in self.json_data.get('professional_programs', {}).items():
-                logger.debug(f"Processing program: {program_name}")
-                
-                if program_name in processed_templates:
-                    continue
-                    
-                try:
-                    # Check if template already exists
-                    existing_template = CourseRequirementTemplates.query.filter_by(
-                        name=program_name
-                    ).first()
-                    
-                    o_level_reqs = program_data.get('o_level_requirements', {})
-                    
-                    if existing_template:
-                        # Update existing template
-                        existing_template.description = f"Professional program: {program_name}"
-                        existing_template.min_credits = o_level_reqs.get('minimum_credits', 5)
-                        existing_template.max_sittings = 2 if 'sitting_requirement' not in o_level_reqs else \
-                            int(re.search(r'\d+', str(o_level_reqs['sitting_requirement'])).group())
-                        existing_template.updated_at = datetime.utcnow()
-                    else:
-                        # Create new template
-                        template = CourseRequirementTemplates(
-                            name=program_name,
-                            description=f"Professional program: {program_name}",
-                            min_credits=o_level_reqs.get('minimum_credits', 5),
-                            max_sittings=2 if 'sitting_requirement' not in o_level_reqs else \
-                                int(re.search(r'\d+', str(o_level_reqs['sitting_requirement'])).group()),
-                            created_at=datetime.utcnow(),
-                            updated_at=datetime.utcnow()
-                        )
-                        self.db.session.add(template)
-                        self.stats.templates_created += 1
-                    
-                    processed_templates.add(program_name)
-                    
-                except Exception as e:
-                    logger.warning(f"Error processing program template {program_name}: {str(e)}")
-                    continue
-            
-            # Commit first batch
-            self.db.session.flush()
-            logger.info(f"Processed {self.stats.templates_created} professional program templates")
-            
-            return True
-        
-            templates_created = self.stats.templates_created - templates_before
-            logger.info(f"Created {templates_created} new templates and updated {len(processed_templates) - templates_created} existing templates")
-            
-        except Exception as e:
-            logger.error(f"Error in _process_json_templates: {str(e)}")
-            raise
-        
-    def _create_template_from_course(self, course: Course) -> Optional[CourseRequirementTemplates]:
-        """Create a course template from an existing course."""
-        try:
-            # Parse requirements
-            requirements = self.requirement_extractor.parse_requirements(
-                course.utme_requirements
-            )
-
-            # Check if template already exists
-            existing_template = CourseRequirementTemplates.query.filter_by(
-                name=course.course_name
-            ).first()
-            
-            if existing_template:
-                # Update existing template
-                existing_template.min_credits = requirements.get('min_credits', 5)
-                existing_template.max_sittings = requirements.get('max_sittings', 2)
-                existing_template.updated_at = datetime.utcnow()
-                return None  # Don't add to batch since we're updating
-            
-            # Create new template
-            template = CourseRequirementTemplates(
-                name=course.course_name,
-                description=f"Template for {course.course_name}",
-                min_credits=requirements.get('min_credits', 5),
-                max_sittings=requirements.get('max_sittings', 2),
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
-            )
-            
-            return template
-            
-        except Exception as e:
-            logger.warning(
-                f"Error creating template for course {course.course_name}: {str(e)}"
-            )
-            return None
         
     def validate_schema(self) -> Tuple[bool, List[str]]:
         """Validate database schema with detailed checks."""

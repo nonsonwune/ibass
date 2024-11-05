@@ -1,147 +1,163 @@
 # app/models/requirement.py
-from datetime import datetime
 from ..extensions import db
-from sqlalchemy.ext.hybrid import hybrid_property
+from .base import BaseModel
+from sqlalchemy import exc
+from contextlib import contextmanager
+import logging
 
-class CourseRequirementTemplates(db.Model):
-    __tablename__ = 'course_requirement_templates'
+logger = logging.getLogger(__name__)
 
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255), nullable=False, unique=True)
-    description = db.Column(db.Text)
-    min_credits = db.Column(db.Integer, nullable=False, default=5)
-    max_sittings = db.Column(db.Integer, nullable=False, default=2)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
+@contextmanager
+def session_scope():
+    """Provide a transactional scope around a series of operations."""
+    try:
+        yield db.session
+        db.session.commit()
+    except:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.close()
 
-    subject_requirements = db.relationship('TemplateSubjectRequirements',
-                                        backref='template',
-                                        lazy='dynamic',
-                                        cascade='all, delete-orphan')
+class UTMERequirementTemplate(BaseModel):
+    __tablename__ = 'utme_requirement_template'
     
-    institution_requirements = db.relationship('InstitutionRequirements',
-                                            backref='template',
-                                            lazy='dynamic',
-                                            cascade='all, delete-orphan')
-
-    def __repr__(self):
-        return f'<CourseTemplate {self.name}>'
-
-    @hybrid_property
-    def mandatory_subjects(self):
-        """Get all mandatory subjects for this template."""
-        return [req.subject for req in self.subject_requirements.filter_by(is_mandatory=True)]
-
-    @hybrid_property
-    def optional_subjects(self):
-        """Get all optional subjects for this template."""
-        return [req.subject for req in self.subject_requirements.filter_by(is_mandatory=False)]
-
-    def to_dict(self):
-        """Convert template to dictionary format."""
-        return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'min_credits': self.min_credits,
-            'max_sittings': self.max_sittings,
-            'mandatory_subjects': [
-                {'id': s.id, 'name': s.name} for s in self.mandatory_subjects
-            ],
-            'optional_subjects': [
-                {'id': s.id, 'name': s.name} for s in self.optional_subjects
-            ]
-        }
-
-class TemplateSubjectRequirements(db.Model):
-    __tablename__ = 'template_subject_requirements'
-
     id = db.Column(db.Integer, primary_key=True)
-    template_id = db.Column(db.Integer, db.ForeignKey('course_requirement_templates.id', ondelete='CASCADE'))
-    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id', ondelete='CASCADE'))
-    is_mandatory = db.Column(db.Boolean, nullable=False, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    requirements = db.Column(db.Text, nullable=False, unique=True)
+    
+    course_requirements = db.relationship('CourseRequirement', 
+                                        back_populates='utme_template',
+                                        lazy='dynamic')
+    
+class DirectEntryRequirementTemplate(BaseModel):
+    __tablename__ = 'direct_entry_requirement_template'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    requirements = db.Column(db.Text, nullable=False, unique=True)
+    
+    course_requirements = db.relationship('CourseRequirement', 
+                                        back_populates='de_template',
+                                        lazy='dynamic')
+class CourseRequirement(BaseModel):
+    __tablename__ = 'course_requirement'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    university_id = db.Column(db.Integer, db.ForeignKey('university.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    utme_template_id = db.Column(db.Integer, db.ForeignKey('utme_requirement_template.id'))
+    de_template_id = db.Column(db.Integer, db.ForeignKey('direct_entry_requirement_template.id'))
+    
+    university = db.relationship('University', back_populates='course_requirements')
+    course = db.relationship('Course', back_populates='requirements')
+    subject_requirement = db.relationship(
+        'SubjectRequirement', 
+        back_populates='requirement',
+        uselist=False,
+        cascade='all, delete-orphan',
+        single_parent=True 
+    )
+    utme_template = db.relationship('UTMERequirementTemplate', back_populates='course_requirements')
+    de_template = db.relationship('DirectEntryRequirementTemplate', back_populates='course_requirements')
+    
     __table_args__ = (
-        db.UniqueConstraint('template_id', 'subject_id', name='unique_template_subject'),
+        db.Index('idx_course_requirement_composite', 'course_id', 'university_id'),
+        db.Index('idx_course_requirement_course_id', 'course_id'),
+        db.Index('idx_course_requirement_template_ids', 'utme_template_id', 'de_template_id'),
     )
 
-    def __repr__(self):
-        return f'<TemplateRequirement {self.template_id}:{self.subject_id}>'
+    @property
+    def utme_requirements(self):
+        return self.utme_template.requirements if self.utme_template else None
 
-class InstitutionRequirements(db.Model):
-    __tablename__ = 'institution_requirements'
+    @property
+    def direct_entry_requirements(self):
+        return self.de_template.requirements if self.de_template else None
 
+    @classmethod
+    def copy_course_requirements(cls, source_course_id, target_course_id):
+        """
+        Copy course requirements from source course to target course.
+        
+        Args:
+            source_course_id (int): ID of the source course
+            target_course_id (int): ID of the target course
+            
+        Returns:
+            tuple: (bool, str) - (Success status, message)
+        """
+        try:
+            # Validate course IDs
+            from .university import Course  # Import here to avoid circular imports
+            source_course = Course.query.get(source_course_id)
+            target_course = Course.query.get(target_course_id)
+            
+            if not source_course or not target_course:
+                return False, "Invalid course ID(s)"
+            
+            if source_course_id == target_course_id:
+                return False, "Source and target courses cannot be the same"
+                
+            with session_scope() as session:
+                # Get all requirements for source course
+                source_requirements = cls.query.filter_by(
+                    course_id=source_course_id
+                ).all()
+                
+                if not source_requirements:
+                    return False, "No requirements found for source course"
+                
+                # Delete existing requirements for target course
+                cls.query.filter_by(course_id=target_course_id).delete()
+                
+                # Copy requirements to target course
+                for req in source_requirements:
+                    new_req = cls(
+                        course_id=target_course_id,
+                        university_id=req.university_id,
+                        utme_template_id=req.utme_template_id,
+                        de_template_id=req.de_template_id
+                    )
+                    session.add(new_req)
+                    
+                    # Copy subject requirements if they exist
+                    if req.subject_requirement:
+                        new_subject_req = SubjectRequirement(
+                            subjects=req.subject_requirement.subjects
+                        )
+                        new_req.subject_requirement = new_subject_req
+                
+                logger.info(f"Successfully copied requirements from course {source_course_id} to {target_course_id}")
+                return True, "Requirements copied successfully"
+                
+        except exc.IntegrityError as e:
+            logger.error(f"Database integrity error: {str(e)}")
+            return False, "Database integrity error occurred"
+        except Exception as e:
+            logger.error(f"Unexpected error: {str(e)}")
+            return False, f"An error occurred: {str(e)}"
+        
+class SubjectRequirement(BaseModel):
+    __tablename__ = 'subject_requirement'
+    
     id = db.Column(db.Integer, primary_key=True)
-    institution_id = db.Column(db.Integer, db.ForeignKey('university.id', ondelete='CASCADE'))
-    template_id = db.Column(db.Integer, db.ForeignKey('course_requirement_templates.id', ondelete='CASCADE'))
-    override_min_credits = db.Column(db.Integer)
-    override_max_sittings = db.Column(db.Integer)
-    additional_requirements = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    subject_requirements = db.relationship('InstitutionSubjectRequirements',
-                                        backref='institution_requirement',
-                                        lazy='dynamic',
-                                        cascade='all, delete-orphan')
-
-    __table_args__ = (
-        db.UniqueConstraint('institution_id', 'template_id', name='unique_institution_template'),
-        db.CheckConstraint('override_min_credits IS NULL OR override_min_credits > 0', 
-                          name='valid_override_credits'),
-        db.CheckConstraint('override_max_sittings IS NULL OR override_max_sittings > 0',
-                          name='valid_override_sittings')
+    course_requirement_id = db.Column(
+        db.Integer, 
+        db.ForeignKey('course_requirement.id', ondelete='CASCADE'),
+        nullable=False
     )
-
-    def __repr__(self):
-        return f'<InstitutionRequirement {self.institution_id}:{self.template_id}>'
-
-    @hybrid_property
-    def effective_min_credits(self):
-        """Get effective minimum credits (override or template default)."""
-        return self.override_min_credits or self.template.min_credits
-
-    @hybrid_property
-    def effective_max_sittings(self):
-        """Get effective maximum sittings (override or template default)."""
-        return self.override_max_sittings or self.template.max_sittings
-
-    def to_dict(self):
-        """Convert requirements to dictionary format."""
-        return {
-            'id': self.id,
-            'institution_id': self.institution_id,
-            'template_id': self.template_id,
-            'min_credits': self.effective_min_credits,
-            'max_sittings': self.effective_max_sittings,
-            'additional_requirements': self.additional_requirements,
-            'mandatory_subjects': [
-                {'id': req.subject.id, 'name': req.subject.name}
-                for req in self.subject_requirements.filter_by(is_mandatory=True)
-            ],
-            'optional_subjects': [
-                {'id': req.subject.id, 'name': req.subject.name}
-                for req in self.subject_requirements.filter_by(is_mandatory=False)
-            ]
-        }
-
-class InstitutionSubjectRequirements(db.Model):
-    __tablename__ = 'institution_subject_requirements'
-
+    subjects = db.Column(db.Text)
+    
+    requirement = db.relationship(
+        'CourseRequirement',
+        back_populates='subject_requirement',
+        single_parent=True
+    )
+    
+class CourseRequirementTemplate(BaseModel):
+    __tablename__ = 'course_requirement_template'
+    
     id = db.Column(db.Integer, primary_key=True)
-    institution_requirement_id = db.Column(db.Integer, 
-                                        db.ForeignKey('institution_requirements.id', ondelete='CASCADE'))
-    subject_id = db.Column(db.Integer, db.ForeignKey('subjects.id', ondelete='CASCADE'))
-    is_mandatory = db.Column(db.Boolean, nullable=False, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    __table_args__ = (
-        db.UniqueConstraint('institution_requirement_id', 'subject_id',
-                           name='unique_institution_subject'),
-    )
-
-    def __repr__(self):
-        return f'<InstitutionSubjectRequirement {self.institution_requirement_id}:{self.subject_id}>'
+    name = db.Column(db.String(256), nullable=False)
+    min_credits = db.Column(db.Integer, default=5)
+    max_sittings = db.Column(db.Integer, default=2)
+    

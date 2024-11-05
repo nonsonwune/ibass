@@ -3,7 +3,7 @@ import re
 from typing import Dict, List, Set, Tuple
 from collections import defaultdict
 from ..models.subject import SubjectCategories, Subjects
-from ..models.requirement import CourseRequirementTemplates, TemplateSubjectRequirements
+from ..models.requirement import CourseRequirement
 
 class SubjectExtractor:
     def __init__(self, json_data=None):

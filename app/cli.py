@@ -7,6 +7,7 @@ from sqlalchemy import text
 import logging
 import json
 import os
+import re
 from .utils.extract_normalize import (
     SubjectExtractor, 
     RequirementExtractor,
@@ -15,14 +16,14 @@ from .utils.extract_normalize import (
 )
 from .utils.data_migration_manager import DataMigrationManager
 from .models.requirement import (
-    CourseRequirementTemplates,
-    TemplateSubjectRequirements,
-    InstitutionRequirements,
-    InstitutionSubjectRequirements
+    UTMERequirementTemplate,
+    DirectEntryRequirementTemplate,
+    CourseRequirement,  
+    CourseRequirementTemplate
 )
 from .models.subject import (
     SubjectCategories,
-    Subjects
+    Subjects,
 )
 
 
@@ -288,22 +289,40 @@ def init_app(app):
         try:
             click.echo("\nVerifying data consistency...")
             
-            # Get actual table counts and max IDs
+            # Get actual table counts and max IDs for all tables
             table_stats = db.session.execute(text("""
                 SELECT 
                     'universities' as table_name,
                     COUNT(*) as record_count,
                     MAX(id) as max_id
-                FROM university
+                    FROM university
                 UNION ALL
                 SELECT 
                     'courses' as table_name,
                     COUNT(*) as record_count,
                     MAX(id) as max_id
-                FROM course
+                    FROM course
+                UNION ALL
+                SELECT 
+                    'subjects' as table_name,
+                    COUNT(*) as record_count,
+                    MAX(id) as max_id
+                    FROM subjects
+                UNION ALL
+                SELECT 
+                    'subject_categories' as table_name,
+                    COUNT(*) as record_count,
+                    MAX(id) as max_id
+                    FROM subject_categories
+                UNION ALL
+                SELECT 
+                    'course_requirement_templates' as table_name,
+                    COUNT(*) as record_count,
+                    MAX(id) as max_id
+                    FROM course_requirement_template
             """)).fetchall()
             
-            # Get orphaned courses (courses without requirements)
+            # Original orphaned courses check
             orphaned_courses = db.session.execute(text("""
                 SELECT c.id, c.course_name
                 FROM course c
@@ -311,7 +330,7 @@ def init_app(app):
                 WHERE cr.id IS NULL
             """)).fetchall()
             
-            # Get duplicate courses
+            # Original duplicate courses check
             duplicate_courses = db.session.execute(text("""
                 SELECT c.course_name, u.university_name, COUNT(*)
                 FROM course c
@@ -321,22 +340,69 @@ def init_app(app):
                 HAVING COUNT(*) > 1
             """)).fetchall()
             
+            # New: Check orphaned subjects (subjects without categories)
+            orphaned_subjects = db.session.execute(text("""
+                SELECT s.id, s.name
+                FROM subjects s
+                LEFT JOIN subject_categories sc ON s.category_id = sc.id
+                WHERE sc.id IS NULL
+            """)).fetchall()
+            
+            # New: Check unused categories (categories with no subjects)
+            unused_categories = db.session.execute(text("""
+                SELECT sc.id, sc.name
+                FROM subject_categories sc
+                LEFT JOIN subjects s ON sc.id = s.category_id
+                WHERE s.id IS NULL
+            """)).fetchall()
+            
+            # New: Check orphaned course requirement templates
+            orphaned_templates = db.session.execute(text("""
+                SELECT crt.id, crt.name
+                FROM course_requirement_template crt
+                LEFT JOIN course_requirement cr ON crt.id = cr.course_id
+                WHERE cr.id IS NULL
+            """)).fetchall()
+            
+            # Output all verification results
             click.echo("\nCurrent Table Status:")
             for stat in table_stats:
                 click.echo(f"{stat.table_name}:")
                 click.echo(f"  Record Count: {stat.record_count}")
                 click.echo(f"  Max ID: {stat.max_id}")
-                
+            
             if orphaned_courses:
                 click.echo("\nOrphaned Courses (no requirements):")
                 for course in orphaned_courses:
                     click.echo(f"ID: {course.id}, Course: {course.course_name}")
-                    
+            
             if duplicate_courses:
                 click.echo("\nDuplicate Courses:")
                 for dup in duplicate_courses:
-                    click.echo(f"Course: {dup[0]}, University: {dup[1]}, "
-                            f"Count: {dup[2]}")
+                    click.echo(f"Course: {dup[0]}, University: {dup[1]}, Count: {dup[2]}")
+            
+            if orphaned_subjects:
+                click.echo("\nOrphaned Subjects (no category):")
+                for subject in orphaned_subjects:
+                    click.echo(f"ID: {subject.id}, Subject: {subject.name}")
+            
+            if unused_categories:
+                click.echo("\nUnused Categories (no subjects):")
+                for category in unused_categories:
+                    click.echo(f"ID: {category.id}, Category: {category.name}")
+            
+            if orphaned_templates:
+                click.echo("\nOrphaned Course Requirement Templates:")
+                for template in orphaned_templates:
+                    click.echo(f"ID: {template.id}, Template: {template.name}")
+            
+            # New: Summary of verification
+            click.echo("\nVerification Summary:")
+            click.echo(f"Total Orphaned Courses: {len(orphaned_courses)}")
+            click.echo(f"Total Duplicate Courses: {len(duplicate_courses)}")
+            click.echo(f"Total Orphaned Subjects: {len(orphaned_subjects)}")
+            click.echo(f"Total Unused Categories: {len(unused_categories)}")
+            click.echo(f"Total Orphaned Templates: {len(orphaned_templates)}")
             
         except Exception as e:
             click.echo(f"Error verifying data: {str(e)}")
@@ -736,35 +802,163 @@ def init_app(app):
     @app.cli.command('db-migrate-requirements')
     @with_appcontext
     def migrate_requirements():
-        """Migrate course requirements to new schema"""
+        """Migrate course requirements to template table"""
         if not wait_for_db_cli():
             click.echo("Could not establish database connection")
             return
 
         try:
-            click.echo('Starting requirements migration...')
+            click.echo('Starting course requirements migration...')
             
-            # Load JSON data
-            json_path = os.path.join(app.root_path, 'data', 'inst_data.json')
-            with open(json_path, 'r') as f:
-                json_data = json.load(f)
-
-            # Initialize migration manager
-            manager = DataMigrationManager(db, json_data)
-
-            # Execute migration
-            manager.migrate_all()
+            # First, get subjects for reference
+            subjects = {s.name: s.id for s in Subjects.query.all()}
+            if not subjects:
+                click.echo("No subjects found in database. Please run db-migrate-subjects first.")
+                return
             
-            # Validate migration
-            if manager.validate_migration():
-                click.echo('Migration completed successfully.')
-            else:
-                click.echo('Migration completed with validation warnings.')
+            click.echo(f'Found {len(subjects)} subjects for reference')
+            
+            # Get unique courses with their UTMERequirementTemplate
+            click.echo('\nAnalyzing existing requirements...')
+            patterns = db.session.execute(text("""
+                SELECT 
+                    c.course_name,
+                    ut.requirements as requirement_text,
+                    COUNT(*) as usage_count
+                FROM course c
+                JOIN course_requirement cr ON c.id = cr.course_id
+                JOIN utme_requirement_template ut ON cr.utme_template_id = ut.id
+                WHERE ut.requirements IS NOT NULL
+                GROUP BY c.course_name, ut.requirements
+                ORDER BY COUNT(*) DESC
+            """)).fetchall()
+            
+            click.echo(f'Found {len(patterns)} unique requirement patterns')
+            
+            # Create templates
+            templates_created = 0
+            requirement_pattern_map = {}  # To store pattern to template_id mapping
+            
+            for pattern in patterns:
+                try:
+                    course_name = pattern[0]
+                    req_text = pattern[1]
+                    usage_count = pattern[2]
+                    
+                    # Extract requirements
+                    min_credits = 5  # Default
+                    max_sittings = 2  # Default
+                    
+                    # Extract values if present
+                    credits_match = re.search(r'(\d+)\s*credits?', req_text, re.IGNORECASE)
+                    if credits_match:
+                        min_credits = int(credits_match.group(1))
+                    
+                    sittings_match = re.search(r'(\d+)\s*sittings?', req_text, re.IGNORECASE)
+                    if sittings_match:
+                        max_sittings = int(sittings_match.group(1))
+                    
+                    # Create template
+                    template = CourseRequirementTemplate(
+                        name=f"{course_name}_Requirements",
+                        min_credits=min_credits,
+                        max_sittings=max_sittings
+                    )
+                    
+                    db.session.add(template)
+                    db.session.flush()  # Get template ID
+                    
+                    templates_created += 1
+                    requirement_pattern_map[req_text] = template.id
+                    
+                    if templates_created % 50 == 0:
+                        db.session.commit()
+                        click.echo(f'Created {templates_created} templates...')
+                    
+                except Exception as e:
+                    click.echo(f'Error creating template for {course_name}: {str(e)}')
+                    continue
+            
+            try:
+                db.session.commit()
+                click.echo(f'Successfully created {templates_created} requirement templates')
+            except Exception as e:
+                db.session.rollback()
+                click.echo(f'Error committing templates: {str(e)}')
+                return
+            
+            # Update course requirements with new template IDs
+            click.echo('\nUpdating course requirements...')
+            updates_made = 0
+            
+            # Process in batches
+            batch_size = 100
+            offset = 0
+            
+            while True:
+                requirements = db.session.execute(text("""
+                    SELECT 
+                        cr.id,
+                        ut.requirements
+                    FROM course_requirement cr
+                    JOIN utme_requirement_template ut ON cr.utme_template_id = ut.id
+                    LIMIT :limit OFFSET :offset
+                """), {"limit": batch_size, "offset": offset}).fetchall()
+                
+                if not requirements:
+                    break
+                
+                for req in requirements:
+                    try:
+                        req_id = req[0]
+                        req_text = req[1]
+                        template_id = requirement_pattern_map.get(req_text)
+                        
+                        if template_id:
+                            # Update course_requirement to use new template
+                            db.session.execute(text("""
+                                UPDATE course_requirement
+                                SET template_id = :template_id
+                                WHERE id = :req_id
+                            """), {
+                                "template_id": template_id,
+                                "req_id": req_id
+                            })
+                            updates_made += 1
+                    except Exception as e:
+                        click.echo(f'Error updating requirement {req_id}: {str(e)}')
+                        continue
+                
+                try:
+                    db.session.commit()
+                    click.echo(f'Updated {updates_made} requirements...')
+                except Exception as e:
+                    db.session.rollback()
+                    click.echo(f'Error in batch commit: {str(e)}')
+                    continue
+                
+                offset += batch_size
+            
+            click.echo('\nMigration completed successfully')
+            click.echo(f'Total templates created: {templates_created}')
+            click.echo(f'Total requirements updated: {updates_made}')
+            
+            # Verify results
+            verification = db.session.execute(text("""
+                SELECT 
+                    (SELECT COUNT(*) FROM course_requirement_template) as template_count,
+                    (SELECT COUNT(*) FROM course_requirement WHERE template_id IS NOT NULL) as requirement_count,
+                    (SELECT COUNT(DISTINCT course_id) FROM course_requirement WHERE template_id IS NOT NULL) as unique_courses
+            """)).first()
+            
+            click.echo('\nVerification Results:')
+            click.echo(f'Templates in database: {verification[0]}')
+            click.echo(f'Requirements with templates: {verification[1]}')
+            click.echo(f'Unique courses with templates: {verification[2]}')
 
         except Exception as e:
             click.echo(f"Error during migration: {str(e)}")
             db.session.rollback()
-            raise
         finally:
             db.session.close()
 
@@ -912,7 +1106,7 @@ def init_app(app):
     @app.cli.command('db-migrate-subjects')
     @with_appcontext
     def migrate_subjects():
-        """Extract and migrate subjects from existing data"""
+        """Extract and migrate subjects from JSON data"""
         if not wait_for_db_cli():
             click.echo("Could not establish database connection")
             return
@@ -921,7 +1115,7 @@ def init_app(app):
             click.echo('Starting subject migration...')
             
             # Load JSON data
-            json_path = os.path.join(current_app.root_path, 'data', 'inst_data.json')
+            json_path = os.path.join(app.root_path, 'data', 'inst_data.json')
             try:
                 with open(json_path, 'r') as f:
                     json_data = json.load(f)
@@ -930,39 +1124,68 @@ def init_app(app):
                 click.echo(f'Error loading JSON data: {str(e)}')
                 return
 
-            # Get existing courses
-            from .models.university import Course
-            courses = Course.query.all()
-            click.echo(f'Found {len(courses)} existing courses')
-
-            # Populate subjects and categories
-            click.echo('Populating subjects and categories...')
-            populate_subjects_and_categories(db, json_data, courses)
+            # Create categories first
+            categories_created = 0
+            click.echo('\nCreating subject categories...')
+            for category_name, subjects in json_data['subject_classifications'].items():
+                try:
+                    category = SubjectCategories(name=category_name)
+                    db.session.add(category)
+                    categories_created += 1
+                except Exception as e:
+                    click.echo(f'Error creating category {category_name}: {str(e)}')
+                    continue
             
-            # Create course templates
-            click.echo('Creating course templates...')
-            create_course_templates(db, courses)
+            try:
+                db.session.commit()
+                click.echo(f'Created {categories_created} categories successfully')
+            except Exception as e:
+                db.session.rollback()
+                click.echo(f'Error committing categories: {str(e)}')
+                return
 
-            # Verify migration
-            subject_count = db.session.execute(text(
-                "SELECT COUNT(*) FROM subjects"
-            )).scalar()
-            category_count = db.session.execute(text(
-                "SELECT COUNT(*) FROM subject_categories"
-            )).scalar()
-            template_count = db.session.execute(text(
-                "SELECT COUNT(*) FROM course_requirement_templates"
-            )).scalar()
+            # Now create subjects
+            subjects_created = 0
+            click.echo('\nCreating subjects...')
+            for category_name, subjects_data in json_data['subject_classifications'].items():
+                category = SubjectCategories.query.filter_by(name=category_name).first()
+                if not category:
+                    click.echo(f'Category {category_name} not found, skipping its subjects')
+                    continue
 
-            click.echo('\nMigration Summary:')
-            click.echo(f'Created {category_count} subject categories')
-            click.echo(f'Created {subject_count} subjects')
-            click.echo(f'Created {template_count} course templates')
+                for subcategory, subject_list in subjects_data.items():
+                    if isinstance(subject_list, list):  # Ensure we're dealing with a list of subjects
+                        for subject_name in subject_list:
+                            try:
+                                # Check if subject already exists
+                                if not Subjects.query.filter_by(name=subject_name).first():
+                                    is_core = subject_name.lower() in ['english language', 'mathematics']
+                                    subject = Subjects(
+                                        name=subject_name,
+                                        category_id=category.id,
+                                        is_core=is_core
+                                    )
+                                    db.session.add(subject)
+                                    subjects_created += 1
+                            except Exception as e:
+                                click.echo(f'Error creating subject {subject_name}: {str(e)}')
+                                continue
+
+            try:
+                db.session.commit()
+                click.echo(f'Created {subjects_created} subjects successfully')
+            except Exception as e:
+                db.session.rollback()
+                click.echo(f'Error committing subjects: {str(e)}')
+                return
+
+            click.echo('\nMigration completed successfully.')
+            click.echo(f'Total categories created: {categories_created}')
+            click.echo(f'Total subjects created: {subjects_created}')
 
         except Exception as e:
             click.echo(f"Error during migration: {str(e)}")
             db.session.rollback()
-            raise
         finally:
             db.session.close()
 

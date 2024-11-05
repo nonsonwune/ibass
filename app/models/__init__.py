@@ -1,6 +1,7 @@
 # app/models/__init__.py
 from .user import User
-from .university import University, Course, CourseRequirement, SubjectRequirement
+from .university import University, Course
+from .requirement import CourseRequirement, SubjectRequirement
 from .interaction import Comment, Vote, Bookmark
 from .feedback import Feedback
 

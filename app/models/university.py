@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import expression
 import re
+from .requirement import CourseRequirement
 
 class University(BaseModel):
     __tablename__ = 'university'
@@ -158,37 +159,3 @@ class Course(BaseModel):
                 search_query = search_query.filter(University.program_type == program_type)
                 
         return search_query.distinct().order_by(cls.course_name)
-
-class CourseRequirement(BaseModel):
-    __tablename__ = 'course_requirement'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    university_id = db.Column(db.Integer, db.ForeignKey('university.id'), nullable=False)
-    course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
-    utme_requirements = db.Column(db.Text)
-    direct_entry_requirements = db.Column(db.Text)
-    
-    university = db.relationship('University', back_populates='course_requirements')
-    course = db.relationship('Course', back_populates='requirements')
-    subject_requirement = db.relationship(
-        'SubjectRequirement', 
-        back_populates='requirement',
-        uselist=False,
-        cascade='all, delete-orphan'
-    )
-    
-    __table_args__ = (
-        Index('idx_course_requirement_composite', 'course_id', 'university_id'),
-        Index('idx_course_requirement_course_id', 'course_id'),
-    )
-
-class SubjectRequirement(BaseModel):
-    __tablename__ = 'subject_requirement'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    course_requirement_id = db.Column(db.Integer, 
-                                    db.ForeignKey('course_requirement.id'),
-                                    nullable=False)
-    subjects = db.Column(db.Text)
-    
-    requirement = db.relationship('CourseRequirement', back_populates='subject_requirement')
