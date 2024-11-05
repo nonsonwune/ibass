@@ -1,3 +1,4 @@
+# app/utils/db_ops.py
 from flask import current_app
 from sqlalchemy import text
 from ..extensions import db
@@ -76,3 +77,132 @@ def verify_search_columns():
     except Exception as e:
         current_app.logger.error(f"Database verification failed: {str(e)}")
         return False
+    
+def migrate_course_structure():
+    """Migrate course data to new normalized structure"""
+    try:
+        current_app.logger.info("Starting course structure migration...")
+        
+        with db.session.begin_nested():
+            # Step 1: Get existing course data
+            old_courses = db.session.execute(text("""
+                SELECT DISTINCT course_name, university_name, 
+                       utme_requirements, direct_entry_requirements, 
+                       subjects 
+                FROM course
+            """)).fetchall()
+            
+            # Step 2: Migrate unique courses
+            current_app.logger.info("Migrating unique courses...")
+            for course in old_courses:
+                db.session.execute(text("""
+                    INSERT INTO courses (name)
+                    VALUES (:name)
+                    ON CONFLICT (name) DO NOTHING
+                """), {"name": course.course_name})
+            
+            # Step 3: Create course requirements
+            current_app.logger.info("Creating course requirements...")
+            for course in old_courses:
+                course_id = db.session.execute(text("""
+                    SELECT id FROM courses WHERE name = :name
+                """), {"name": course.course_name}).scalar()
+                
+                university_id = db.session.execute(text("""
+                    SELECT id FROM university 
+                    WHERE university_name = :name
+                """), {"name": course.university_name}).scalar()
+                
+                req_id = db.session.execute(text("""
+                    INSERT INTO course_requirements 
+                    (university_id, course_id, utme_requirements, direct_entry_requirements)
+                    VALUES (:uni_id, :course_id, :utme, :de)
+                    RETURNING id
+                """), {
+                    "uni_id": university_id,
+                    "course_id": course_id,
+                    "utme": course.utme_requirements,
+                    "de": course.direct_entry_requirements
+                }).scalar()
+                
+                # Step 4: Create subject requirements
+                if course.subjects:
+                    db.session.execute(text("""
+                        INSERT INTO subject_requirements 
+                        (course_requirement_id, subjects)
+                        VALUES (:req_id, :subjects)
+                    """), {
+                        "req_id": req_id,
+                        "subjects": course.subjects
+                    })
+        
+        db.session.commit()
+        current_app.logger.info("Course structure migration completed successfully")
+        return True
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Course structure migration failed: {str(e)}")
+        raise
+    
+def verify_course_migration():
+    """Verify course migration was successful"""
+    try:
+        # Check course counts match
+        old_count = db.session.execute(text("""
+            SELECT COUNT(DISTINCT course_name) FROM course
+        """)).scalar()
+        
+        new_count = db.session.execute(text("""
+            SELECT COUNT(*) FROM courses
+        """)).scalar()
+        
+        if old_count != new_count:
+            current_app.logger.error(
+                f"Course count mismatch: {old_count} vs {new_count}"
+            )
+            return False
+            
+        # Check requirements were created
+        req_count = db.session.execute(text("""
+            SELECT COUNT(*) FROM course_requirements
+        """)).scalar()
+        
+        if req_count == 0:
+            current_app.logger.error("No course requirements were created")
+            return False
+            
+        return True
+        
+    except Exception as e:
+        current_app.logger.error(f"Migration verification failed: {str(e)}")
+        return False
+    
+def verify_migration_results():
+    """Verify results of course structure migration"""
+    try:
+        results = {}
+        
+        # Get counts from all relevant tables
+        counts = db.session.execute(text("""
+            SELECT
+                (SELECT COUNT(*) FROM courses) as courses_count,
+                (SELECT COUNT(*) FROM course_requirements) as requirements_count,
+                (SELECT COUNT(*) FROM subject_requirements) as subjects_count,
+                (SELECT COUNT(DISTINCT course_name) FROM course) as old_unique_courses,
+                (SELECT COUNT(*) FROM course) as old_total_courses
+        """)).fetchone()
+        
+        results = {
+            'new_unique_courses': counts[0],
+            'course_requirements': counts[1],
+            'subject_requirements': counts[2],
+            'old_unique_courses': counts[3],
+            'old_total_courses': counts[4]
+        }
+        
+        return results
+        
+    except Exception as e:
+        current_app.logger.error(f"Verification query failed: {str(e)}")
+        raise

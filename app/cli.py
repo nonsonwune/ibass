@@ -1147,3 +1147,89 @@ def init_app(app):
             raise
         finally:
             db.session.close()
+            
+    @app.cli.command('db-migrate-courses')
+    @with_appcontext
+    def migrate_courses():
+        """Migrate courses to new normalized structure"""
+        if not wait_for_db_cli():
+            click.echo("Could not establish database connection")
+            return
+            
+        try:
+            click.echo('Starting course structure migration...')
+            from .utils.db_ops import migrate_course_structure
+            migrate_course_structure()
+            click.echo('Course structure migration completed successfully.')
+        except Exception as e:
+            click.echo(f"Error during migration: {str(e)}")
+            db.session.rollback()
+            raise
+        finally:
+            db.session.close()
+            
+    @app.cli.command('db-verify-migration')
+    @with_appcontext
+    def verify_migration():
+        """Verify course migration results"""
+        if not wait_for_db_cli():
+            click.echo("Could not establish database connection")
+            return
+            
+        try:
+            from .utils.db_ops import verify_migration_results
+            results = verify_migration_results()
+            
+            click.echo("\nMigration Results:")
+            click.echo(f"Original unique courses: {results['old_unique_courses']}")
+            click.echo(f"Original total courses: {results['old_total_courses']}")
+            click.echo(f"New unique courses: {results['new_unique_courses']}")
+            click.echo(f"Course requirements: {results['course_requirements']}")
+            click.echo(f"Subject requirements: {results['subject_requirements']}")
+            
+            # Verify counts match expectations
+            if results['old_unique_courses'] != results['new_unique_courses']:
+                click.echo("\nWARNING: Unique course counts don't match!")
+            if results['old_total_courses'] != results['course_requirements']:
+                click.echo("\nWARNING: Total course requirements don't match original course count!")
+                
+        except Exception as e:
+            click.echo(f"Error during verification: {str(e)}")
+            raise
+        
+    @app.cli.command('verify-course-search')
+    @with_appcontext
+    def verify_course_search():
+        """Verify course search vectors and functionality"""
+        try:
+            # Check search vector population
+            null_vectors = db.session.execute(text("""
+                SELECT COUNT(*) 
+                FROM course 
+                WHERE search_vector IS NULL
+            """)).scalar()
+            
+            total_courses = db.session.execute(text("""
+                SELECT COUNT(*) FROM course
+            """)).scalar()
+            
+            click.echo(f"\nSearch Vector Status:")
+            click.echo(f"Total courses: {total_courses}")
+            click.echo(f"Courses without search vector: {null_vectors}")
+            
+            if null_vectors > 0:
+                click.echo("\nUpdating missing search vectors...")
+                db.session.execute(text("""
+                    UPDATE course 
+                    SET search_vector = 
+                        setweight(to_tsvector('english', coalesce(course_name,'')), 'A') ||
+                        setweight(to_tsvector('english', coalesce(code,'')), 'B')
+                    WHERE search_vector IS NULL
+                """))
+                db.session.commit()
+                
+            click.echo("\nSearch vector verification complete.")
+            
+        except Exception as e:
+            click.echo(f"Error verifying course search: {str(e)}")
+            db.session.rollback()
