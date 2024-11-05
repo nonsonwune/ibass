@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
-from ..models.university import University, Course
+from ..models.university import University, Course, CourseRequirement, SubjectRequirement
 from ..models.interaction import Bookmark, Comment, Vote
 from ..models.user import User
 from ..extensions import db
@@ -100,10 +100,12 @@ def get_courses():
     university = request.args.get('university')
     
     try:
-        # Start with base query
-        query = db.session.query(Course).join(University)
+        # Start with base query joining all necessary tables explicitly
+        query = (db.session.query(Course, University, CourseRequirement)
+                .join(CourseRequirement, Course.id == CourseRequirement.course_id)
+                .join(University, University.id == CourseRequirement.university_id))
         
-        # Filter by state only if not "ALL"
+        # Filter by state if not "ALL"
         if state and state != "ALL":
             query = query.filter(University.state == state)
         
@@ -121,35 +123,23 @@ def get_courses():
         if university:
             query = query.filter(University.university_name == university)
             
-        courses = query.order_by(Course.course_name).all()
+        # Execute query and get results
+        results = query.order_by(Course.course_name).all()
         
-        # Add "All Courses" option at the beginning of the response
+        # Process results in a single step
         response_data = [{
-            "id": 0,  # Special ID for "All Courses"
-            "course_name": "ALL",
-            "university_name": None,
-            "state": None,
-            "program_type": None,
-            "abbrv": None,
-            "direct_entry_requirements": None,
-            "utme_requirements": None,
-            "subjects": None,
-        }]
-        
-        # Add actual courses
-        response_data.extend([{
             "id": course.id,
             "course_name": course.course_name,
-            "university_name": course.university.university_name,
-            "state": course.university.state,
-            "program_type": course.university.program_type,
-            "abbrv": course.university.abbrv,
-            "direct_entry_requirements": course.direct_entry_requirements,
-            "utme_requirements": course.utme_requirements,
-            "subjects": course.subjects,
-        } for course in courses])
+            "university_name": university.university_name,
+            "state": university.state,
+            "program_type": university.program_type,
+            "abbrv": university.abbrv,
+            "direct_entry_requirements": requirement.direct_entry_requirements,
+            "utme_requirements": requirement.utme_requirements,
+            "subjects": requirement.subject_requirement.subjects if requirement.subject_requirement else None,
+        } for course, university, requirement in results]
         
-        current_app.logger.info(f"Found {len(response_data)-1} courses for state: {state}, types: {programme_types}")
+        current_app.logger.info(f"Found {len(response_data)} courses for state: {state}, types: {programme_types}")
         
         return jsonify(response_data)
         
@@ -165,7 +155,14 @@ def get_institution_details(uni_id):
     try:
         selected_course = request.args.get('selected_course')
         university = University.query.get_or_404(uni_id)
-        courses = Course.query.filter_by(university_name=university.university_name).all()
+        
+        # Get courses through the proper relationship
+        courses = (Course.query
+                  .join(CourseRequirement, Course.id == CourseRequirement.course_id)
+                  .filter(CourseRequirement.university_id == uni_id)
+                  .options(joinedload(Course.requirements)
+                          .joinedload(CourseRequirement.subject_requirement))
+                  .all())
 
         response_data = {
             "id": university.id,
@@ -174,14 +171,19 @@ def get_institution_details(uni_id):
             "program_type": university.program_type,
             "website": university.website,
             "established": university.established,
-            "abbrv": university.abbrv,  # Added this line
+            "abbrv": university.abbrv,
             "selected_course": selected_course,
             "courses": [{
                 "id": course.id,
                 "course_name": course.course_name,
-                "utme_requirements": course.utme_requirements or "N/A",
-                "subjects": course.subjects or "N/A",
-                "direct_entry_requirements": course.direct_entry_requirements or "N/A",
+                "utme_requirements": (course.requirements[0].utme_requirements 
+                                   if course.requirements else "N/A"),
+                "subjects": (course.requirements[0].subject_requirement.subjects 
+                           if course.requirements and 
+                           course.requirements[0].subject_requirement 
+                           else "N/A"),
+                "direct_entry_requirements": (course.requirements[0].direct_entry_requirements 
+                                           if course.requirements else "N/A"),
             } for course in courses]
         }
 
@@ -239,6 +241,7 @@ def get_user_bookmarks():
 @bp.route('/remove_bookmark/<int:university_id>', methods=['POST'])
 @login_required
 def remove_bookmark(university_id):
+    current_app.logger.info(f"Attempting to remove bookmark for university {university_id}, user {current_user.id}")
     try:
         bookmark = Bookmark.query.filter_by(
             user_id=current_user.id,
@@ -246,6 +249,7 @@ def remove_bookmark(university_id):
         ).first()
         
         if bookmark:
+            current_app.logger.info(f"Found bookmark to remove: {bookmark.id}")
             db.session.delete(bookmark)
             db.session.commit()
             return jsonify({
@@ -253,6 +257,7 @@ def remove_bookmark(university_id):
                 "message": "Bookmark removed successfully."
             }), 200
         else:
+            current_app.logger.warning(f"No bookmark found for university {university_id} and user {current_user.id}")
             return jsonify({
                 "success": False,
                 "message": "Bookmark not found."
@@ -484,16 +489,21 @@ def search_courses():
 @bp.route('/course/<int:course_id>', methods=['GET'])
 def get_course_details(course_id):
     try:
-        course = Course.query.get_or_404(course_id)
+        course = (Course.query
+                 .join(CourseRequirement)
+                 .filter(Course.id == course_id)
+                 .first_or_404())
+        requirement = course.requirements[0] if course.requirements else None
         university = University.query.filter_by(university_name=course.university_name).first()
+        
         course_data = {
             'id': course.id,
             'course_name': course.course_name,
             'university_name': course.university_name,
             'abbrv': course.abbrv,
-            'utme_requirements': course.utme_requirements,
-            'direct_entry_requirements': course.direct_entry_requirements,
-            'subjects': course.subjects,
+            'utme_requirements': requirement.utme_requirements if requirement else None,
+            'direct_entry_requirements': requirement.direct_entry_requirements if requirement else None,
+            'subjects': requirement.subject_requirement.subjects if requirement and requirement.subject_requirement else None,
             'university_id': university.id if university else None,
         }
         return jsonify(course_data), 200
@@ -590,3 +600,90 @@ def comments_with_replies():
             "error": "Failed to retrieve comments with replies",
             "message": str(e) if current_app.debug else "An error occurred while retrieving comments."
         }), 500
+        
+def get_recommendations():
+    try:
+        params = validate_recommendation_params(request.args)
+        
+        # Updated query to properly join and load requirements
+        base_query = (db.session.query(Course, University, CourseRequirement)
+            .join(CourseRequirement, Course.id == CourseRequirement.course_id)
+            .join(University, University.id == CourseRequirement.university_id)
+            .options(joinedload(Course.requirements)
+                    .joinedload(CourseRequirement.subject_requirement)))
+
+        # Apply filters
+        if params['location']:
+            base_query = base_query.filter(University.state == params['location'])
+        
+        if params['programme_type']:
+            base_query = base_query.filter(University.program_type.in_(params['programme_type']))
+
+        paginated_results = paginate_query(base_query, page=params['page'], per_page=params['per_page'])
+        
+        return jsonify({
+            'items': [{
+                'id': course.id,
+                'course_name': course.course_name,
+                'university_name': university.university_name,
+                'state': university.state,
+                'program_type': university.program_type,
+                'utme_requirements': requirement.utme_requirements if requirement else None,
+                'direct_entry_requirements': requirement.direct_entry_requirements if requirement else None,
+                'subjects': requirement.subject_requirement.subjects if requirement and requirement.subject_requirement else None
+            } for course, university, requirement in paginated_results.items],
+            'pagination': {
+                'page': paginated_results.page,
+                'per_page': paginated_results.per_page,
+                'total_pages': paginated_results.pages,
+                'total_items': paginated_results.total
+            }
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error in recommendations: {str(e)}")
+        return jsonify({
+            'error': 'An error occurred while fetching recommendations',
+            'details': str(e) if current_app.debug else None
+        }), 500
+        
+def paginate_query(query, page=1, per_page=50):
+    """Helper function to paginate query results"""
+    try:
+        return query.paginate(page=page, per_page=per_page, error_out=False)
+    except Exception as e:
+        raise ValueError(f"Pagination error: {str(e)}")
+
+
+def validate_recommendation_params(params):
+    """Validate and clean recommendation parameters"""
+    try:
+        validated = {
+            'location': params.get('location', '').strip(),
+            'programme_type': [p.strip() for p in params.get('programme_type', '').split(',') if p.strip()],
+            'selected_institutions': [i.strip() for i in params.get('institutions', '').split(',') if i.strip()],
+            'page': int(params.get('page', 1)),
+            'per_page': min(int(params.get('per_page', 50)), 100)  # Limit maximum items per page
+        }
+        return validated
+    except (ValueError, AttributeError) as e:
+        raise ValueError(f"Invalid parameter format: {str(e)}")
+
+def format_recommendation_response(paginated_results):
+    return {
+        'items': [{
+            'id': course.id,
+            'course_name': course.course_name,
+            'university_name': university.university_name,
+            'state': university.state,
+            'program_type': university.program_type,
+            'utme_requirements': requirement.utme_requirements if requirement else None,
+            'direct_entry_requirements': requirement.direct_entry_requirements if requirement else None,
+            'subjects': requirement.subject_requirement.subjects if requirement and requirement.subject_requirement else None
+        } for course, university, requirement in paginated_results.items],
+        'pagination': {
+            'page': paginated_results.page,
+            'per_page': paginated_results.per_page,
+            'total_pages': paginated_results.pages,
+            'total_items': paginated_results.total
+        }
+    }

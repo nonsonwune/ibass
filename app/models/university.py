@@ -67,6 +67,13 @@ class University(BaseModel):
             search_query = search_query.filter(cls.program_type == program_type)
             
         return search_query.order_by(cls.university_name)
+    
+    __table_args__ = (
+        Index('idx_university_filters', 'state', 'program_type'),
+        Index('idx_university_name', 'university_name'),
+        Index('idx_university_program_type', 'program_type'),
+        Index('idx_university_search', 'search_vector', postgresql_using='gin'),
+    )
 
     @classmethod
     def get_all_states(cls):
@@ -109,7 +116,8 @@ class Course(BaseModel):
     requirements = db.relationship(
         'CourseRequirement',
         back_populates='course',
-        cascade='all, delete-orphan'
+        cascade='all, delete-orphan',
+        lazy='joined'
     )
 
     @classmethod
@@ -167,6 +175,11 @@ class CourseRequirement(BaseModel):
         back_populates='requirement',
         uselist=False,
         cascade='all, delete-orphan'
+    )
+    
+    __table_args__ = (
+        Index('idx_course_requirement_composite', 'course_id', 'university_id'),
+        Index('idx_course_requirement_course_id', 'course_id'),
     )
 
 class SubjectRequirement(BaseModel):

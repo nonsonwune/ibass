@@ -9,7 +9,6 @@ bp = Blueprint('search', __name__)
 
 @bp.route('/api/search')
 def api_search():
-    """API search endpoint with proper error handling"""
     query_text = request.args.get('q', '').strip()
     state = request.args.get('state')
     program_type = request.args.get('program_type')
@@ -25,28 +24,29 @@ def api_search():
         
         return jsonify({
             'universities': [{
-                'id': uni.id,
-                'university_name': uni.university_name,
-                'state': uni.state,
-                'program_type': uni.program_type
-            } for uni in results['universities'].items],
+                'id': uni['id'],
+                'university_name': uni['university_name'],
+                'state': uni['state'],
+                'program_type': uni['program_type']
+            } for uni in results['universities']['items']],
             'courses': [{
-                'id': course.id,
-                'course_name': course.course_name,
-                'university_name': course.university_name,
-                'abbrv': course.abbrv,
+                'id': course['id'],
+                'course_name': course['course_name'],
+                'code': course.get('code'),
+                'state': course.get('state'),
+                'program_type': course.get('program_type'),
                 'requirements': {
-                    'direct_entry': course.direct_entry_requirements,
-                    'utme': course.utme_requirements,
-                    'subjects': course.subjects
+                    'direct_entry': course.get('direct_entry_requirements'),
+                    'utme': course.get('utme_requirements'),
+                    'subjects': course.get('subjects')
                 }
-            } for course in results['courses'].items],
+            } for course in results['courses']['items']],
             'metadata': {
-                'total_universities': results['total_universities'],
-                'total_courses': results['total_courses'],
+                'total_universities': results['universities']['total'],
+                'total_courses': results['courses']['total'],
                 'current_page': page,
-                'has_next': results['universities'].has_next or results['courses'].has_next,
-                'has_prev': results['universities'].has_prev or results['courses'].has_prev
+                'has_next': results['universities']['has_next'] or results['courses']['has_next'],
+                'has_prev': results['universities']['has_prev'] or results['courses']['has_prev']
             }
         })
         

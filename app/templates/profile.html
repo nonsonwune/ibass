@@ -1,536 +1,517 @@
 <!-- app/templates/profile.html -->
-{% extends "base.html" %} {% block title %}{{ user.username }}'s Profile -
-Nigerian Institutions Finder{% endblock %} {% block content %}
+{% extends "base.html" %}
+
+{% block title %}{{ user.username }}'s Profile - Nigerian Institutions Finder{% endblock %}
+
+{% block content %}
 <div class="container mt-5">
-  <div class="row">
-    <div class="col-md-4">
-      <div class="card mb-4">
-        <div class="card-body">
-          <h2 class="card-title">{{ user.username }}</h2>
-          <p class="card-text"><strong>Email:</strong> {{ user.email }}</p>
-          <p class="card-text"><strong>User Score:</strong> {{ user.score }}</p>
-          {% if current_user.id == user.id %}
-          <a
-            href="{{ url_for('auth.change_password') }}"
-            class="btn btn-primary"
-            >Change Password</a
-          >
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    <div class="col-md-8">
-      <ul class="nav nav-tabs" id="profileTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button
-            class="nav-link active"
-            id="bookmarks-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#bookmarks"
-            type="button"
-            role="tab"
-            aria-controls="bookmarks"
-            aria-selected="true"
-          >
-            Bookmarks
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button
-            class="nav-link"
-            id="comments-tab"
-            data-bs-toggle="tab"
-            data-bs-target="#comments"
-            type="button"
-            role="tab"
-            aria-controls="comments"
-            aria-selected="false"
-          >
-            Comments
-          </button>
-        </li>
-      </ul>
-      <div class="tab-content mt-3" id="profileTabsContent">
-        <div
-          class="tab-pane fade show active"
-          id="bookmarks"
-          role="tabpanel"
-          aria-labelledby="bookmarks-tab"
-        >
-          <h3 class="mb-3">Bookmarked Institutions</h3>
-          {% if user.bookmarks %}
-          <div class="list-group" id="bookmarksList">
-            {% for bookmark in user.bookmarks %}
-            <div
-              class="list-group-item list-group-item-action d-flex justify-content-between align-items-center bookmark-list-item"
-              data-bookmark-id="{{ bookmark.id }}"
-            >
-              <a
-                href="#"
-                class="institution-details-link"
-                data-bs-toggle="modal"
-                data-bs-target="#institutionModal"
-                data-uni-id="{{ bookmark.university_id }}"
-              >
-                {{ bookmark.university.university_name }}
-              </a>
-              {% if current_user.id == user.id %}
-              <button
-                class="btn btn-sm btn-outline-danger remove-bookmark"
-                data-university-id="{{ bookmark.university_id }}"
-              >
-                <i class="fas fa-times"></i> Remove
-              </button>
-              {% endif %}
+    <div class="row">
+        <!-- User Info Card -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h2 class="card-title">{{ user.username }}</h2>
+                    <p class="card-text"><strong>Email:</strong> {{ user.email }}</p>
+                    <p class="card-text"><strong>User Score:</strong> {{ user.score }}</p>
+                    {% if current_user.id == user.id %}
+                        <a href="{{ url_for('auth.change_password') }}" class="btn btn-primary">Change Password</a>
+                    {% endif %}
+                </div>
             </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="text-muted">No bookmarked institutions.</p>
-          {% endif %}
         </div>
-        <div
-          class="tab-pane fade"
-          id="comments"
-          role="tabpanel"
-          aria-labelledby="comments-tab"
-        >
-          <h3 class="mb-3">Comments</h3>
-          {% if user.comments %}
-          <div id="commentsList">
-            {% for comment in user.comments %}
-            <div
-              class="card mb-3 comment-card"
-              data-comment-id="{{ comment.id }}"
-            >
-              <div class="card-body">
-                <p class="card-text">{{ comment.content }}</p>
-                <p class="card-text">
-                  <small class="text-muted"
-                    >Posted on: {{ comment.date_posted.strftime('%Y-%m-%d
-                    %H:%M:%S') }}</small
-                  >
-                </p>
-                <p class="card-text">Comment Score: {{ comment.score }}</p>
-                {% if current_user.id == comment.user_id or
-                current_user.is_admin %}
-                <button
-                  class="btn btn-sm btn-danger delete-comment"
-                  data-comment-id="{{ comment.id }}"
-                >
-                  <i class="fas fa-trash-alt"></i> Delete
-                </button>
-                {% endif %}
-              </div>
+
+        <!-- Tabs Container -->
+        <div class="col-md-8">
+            <ul class="nav nav-tabs" id="profileTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="bookmarks-tab" data-bs-toggle="tab" 
+                            data-bs-target="#bookmarks" type="button" role="tab" 
+                            aria-controls="bookmarks" aria-selected="true">
+                        Bookmarks
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="comments-tab" data-bs-toggle="tab" 
+                            data-bs-target="#comments" type="button" role="tab" 
+                            aria-controls="comments" aria-selected="false">
+                        Comments
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content mt-3" id="profileTabsContent">
+                <!-- Bookmarks Tab -->
+                <div class="tab-pane fade show active" id="bookmarks" role="tabpanel" aria-labelledby="bookmarks-tab">
+                    <h3 class="mb-3">Bookmarked Institutions</h3>
+                    {% if user.bookmarks %}
+                        <div class="list-group" id="bookmarksList">
+                            {% for bookmark in user.bookmarks %}
+                                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center bookmark-list-item"
+                                     data-bookmark-id="{{ bookmark.id }}">
+                                    <a href="#" class="institution-details-link" data-bs-toggle="modal"
+                                       data-bs-target="#institutionModal" data-uni-id="{{ bookmark.university_id }}">
+                                        {{ bookmark.university.university_name }}
+                                    </a>
+                                    {% if current_user.id == user.id %}
+                                        <button class="btn btn-sm btn-outline-danger remove-bookmark"
+                                                data-university-id="{{ bookmark.university_id }}">
+                                            <i class="fas fa-times"></i> Remove
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No bookmarked institutions.</p>
+                    {% endif %}
+                </div>
+
+                <!-- Comments Tab -->
+                <div class="tab-pane fade" id="comments" role="tabpanel" aria-labelledby="comments-tab">
+                    <h3 class="mb-3">Comments</h3>
+                    {% if user.comments %}
+                        <div id="commentsList">
+                            {% for comment in user.comments %}
+                                <div class="card mb-3 comment-card" data-comment-id="{{ comment.id }}">
+                                    <div class="card-body">
+                                        <p class="card-text">{{ comment.content }}</p>
+                                        <p class="card-text">
+                                            <small class="text-muted">Posted on: {{ comment.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                                        </p>
+                                        <p class="card-text">Comment Score: {{ comment.score }}</p>
+                                        {% if current_user.id == comment.user_id or current_user.is_admin %}
+                                            <button class="btn btn-sm btn-danger delete-comment"
+                                                    data-comment-id="{{ comment.id }}">
+                                                <i class="fas fa-trash-alt"></i> Delete
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No comments yet.</p>
+                    {% endif %}
+                </div>
             </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="text-muted">No comments yet.</p>
-          {% endif %}
         </div>
-      </div>
     </div>
-  </div>
 </div>
 
 <!-- Institution Modal -->
-<div
-  class="modal fade"
-  id="institutionModal"
-  tabindex="-1"
-  aria-labelledby="institutionModalLabel"
-  aria-hidden="true"
->
-  <div class="modal-dialog modal-xl modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="institutionModalLabel">
-          <i class="fas fa-university me-2"></i> Institution Details
-        </h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
-      </div>
-      <div class="modal-body">
-        <div
-          id="loadingIndicator"
-          class="text-center mb-3"
-          style="display: none"
-        >
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-        </div>
-        <div id="institutionDetails" style="display: none">
-          <h2 id="institutionName"></h2>
-          <p><strong>State:</strong> <span id="institutionState"></span></p>
-          <p>
-            <strong>Program Type:</strong>
-            <span id="institutionProgramType"></span>
-          </p>
-          <p>
-            <strong>Search Criteria:</strong> <span id="searchCriteria"></span>
-          </p>
+<div class="modal fade" id="institutionModal" tabindex="-1" aria-labelledby="institutionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="institutionModalLabel">
+                    <i class="fas fa-university me-2"></i> Institution Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="loadingIndicator" class="text-center mb-3" style="display: none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="institutionDetails" style="display: none">
+                    <h2 id="institutionName"></h2>
+                    <p><strong>State:</strong> <span id="institutionState"></span></p>
+                    <p><strong>Program Type:</strong> <span id="institutionProgramType"></span></p>
+                    <p><strong>Search Criteria:</strong> <span id="searchCriteria"></span></p>
 
-          <div id="selectedCourseDetails" style="display: none">
-            <h4>Selected Course</h4>
-            <div id="selectedCourseContent"></div>
-          </div>
+                    <div id="selectedCourseDetails" style="display: none">
+                        <h4>Selected Course</h4>
+                        <div id="selectedCourseContent"></div>
+                    </div>
 
-          <h3>Courses</h3>
-          <div id="institutionCoursesList"></div>
+                    <h3>Courses</h3>
+                    <div id="institutionCoursesList"></div>
+                </div>
+                <div id="modalErrorMessage" class="alert alert-danger" role="alert" style="display: none"></div>
+            </div>
         </div>
-        <div
-          id="modalErrorMessage"
-          class="alert alert-danger"
-          role="alert"
-          style="display: none"
-        ></div>
-      </div>
     </div>
-  </div>
 </div>
 
 <!-- Confirmation Modal -->
-<div
-  class="modal fade"
-  id="confirmationModal"
-  tabindex="-1"
-  aria-labelledby="confirmationModalLabel"
-  aria-hidden="true"
->
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="confirmationModalLabel">Confirm Action</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-          aria-label="Close"
-        ></button>
-      </div>
-      <div class="modal-body">
-        Are you sure you want to proceed with this action?
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          Cancel
-        </button>
-        <button type="button" class="btn btn-danger" id="confirmAction">
-          Confirm
-        </button>
-      </div>
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmationModalLabel">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to proceed with this action?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmAction">Confirm</button>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
-{% endblock %} {% block extra_scripts %} {{ super() }}
+<!-- Toast Container -->
+<div id="toastContainer"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ super() }}
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const institutionModal = document.getElementById("institutionModal");
-    const removeButtons = document.querySelectorAll(".remove-bookmark");
-    const deleteCommentButtons = document.querySelectorAll(".delete-comment");
-    const confirmationModal = new bootstrap.Modal(
-      document.getElementById("confirmationModal")
-    );
-    const confirmActionButton = document.getElementById("confirmAction");
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap components
+    const institutionModal = document.getElementById('institutionModal');
+    const removeButtons = document.querySelectorAll('.remove-bookmark');
+    const deleteCommentButtons = document.querySelectorAll('.delete-comment');
+    const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+    const confirmActionButton = document.getElementById('confirmAction');
 
-    institutionModal.addEventListener("show.bs.modal", function (event) {
-      const button = event.relatedTarget;
-      const uniId = button.getAttribute("data-uni-id");
-      fetchInstitutionDetails(uniId);
+    // Configure CSRF token for all requests
+    const csrfToken = "{{ csrf_token() }}";
+    
+    // Event Listeners
+    institutionModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const uniId = button.getAttribute('data-uni-id');
+        fetchInstitutionDetails(uniId);
     });
 
-    removeButtons.forEach((button) => {
-      button.addEventListener("click", function (event) {
-        event.preventDefault();
-        const universityId = this.getAttribute("data-university-id");
-        showConfirmationModal(() => removeBookmark(universityId, this));
-      });
+    removeButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            const universityId = this.getAttribute('data-university-id');
+            showConfirmationModal(() => removeBookmark(universityId, this));
+        });
     });
 
-    deleteCommentButtons.forEach((button) => {
-      button.addEventListener("click", function (event) {
-        event.preventDefault();
-        const commentId = this.getAttribute("data-comment-id");
-        showConfirmationModal(() => deleteComment(commentId, this));
-      });
+    deleteCommentButtons.forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            const commentId = this.getAttribute('data-comment-id');
+            showConfirmationModal(() => deleteComment(commentId, this));
+        });
     });
 
+    // Utility Functions
     function showConfirmationModal(callback) {
-      confirmActionButton.onclick = function () {
-        confirmationModal.hide();
-        callback();
-      };
-      confirmationModal.show();
+        confirmActionButton.onclick = function() {
+            confirmationModal.hide();
+            callback();
+        };
+        confirmationModal.show();
     }
 
+    function handleResponse(response) {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    }
+
+    // API Functions
     function fetchInstitutionDetails(uniId) {
-      const loadingIndicator = document.getElementById("loadingIndicator");
-      const institutionDetails = document.getElementById("institutionDetails");
-      const modalErrorMessage = document.getElementById("modalErrorMessage");
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const institutionDetails = document.getElementById('institutionDetails');
+        const modalErrorMessage = document.getElementById('modalErrorMessage');
 
-      loadingIndicator.style.display = "block";
-      institutionDetails.style.display = "none";
-      modalErrorMessage.style.display = "none";
-
-      fetch(`/api/institution/${uniId}`, {
-        headers: {
-          "X-CSRFToken": "{{ csrf_token() }}",
-          Accept: "application/json",
-        },
-        credentials: "same-origin",
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Network response was not ok");
-          }
-          return response.json();
+        showLoading(true);
+        
+        fetch(`/api/institution/${uniId}`, {
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
         })
-        .then((data) => {
-          loadingIndicator.style.display = "none";
-          institutionDetails.style.display = "block";
-          populateInstitutionDetails(data);
+        .then(handleResponse)
+        .then(data => {
+            showLoading(false);
+            institutionDetails.style.display = 'block';
+            populateInstitutionDetails(data);
         })
-        .catch((error) => {
-          loadingIndicator.style.display = "none";
-          modalErrorMessage.style.display = "block";
-          modalErrorMessage.textContent =
-            "Error loading institution details. Please try again.";
-          console.error("Error:", error);
+        .catch(error => {
+            showLoading(false);
+            showError(error.message);
         });
     }
 
-    function populateInstitutionDetails(institution) {
-      document.getElementById("institutionName").textContent =
-        institution.university_name;
-      document.getElementById("institutionState").textContent =
-        institution.state;
-      document.getElementById("institutionProgramType").textContent =
-        institution.program_type;
-      document.getElementById("searchCriteria").textContent =
-        institution.search_type === "course"
-          ? `Course: ${institution.selected_course}`
-          : `Location: ${institution.state}`;
-
-      const selectedCourseDetails = document.getElementById(
-        "selectedCourseDetails"
-      );
-      const selectedCourseContent = document.getElementById(
-        "selectedCourseContent"
-      );
-      const institutionCoursesList = document.getElementById(
-        "institutionCoursesList"
-      );
-
-      if (
-        institution.selected_course &&
-        institution.courses &&
-        institution.courses.length > 0
-      ) {
-        const selectedCourseData = institution.courses.find(
-          (course) =>
-            course.course_name.toLowerCase() ===
-            institution.selected_course.toLowerCase()
-        );
-        if (selectedCourseData) {
-          selectedCourseContent.innerHTML =
-            createCourseHTML(selectedCourseData);
-          selectedCourseDetails.style.display = "block";
-        } else {
-          selectedCourseContent.innerHTML = `<p class="alert alert-warning">No details available for the selected course "${institution.selected_course}" in this institution.</p>`;
-          selectedCourseDetails.style.display = "block";
-        }
-      } else {
-        selectedCourseDetails.style.display = "none";
-      }
-
-      if (institution.courses && institution.courses.length > 0) {
-        institutionCoursesList.innerHTML = institution.courses
-          .map((course, index) => createAccordionItem(course, index))
-          .join("");
-      } else {
-        institutionCoursesList.innerHTML =
-          '<p class="text-muted">No courses available for this institution.</p>';
-      }
-    }
-
-    function createCourseHTML(course) {
-      return `
-        <div class="card mb-3">
-          <div class="card-body">
-            <h5 class="card-title">${course.course_name}</h5>
-            <p><strong>UTME Requirements:</strong> ${
-              course.utme_requirements || "N/A"
-            }</p>
-            <p><strong>Direct Entry Requirements:</strong> ${
-              course.direct_entry_requirements || "N/A"
-            }</p>
-            <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
-          </div>
-        </div>
-      `;
-    }
-
-    function createAccordionItem(course, index) {
-      const collapseId = `collapseCourse${index}`;
-      const headingId = `headingCourse${index}`;
-      return `
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="${headingId}">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#${collapseId}" aria-expanded="false" aria-controls="${collapseId}">
-              ${course.course_name}
-            </button>
-          </h2>
-          <div id="${collapseId}" class="accordion-collapse collapse" aria-labelledby="${headingId}" data-bs-parent="#coursesAccordion">
-            <div class="accordion-body">
-              <p><strong>UTME Requirements:</strong> ${
-                course.utme_requirements || "N/A"
-              }</p>
-              <p><strong>Direct Entry Requirements:</strong> ${
-                course.direct_entry_requirements || "N/A"
-              }</p>
-              <p><strong>Subjects:</strong> ${course.subjects || "N/A"}</p>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
     function removeBookmark(universityId, buttonElement) {
-      fetch(`/university/remove_bookmark/${universityId}`, {
-        method: "POST",
-        headers: {
-          "X-CSRFToken": "{{ csrf_token() }}",
-          "Content-Type": "application/json",
-        },
-        credentials: "same-origin",
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success) {
-            const listItem = buttonElement.closest(".bookmark-list-item");
-            listItem.style.animation = "fadeOut 0.5s";
-            setTimeout(() => {
-              listItem.remove();
-              if (
-                document.querySelectorAll(".bookmark-list-item").length === 0
-              ) {
-                document.getElementById("bookmarksList").innerHTML =
-                  '<p class="text-muted">No bookmarked institutions.</p>';
-              }
-            }, 500);
-          } else {
-            showToast("Failed to remove bookmark: " + data.message, "error");
-          }
+        console.log(`Attempting to remove bookmark for university ${universityId}`);
+        fetch(`/api/remove_bookmark/${universityId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
         })
-        .catch((error) => {
-          console.error("Error:", error);
-          showToast("An error occurred while removing the bookmark", "error");
+        .then(response => {
+            console.log('Response status:', response.status);
+            return handleResponse(response);
+        })
+        .then(data => {
+            if (data.success) {
+                removeElement(buttonElement.closest('.bookmark-list-item'), () => {
+                    updateEmptyState('bookmarksList', 'No bookmarked institutions.');
+                });
+                showToast(data.message, 'success');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast(error.message || 'Failed to remove bookmark', 'error');
         });
     }
 
     function deleteComment(commentId, buttonElement) {
-      fetch(`/api/delete_comment/${commentId}`, {
-        method: "POST",
-        headers: {
-          "X-CSRFToken": window.csrfToken,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "same-origin",
-      })
-        .then((response) => {
-          if (!response.ok) {
-            return response.json().then((data) => {
-              throw new Error(
-                data.message || `HTTP error! status: ${response.status}`
-              );
-            });
-          }
-          return response.json();
+        fetch(`/api/delete_comment/${commentId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            credentials: 'same-origin'
         })
-        .then((data) => {
-          if (data.success) {
-            const commentCard = buttonElement.closest(".comment-card");
-            commentCard.style.animation = "fadeOut 0.5s";
-            setTimeout(() => {
-              commentCard.remove();
-              // Update empty state if no comments left
-              if (document.querySelectorAll(".comment-card").length === 0) {
-                document.getElementById("commentsList").innerHTML =
-                  '<p class="text-muted">No comments yet.</p>';
-              }
-            }, 500);
-            showToast(data.message, "success");
-          } else {
-            throw new Error(data.message || "Failed to delete comment");
-          }
+        .then(handleResponse)
+        .then(data => {
+            if (data.success) {
+                removeElement(buttonElement.closest('.comment-card'), () => {
+                    updateEmptyState('commentsList', 'No comments yet.');
+                });
+                showToast(data.message, 'success');
+            }
         })
-        .catch((error) => {
-          console.error("Error:", error);
-          showToast(
-            error.message || "An error occurred while deleting the comment",
-            "error"
-          );
+        .catch(error => {
+            showToast(error.message || 'Failed to delete comment', 'error');
         });
     }
 
+    // UI Helper Functions
+    function showLoading(show) {
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const institutionDetails = document.getElementById('institutionDetails');
+        const modalErrorMessage = document.getElementById('modalErrorMessage');
+
+        loadingIndicator.style.display = show ? 'block' : 'none';
+        institutionDetails.style.display = show ? 'none' : 'block';
+        modalErrorMessage.style.display = 'none';
+    }
+
+    function showError(message) {
+        const modalErrorMessage = document.getElementById('modalErrorMessage');
+        modalErrorMessage.textContent = message;
+        modalErrorMessage.style.display = 'block';
+    }
+
+    function removeElement(element, onEmpty) {
+        element.style.animation = 'fadeOut 0.5s';
+        setTimeout(() => {
+            element.remove();
+            const container = element.parentElement;
+            if (container && container.children.length === 0 && onEmpty) {
+                onEmpty();
+            }
+        }, 500);
+    }
+
+    function updateEmptyState(containerId, message) {
+        const container = document.getElementById(containerId);
+        if (container && container.children.length === 0) {
+            container.innerHTML = `<p class="text-muted">${message}</p>`;
+        }
+    }
+
     function showToast(message, type) {
-      const toastContainer = document.getElementById("toastContainer");
-      const toast = document.createElement("div");
-      toast.classList.add("toast", `bg-${type}`, "text-white");
-      toast.setAttribute("role", "alert");
-      toast.setAttribute("aria-live", "assertive");
-      toast.setAttribute("aria-atomic", "true");
+        const toastContainer = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.classList.add('toast', `bg-${type}`, 'text-white');
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', 'true');
 
-      toast.innerHTML = `
-        <div class="toast-header">
-          <strong class="me-auto">Notification</strong>
-          <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
-        <div class="toast-body">
-          ${message}
-        </div>
-      `;
+        toast.innerHTML = `
+            <div class="toast-header">
+                <strong class="me-auto">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">${message}</div>
+        `;
 
-      toastContainer.appendChild(toast);
-      const bsToast = new bootstrap.Toast(toast);
-      bsToast.show();
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
 
-      toast.addEventListener("hidden.bs.toast", function () {
-        toast.remove();
-      });
+        toast.addEventListener('hidden.bs.toast', () => toast.remove());
     }
-  });
+
+    function populateInstitutionDetails(institution) {
+        document.getElementById('institutionName').textContent = institution.university_name;
+        document.getElementById('institutionState').textContent = institution.state;
+        document.getElementById('institutionProgramType').textContent = institution.program_type;
+        document.getElementById('searchCriteria').textContent = 
+            institution.search_type === 'course' 
+                ? `Course: ${institution.selected_course}`
+                : `Location: ${institution.state}`;
+
+        const selectedCourseDetails = document.getElementById('selectedCourseDetails');
+        const selectedCourseContent = document.getElementById('selectedCourseContent');
+        const institutionCoursesList = document.getElementById('institutionCoursesList');
+
+        // Handle selected course display
+        if (institution.selected_course && institution.courses?.length > 0) {
+            const selectedCourseData = institution.courses.find(
+                course => course.course_name.toLowerCase() === institution.selected_course.toLowerCase()
+            );
+
+            if (selectedCourseData) {
+                selectedCourseContent.innerHTML = createCourseHTML(selectedCourseData);
+                selectedCourseDetails.style.display = 'block';
+            } else {
+                selectedCourseContent.innerHTML = `
+                    <p class="alert alert-warning">
+                        No details available for the selected course "${institution.selected_course}" in this institution.
+                    </p>`;
+                selectedCourseDetails.style.display = 'block';
+            }
+        } else {
+            selectedCourseDetails.style.display = 'none';
+        }
+
+        // Handle courses list
+        if (institution.courses?.length > 0) {
+            const accordionId = `courses-accordion-${institution.id}`;
+            institutionCoursesList.innerHTML = `
+                <div class="accordion" id="${accordionId}">
+                    ${institution.courses.map((course, index) => 
+                        createAccordionItem(course, index, accordionId)).join('')}
+                </div>`;
+        } else {
+            institutionCoursesList.innerHTML = '<p class="text-muted">No courses available for this institution.</p>';
+        }
+    }
+
+    function createCourseHTML(course) {
+        return `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">${escapeHtml(course.course_name)}</h5>
+                    <div class="course-details">
+                        <p><strong>UTME Requirements:</strong> ${escapeHtml(course.utme_requirements || 'N/A')}</p>
+                        <p><strong>Direct Entry Requirements:</strong> ${escapeHtml(course.direct_entry_requirements || 'N/A')}</p>
+                        <p><strong>Subjects:</strong> ${escapeHtml(course.subjects || 'N/A')}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function createAccordionItem(course, index, accordionId) {
+        const collapseId = `collapse-${accordionId}-${index}`;
+        const headingId = `heading-${accordionId}-${index}`;
+        
+        return `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="${headingId}">
+                    <button class="accordion-button collapsed" type="button" 
+                            data-bs-toggle="collapse" 
+                            data-bs-target="#${collapseId}" 
+                            aria-expanded="false" 
+                            aria-controls="${collapseId}">
+                        ${escapeHtml(course.course_name)}
+                    </button>
+                </h2>
+                <div id="${collapseId}" 
+                     class="accordion-collapse collapse" 
+                     aria-labelledby="${headingId}" 
+                     data-bs-parent="#${accordionId}">
+                    <div class="accordion-body">
+                        <p><strong>UTME Requirements:</strong> ${escapeHtml(course.utme_requirements || 'N/A')}</p>
+                        <p><strong>Direct Entry Requirements:</strong> ${escapeHtml(course.direct_entry_requirements || 'N/A')}</p>
+                        <p><strong>Subjects:</strong> ${escapeHtml(course.subjects || 'N/A')}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+});
 </script>
+
 <style>
-  @keyframes fadeOut {
-    from {
-      opacity: 1;
-    }
-    to {
-      opacity: 0;
-    }
-  }
-  .bookmark-list-item,
-  .comment-card {
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+.bookmark-list-item,
+.comment-card {
     transition: opacity 0.3s ease-out;
-  }
-  .bookmark-list-item.removing,
-  .comment-card.removing {
+}
+
+.bookmark-list-item.removing,
+.comment-card.removing {
     opacity: 0;
-  }
-  #toastContainer {
+}
+
+#toastContainer {
     position: fixed;
     top: 20px;
     right: 20px;
     z-index: 1050;
-  }
+}
+
+.toast {
+    min-width: 300px;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: rgba(0, 0, 0, 0.03);
+    font-weight: 500;
+}
+
+.course-details p {
+    margin-bottom: 0.5rem;
+}
+
+.institution-details-link {
+    text-decoration: none;
+    color: inherit;
+    flex-grow: 1;
+    padding: 0.5rem 0;
+}
+
+.institution-details-link:hover {
+    color: #0056b3;
+}
+
+.modal-xl {
+    max-width: 90%;
+}
+
+@media (max-width: 768px) {
+    .modal-xl {
+        max-width: 95%;
+    }
+    
+    .toast {
+        min-width: 250px;
+    }
+}
 </style>
 {% endblock %}

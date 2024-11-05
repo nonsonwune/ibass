@@ -112,10 +112,16 @@ def init_search_vectors():
             result = db.session.execute(text("""
                 WITH course_data AS (
                     SELECT 
-                        id,
-                        COALESCE(course_name, '') || ' ' ||
-                        COALESCE(code, '') as combined_text
-                    FROM course
+                        c.id,
+                        COALESCE(c.course_name, '') || ' ' ||
+                        COALESCE(c.code, '') || ' ' ||
+                        COALESCE(string_agg(u.university_name, ' '), '') || ' ' ||
+                        COALESCE(string_agg(sr.subjects, ' '), '') as combined_text
+                    FROM course c
+                    LEFT JOIN course_requirement cr ON c.id = cr.course_id
+                    LEFT JOIN university u ON cr.university_id = u.id
+                    LEFT JOIN subject_requirement sr ON cr.id = sr.course_requirement_id
+                    GROUP BY c.id, c.course_name, c.code
                 )
                 UPDATE course c
                 SET search_vector = to_tsvector('english', cd.combined_text)
@@ -220,16 +226,21 @@ def perform_search(query_text, state=None, program_type=None, page=1, per_page=1
                     SELECT 
                         c.*,
                         u.state,
-                        u.program_type
+                        u.program_type,
+                        cr.utme_requirements,
+                        cr.direct_entry_requirements,
+                        sr.subjects
                     FROM course c
-                    JOIN university u ON c.university_name = u.university_name
+                    JOIN course_requirement cr ON c.id = cr.course_id
+                    JOIN university u ON cr.university_id = u.id
+                    LEFT JOIN subject_requirement sr ON cr.id = sr.course_requirement_id
                     WHERE (:state IS NULL OR u.state = :state)
                     AND (:program_type IS NULL OR u.program_type = :program_type)
                     AND (
                         :query IS NULL 
                         OR c.search_vector @@ plainto_tsquery('english', :query)
                         OR c.course_name ILIKE :like_query
-                        OR c.abbrv ILIKE :like_query
+                        OR c.code ILIKE :like_query
                     )
                 )
                 SELECT *
@@ -256,14 +267,15 @@ def perform_search(query_text, state=None, program_type=None, page=1, per_page=1
                 text("""
                     SELECT COUNT(*)
                     FROM course c
-                    JOIN university u ON c.university_name = u.university_name
+                    JOIN course_requirement cr ON c.id = cr.course_id
+                    JOIN university u ON cr.university_id = u.id
                     WHERE (:state IS NULL OR u.state = :state)
                     AND (:program_type IS NULL OR u.program_type = :program_type)
                     AND (
                         :query IS NULL 
                         OR c.search_vector @@ plainto_tsquery('english', :query)
                         OR c.course_name ILIKE :like_query
-                        OR c.abbrv ILIKE :like_query
+                        OR c.code ILIKE :like_query
                     )
                 """),
                 {

@@ -15,7 +15,7 @@ from ..models.feedback import Feedback
 from ..forms.feedback import ContactForm
 from ..extensions import db, cache
 from ..models.interaction import Comment
-from ..models.university import University, Course
+from ..models.university import University, Course, CourseRequirement
 from ..models.user import User
 from ..utils.search import perform_search
 from sqlalchemy import or_, func, text
@@ -52,9 +52,13 @@ def search_results():
             )
         )
 
-        # Base courses query
+        # Base courses query using relationships
         courses_query = Course.query.join(
-            University, University.university_name == Course.university_name
+            CourseRequirement,
+            CourseRequirement.course_id == Course.id
+        ).join(
+            University,
+            University.id == CourseRequirement.university_id
         ).filter(
             or_(
                 Course.course_name.ilike(f"%{query_text}%"),
@@ -63,6 +67,8 @@ def search_results():
                     "course.search_vector @@ plainto_tsquery('english', :query)"
                 ).bindparams(query=query_text),
             )
+        ).options(
+            joinedload(Course.requirements).joinedload(CourseRequirement.university)
         )
 
         # Get all matching results before filtering for filter options
@@ -90,7 +96,7 @@ def search_results():
 
         # Get final filtered results
         universities = universities_query.all()
-        courses = courses_query.all()
+        courses = courses_query.distinct(Course.id).all()
 
         # Count results
         universities_count = len(universities)

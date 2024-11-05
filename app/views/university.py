@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, jsonify, current_app, abo
 from flask_login import current_user
 from sqlalchemy import func, distinct
 from sqlalchemy.exc import SQLAlchemyError
-from ..models.university import University, Course
+from ..models.university import University, Course, CourseRequirement
 from ..models.interaction import Bookmark
 from ..extensions import db
 from ..config import Config
@@ -25,8 +25,13 @@ def recommend():
         base_query = db.session.query(University).distinct()
         
         if preferred_course:
-            base_query = base_query.join(Course, University.courses)
-            base_query = base_query.filter(Course.course_name == preferred_course)
+            base_query = base_query.join(
+                CourseRequirement,
+                University.course_requirements
+            ).join(
+                Course,
+                CourseRequirement.course_id == Course.id
+            ).filter(Course.course_name == preferred_course)
 
         # Get filter counts and available options before applying remaining filters
         filter_results = get_filter_counts_and_options(base_query, location)
@@ -181,13 +186,26 @@ def format_university_results(universities, preferred_course=None):
     formatted_results = []
     
     for uni in universities:
-        courses = uni.courses
-        filtered_courses = [
-            course for course in courses
-            if not preferred_course or course.course_name == preferred_course
-        ]
-        
-        if not preferred_course or filtered_courses:
+        filtered_requirements = []
+        if preferred_course:
+            filtered_requirements = [
+                req for req in uni.course_requirements
+                if req.course.course_name == preferred_course
+            ]
+        else:
+            filtered_requirements = uni.course_requirements
+            
+        if not preferred_course or filtered_requirements:
+            requirement_data = []
+            for req in filtered_requirements:
+                requirement_data.append({
+                    "id": req.course.id,
+                    "course_name": req.course.course_name,
+                    "utme_requirements": req.utme_requirements,
+                    "subjects": req.subject_requirement.subjects if req.subject_requirement else None,
+                    "direct_entry_requirements": req.direct_entry_requirements,
+                })
+            
             uni_data = {
                 "id": uni.id,
                 "university_name": uni.university_name,
@@ -195,15 +213,9 @@ def format_university_results(universities, preferred_course=None):
                 "program_type": uni.program_type,
                 "website": uni.website,
                 "established": uni.established,
-                "abbrv": uni.abbrv,  # Added this line
-                "total_courses": len(courses),
-                "courses": [{
-                    "id": course.id,
-                    "course_name": course.course_name,
-                    "utme_requirements": course.utme_requirements,
-                    "subjects": course.subjects,
-                    "direct_entry_requirements": course.direct_entry_requirements,
-                } for course in filtered_courses],
+                "abbrv": uni.abbrv,
+                "total_courses": len(uni.course_requirements),
+                "requirements": requirement_data,
                 "selected_course": preferred_course
             }
             formatted_results.append(uni_data)
@@ -239,15 +251,25 @@ def get_empty_template_data(location, programme_types, course):
 @bp.route("/course/<int:course_id>")
 def get_course(course_id):
     try:
-        course = Course.query.get_or_404(course_id)
+        course = Course.query.join(
+            CourseRequirement
+        ).join(
+            University
+        ).filter(
+            Course.id == course_id
+        ).first_or_404()
+        
+        requirement = course.requirements[0] if course.requirements else None
+        university = requirement.university if requirement else None
+        
         return jsonify({
             "id": course.id,
             "course_name": course.course_name,
-            "university_name": course.university_name,
-            "utme_requirements": course.utme_requirements,
-            "subjects": course.subjects,
-            "direct_entry_requirements": course.direct_entry_requirements,
-            "abbrv": course.abbrv,
+            "university_name": university.university_name if university else None,
+            "utme_requirements": requirement.utme_requirements if requirement else None,
+            "subjects": requirement.subject_requirement.subjects if requirement and requirement.subject_requirement else None,
+            "direct_entry_requirements": requirement.direct_entry_requirements if requirement else None,
+            "abbrv": university.abbrv if university else None,
         })
     except Exception as e:
         current_app.logger.error(f"Error fetching course details: {str(e)}")
@@ -258,13 +280,12 @@ def institution_details(id):
     try:
         university = University.query.get_or_404(id)
         
-        # Optimize course query with a single database hit
-        courses = (Course.query
-                  .filter_by(university_name=university.university_name)
-                  .order_by(Course.course_name)
-                  .all())
-
-        current_app.logger.info(f"Rendering details for University ID: {id}")
+        courses = Course.query.join(
+            CourseRequirement,
+            CourseRequirement.course_id == Course.id
+        ).filter(
+            CourseRequirement.university_id == id
+        ).order_by(Course.course_name).all()
 
         return render_template(
             "institution_details.html",
@@ -277,25 +298,25 @@ def institution_details(id):
 
 @bp.route("/institution/<int:id>/courses")
 def get_institution_courses(id):
-    """Get courses for an institution with optional filtering"""
     try:
         # Get query parameters
         search_query = request.args.get('q', '').strip()
         page = request.args.get('page', 1, type=int)
         per_page = current_app.config.get('COURSES_PER_PAGE', 10)
 
-        # Get base query
-        university = University.query.get_or_404(id)
-        query = Course.query.filter_by(university_name=university.university_name)
+        # Build base query using relationships
+        query = Course.query.join(
+            CourseRequirement,
+            CourseRequirement.course_id == Course.id
+        ).filter(
+            CourseRequirement.university_id == id
+        )
 
         # Apply search filter if provided
         if search_query:
             search_terms = [term.strip() for term in search_query.split()]
             for term in search_terms:
-                query = query.join(University).filter(
-                    Course.course_name.ilike(f'%{term}%') |
-                    University.abbrv.ilike(f'%{term}%')
-                )
+                query = query.filter(Course.course_name.ilike(f'%{term}%'))
 
         # Get total count for pagination
         total_courses = query.count()
@@ -308,14 +329,15 @@ def get_institution_courses(id):
                   .limit(per_page)
                   .all())
 
-        # Format response
+        # Format response using relationships
         course_list = [{
             'id': course.id,
             'course_name': course.course_name,
-            'abbrv': course.abbrv,
-            'utme_requirements': course.utme_requirements,
-            'subjects': course.subjects,
-            'direct_entry_requirements': course.direct_entry_requirements
+            'requirements': [{
+                'utme_requirements': req.utme_requirements,
+                'direct_entry_requirements': req.direct_entry_requirements,
+                'subjects': req.subject_requirement.subjects if req.subject_requirement else None
+            } for req in course.requirements if req.university_id == id]
         } for course in courses]
 
         return jsonify({
@@ -368,7 +390,6 @@ def suggest_institutions():
 
 @bp.route("/courses/suggest")
 def suggest_courses():
-    """Endpoint for course name autocomplete suggestions"""
     try:
         query = request.args.get('q', '').strip()
         institution_id = request.args.get('institution_id')
@@ -377,19 +398,22 @@ def suggest_courses():
             return jsonify([])
 
         # Start with base query
-        course_query = Course.query.distinct(Course.course_name)
+        course_query = Course.query.join(
+            CourseRequirement
+        ).join(
+            University
+        ).distinct(Course.course_name)
 
         # Add institution filter if provided
         if institution_id:
-            university = University.query.get_or_404(institution_id)
-            course_query = course_query.filter_by(university_name=university.university_name)
+            course_query = course_query.filter(CourseRequirement.university_id == institution_id)
 
         # Get suggestions with count of institutions offering each course
         suggestions = (course_query
                      .filter(Course.course_name.ilike(f'%{query}%'))
                      .with_entities(
                          Course.course_name,
-                         func.count(distinct(Course.university_name)).label('institution_count')
+                         func.count(distinct(CourseRequirement.university_id)).label('institution_count')
                      )
                      .group_by(Course.course_name)
                      .order_by(Course.course_name)

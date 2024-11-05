@@ -152,47 +152,33 @@ def init_app(app):
             result = db.session.execute(text("""
                 SELECT column_name 
                 FROM information_schema.columns 
-                WHERE table_name = 'university' 
-                AND column_name = 'search_vector'
-            """)).fetchone()
-            click.echo(f"University search_vector column exists: {result is not None}")
-            
-            result = db.session.execute(text("""
-                SELECT column_name 
-                FROM information_schema.columns 
                 WHERE table_name = 'course' 
                 AND column_name = 'search_vector'
             """)).fetchone()
             click.echo(f"Course search_vector column exists: {result is not None}")
             
-            # Check indexes
-            result = db.session.execute(text("""
-                SELECT indexname 
-                FROM pg_indexes 
-                WHERE tablename = 'university' 
-                AND indexname = 'idx_university_search'
-            """)).fetchone()
-            click.echo(f"University search index exists: {result is not None}")
-            
             # Check if vectors are populated
-            uni_count = db.session.execute(text("""
+            course_count = db.session.execute(text("""
                 SELECT COUNT(*) 
-                FROM university 
+                FROM course 
                 WHERE search_vector IS NOT NULL
             """)).scalar()
-            click.echo(f"Universities with search vectors: {uni_count}")
+            click.echo(f"Courses with search vectors: {course_count}")
             
             # Test a simple search
-            click.echo("\nTesting search for 'lagos'...")
-            unis = db.session.execute(text("""
-                SELECT university_name 
-                FROM university 
-                WHERE search_vector @@ to_tsquery('english', 'lagos')
+            click.echo("\nTesting course search...")
+            courses = db.session.execute(text("""
+                SELECT c.course_name, u.university_name
+                FROM course c
+                JOIN course_requirement cr ON c.id = cr.course_id
+                JOIN university u ON cr.university_id = u.id
+                WHERE c.search_vector @@ to_tsquery('english', 'computer')
                 LIMIT 5
             """)).fetchall()
-            click.echo(f"Found {len(unis)} universities containing 'lagos'")
-            for uni in unis:
-                click.echo(f"- {uni.university_name}")
+            
+            click.echo(f"Found {len(courses)} courses matching 'computer'")
+            for course in courses:
+                click.echo(f"- {course.course_name} at {course.university_name}")
                 
         except Exception as e:
             click.echo(f"Error during verification: {str(e)}")
@@ -302,13 +288,6 @@ def init_app(app):
         try:
             click.echo("\nVerifying data consistency...")
             
-            # Get transfer log records
-            transfer_stats = db.session.execute(text("""
-                SELECT table_name, last_transferred_id
-                FROM transfer_log
-                WHERE table_name IN ('universities', 'courses')
-            """)).fetchall()
-            
             # Get actual table counts and max IDs
             table_stats = db.session.execute(text("""
                 SELECT 
@@ -324,26 +303,24 @@ def init_app(app):
                 FROM course
             """)).fetchall()
             
-            # Get orphaned courses
+            # Get orphaned courses (courses without requirements)
             orphaned_courses = db.session.execute(text("""
-                SELECT c.id, c.course_name, c.university_name
+                SELECT c.id, c.course_name
                 FROM course c
-                LEFT JOIN university u ON c.university_name = u.university_name
-                WHERE u.university_name IS NULL
+                LEFT JOIN course_requirement cr ON c.id = cr.course_id
+                WHERE cr.id IS NULL
             """)).fetchall()
             
             # Get duplicate courses
             duplicate_courses = db.session.execute(text("""
-                SELECT course_name, university_name, COUNT(*)
-                FROM course
-                GROUP BY course_name, university_name
+                SELECT c.course_name, u.university_name, COUNT(*)
+                FROM course c
+                JOIN course_requirement cr ON c.id = cr.course_id
+                JOIN university u ON cr.university_id = u.id
+                GROUP BY c.course_name, u.university_name
                 HAVING COUNT(*) > 1
             """)).fetchall()
             
-            click.echo("\nTransfer Log Status:")
-            for record in transfer_stats:
-                click.echo(f"{record.table_name}: Last ID = {record.last_transferred_id}")
-                
             click.echo("\nCurrent Table Status:")
             for stat in table_stats:
                 click.echo(f"{stat.table_name}:")
@@ -351,37 +328,15 @@ def init_app(app):
                 click.echo(f"  Max ID: {stat.max_id}")
                 
             if orphaned_courses:
-                click.echo("\nOrphaned Courses (no matching university):")
+                click.echo("\nOrphaned Courses (no requirements):")
                 for course in orphaned_courses:
-                    click.echo(f"ID: {course.id}, Course: {course.course_name}, "
-                             f"University: {course.university_name}")
+                    click.echo(f"ID: {course.id}, Course: {course.course_name}")
                     
             if duplicate_courses:
                 click.echo("\nDuplicate Courses:")
                 for dup in duplicate_courses:
-                    click.echo(f"Course: {dup.course_name}, University: {dup.university_name}, "
-                             f"Count: {dup[2]}")
-            
-            # Check for gaps in IDs
-            click.echo("\nChecking for gaps in IDs...")
-            gaps = db.session.execute(text("""
-                WITH RECURSIVE numbers AS (
-                    SELECT MIN(id) as num FROM course
-                    UNION ALL
-                    SELECT num + 1
-                    FROM numbers
-                    WHERE num < (SELECT MAX(id) FROM course)
-                )
-                SELECT num
-                FROM numbers n
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM course c WHERE c.id = n.num
-                )
-            """)).fetchall()
-            
-            if gaps:
-                click.echo(f"\nFound {len(gaps)} gaps in course IDs:")
-                click.echo(f"First few missing IDs: {[gap[0] for gap in gaps[:5]]}")
+                    click.echo(f"Course: {dup[0]}, University: {dup[1]}, "
+                            f"Count: {dup[2]}")
             
         except Exception as e:
             click.echo(f"Error verifying data: {str(e)}")
@@ -1233,3 +1188,68 @@ def init_app(app):
         except Exception as e:
             click.echo(f"Error verifying course search: {str(e)}")
             db.session.rollback()
+            
+    @app.cli.command('db-verify-relationships')
+    @with_appcontext
+    def verify_relationships():
+        """Verify course-university relationships"""
+        try:
+            click.echo("\nVerifying course-university relationships...")
+            
+            # Check courses with no requirements
+            orphaned = db.session.execute(text("""
+                SELECT COUNT(*)
+                FROM course c
+                LEFT JOIN course_requirement cr ON c.id = cr.course_id
+                WHERE cr.id IS NULL
+            """)).scalar()
+            
+            # Check requirements with no subjects
+            missing_subjects = db.session.execute(text("""
+                SELECT COUNT(*)
+                FROM course_requirement cr
+                LEFT JOIN subject_requirement sr ON cr.id = sr.course_requirement_id
+                WHERE sr.id IS NULL
+            """)).scalar()
+            
+            # Check requirement distribution
+            requirement_stats = db.session.execute(text("""
+                SELECT 
+                    COUNT(DISTINCT c.id) as total_courses,
+                    COUNT(DISTINCT cr.id) as total_requirements,
+                    COUNT(DISTINCT sr.id) as total_subject_requirements
+                FROM course c
+                LEFT JOIN course_requirement cr ON c.id = cr.course_id
+                LEFT JOIN subject_requirement sr ON cr.id = sr.course_requirement_id
+            """)).fetchone()
+            
+            click.echo(f"\nRelationship Status:")
+            click.echo(f"Courses without requirements: {orphaned}")
+            click.echo(f"Requirements without subjects: {missing_subjects}")
+            click.echo(f"\nDistribution:")
+            click.echo(f"Total courses: {requirement_stats[0]}")
+            click.echo(f"Total requirements: {requirement_stats[1]}")
+            click.echo(f"Total subject requirements: {requirement_stats[2]}")
+            
+            # Check for courses with multiple requirements
+            duplicates = db.session.execute(text("""
+                SELECT c.course_name, COUNT(cr.id)
+                FROM course c
+                JOIN course_requirement cr ON c.id = cr.course_id
+                GROUP BY c.id, c.course_name
+                HAVING COUNT(cr.id) > 1
+                ORDER BY COUNT(cr.id) DESC
+                LIMIT 5
+            """)).fetchall()
+            
+            if duplicates:
+                click.echo("\nCourses with multiple requirements:")
+                for dup in duplicates:
+                    click.echo(f"- {dup[0]}: {dup[1]} requirements")
+                    
+        except Exception as e:
+            click.echo(f"Error verifying relationships: {str(e)}")
+            db.session.rollback()
+            raise
+        finally:
+            db.session.close()
