@@ -394,9 +394,15 @@ def search():
             )
         universities = universities_query.all()
 
-        courses_query = Course.query.join(University).filter(
-            (Course.course_name.ilike(f"%{query_text}%"))
-            | (University.abbrv.ilike(f"%{query_text}%"))
+        courses_query = Course.query.join(
+            CourseRequirement,
+            CourseRequirement.course_id == Course.id
+        ).join(
+            University,
+            University.id == CourseRequirement.university_id
+        ).filter(
+            (Course.course_name.ilike(f"%{query_text}%")) |
+            (University.abbrv.ilike(f"%{query_text}%"))
         )
         courses = courses_query.all()
 
@@ -413,11 +419,13 @@ def search():
                 {
                     "id": course.id,
                     "course_name": course.course_name,
-                    "university_name": course.university_name,
-                    "abbrv": course.abbrv,
-                    "direct_entry_requirements": course.direct_entry_requirements,
-                    "utme_requirements": course.utme_requirements,
-                    "subjects": course.subjects,
+                    "requirements": [{
+                        "university_name": req.university.university_name,
+                        "abbrv": req.university.abbrv,
+                        "direct_entry_requirements": req.direct_entry_requirements,
+                        "utme_requirements": req.utme_requirements,
+                        "subjects": req.subject_requirement.subjects if req.subject_requirement else None
+                    } for req in course.requirements]
                 }
                 for course in courses
             ],
@@ -425,7 +433,7 @@ def search():
     except Exception as e:
         current_app.logger.error(f"Error in search: {str(e)}")
         return jsonify({
-            "error": "An error occurred while processing your search. Please try again."
+            "error": "An error occurred while processing your search."
         }), 500
 
 @bp.route('/delete_comment/<int:comment_id>', methods=['POST'])
@@ -491,16 +499,21 @@ def get_course_details(course_id):
     try:
         course = (Course.query
                  .join(CourseRequirement)
+                 .join(University,  # Add this join
+                      University.id == CourseRequirement.university_id)
                  .filter(Course.id == course_id)
+                 .options(joinedload(Course.requirements)
+                         .joinedload(CourseRequirement.university))  # Add eager loading
                  .first_or_404())
+                 
         requirement = course.requirements[0] if course.requirements else None
-        university = University.query.filter_by(university_name=course.university_name).first()
+        university = requirement.university if requirement else None  # Get university through relationship
         
         course_data = {
             'id': course.id,
             'course_name': course.course_name,
-            'university_name': course.university_name,
-            'abbrv': course.abbrv,
+            'university_name': university.university_name if university else None,
+            'abbrv': university.abbrv if university else None,  # Get from university object
             'utme_requirements': requirement.utme_requirements if requirement else None,
             'direct_entry_requirements': requirement.direct_entry_requirements if requirement else None,
             'subjects': requirement.subject_requirement.subjects if requirement and requirement.subject_requirement else None,

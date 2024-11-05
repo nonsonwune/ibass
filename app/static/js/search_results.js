@@ -145,7 +145,7 @@ function initializeCourseModals() {
 
 // Fetch course details from API
 function fetchCourseDetails(courseId, modalBody, modalElement) {
-  fetch(`/api/course/${courseId}`)
+  fetch(`/university/course/${courseId}`)
     .then((response) => response.json())
     .then((courseDetails) => {
       if (courseDetails.error) {
@@ -155,39 +155,46 @@ function fetchCourseDetails(courseId, modalBody, modalElement) {
             </div>`;
         return;
       }
-      modalBody.innerHTML = `
-          <h6 class="mb-3">
-            <i class="fas fa-university me-2 text-primary"></i>${
-              courseDetails.university_name
-            }
-          </h6>
-          <div class="course-requirements">
-            <h6 class="mb-3">Entry Requirements</h6>
-            <div class="mb-3">
-              <strong>UTME Requirements:</strong>
-              <p class="mb-2">${
-                courseDetails.utme_requirements || "Not specified"
-              }</p>
-            </div>
-            <div class="mb-3">
-              <strong>Required Subjects:</strong>
-              <p class="mb-2">${courseDetails.subjects || "Not specified"}</p>
-            </div>
-            <div>
-              <strong>Direct Entry Requirements:</strong>
-              <p class="mb-0">${
-                courseDetails.direct_entry_requirements || "Not specified"
-              }</p>
-            </div>
-          </div>
-        `;
+
+      let content = `
+        <div class="course-requirements">
+          <h6 class="mb-3">Entry Requirements</h6>
+      `;
+
+      // Add university name and requirements
+      content += `
+        <h6 class="mb-3">
+          <i class="fas fa-university me-2 text-primary"></i>${
+            courseDetails.university_name || "Unknown University"
+          }
+        </h6>
+        <div class="mb-3">
+          <strong>UTME Requirements:</strong>
+          <p class="mb-2">${
+            courseDetails.utme_requirements || "Not specified"
+          }</p>
+        </div>
+        <div class="mb-3">
+          <strong>Required Subjects:</strong>
+          <p class="mb-2">${courseDetails.subjects || "Not specified"}</p>
+        </div>
+        <div>
+          <strong>Direct Entry Requirements:</strong>
+          <p class="mb-0">${
+            courseDetails.direct_entry_requirements || "Not specified"
+          }</p>
+        </div>
+      `;
+
+      content += "</div>";
+      modalBody.innerHTML = content;
 
       // Update "View Institution" button link
       const viewInstitutionBtn = modalElement.querySelector(
         ".view-institution-btn"
       );
       if (viewInstitutionBtn && courseDetails.university_id) {
-        viewInstitutionBtn.href = `/institution/${courseDetails.university_id}`;
+        viewInstitutionBtn.href = `/university/institution/${courseDetails.university_id}`;
       }
     })
     .catch((error) => {

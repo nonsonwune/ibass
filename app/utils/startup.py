@@ -1,3 +1,4 @@
+# app/utils/startup.py
 from flask import current_app
 from .db_ops import verify_search_columns, create_search_columns
 from .search import init_search_vectors
