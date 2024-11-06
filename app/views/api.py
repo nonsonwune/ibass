@@ -150,19 +150,82 @@ def get_courses():
             "message": str(e)
         }), 500
 
+def validate_course_data(course, requirements):
+    """Validate course data before sending"""
+    try:
+        return {
+            "id": course.id,
+            "course_name": course.course_name,
+            "utme_requirements": requirements.get('utme'),
+            "direct_entry_requirements": requirements.get('de'),
+            "subjects": requirements.get('subjects')
+        }
+    except Exception as e:
+        current_app.logger.error(f"Error validating course data: {str(e)}")
+        return None
+
 @bp.route('/institution/<int:uni_id>')
 def get_institution_details(uni_id):
     try:
         selected_course = request.args.get('selected_course')
         university = University.query.get_or_404(uni_id)
         
-        # Get courses through the proper relationship
+        current_app.logger.debug(f"Fetching courses for university {uni_id}")
+        
+        # Get all requirements first
+        requirements = CourseRequirement.get_course_requirements(uni_id)
+        
+        # Log requirement details
+        current_app.logger.info(f"Found {len(requirements)} requirements for university {uni_id}")
+        
+        # Create requirements lookup dict with logging
+        req_lookup = {req.course_id: req for req in requirements} if requirements else {}
+        current_app.logger.debug(f"Created lookup for {len(req_lookup)} requirements")
+        
         courses = (Course.query
                   .join(CourseRequirement, Course.id == CourseRequirement.course_id)
                   .filter(CourseRequirement.university_id == uni_id)
-                  .options(joinedload(Course.requirements)
-                          .joinedload(CourseRequirement.subject_requirement))
+                  .order_by(Course.course_name)
                   .all())
+
+        # Log course details
+        current_app.logger.info(f"Found {len(courses)} courses for university {uni_id}")
+        course_data = []
+        
+        for course in courses:
+            req = req_lookup.get(course.id)
+            current_app.logger.debug(
+                f"Processing course {course.id} ({course.course_name}): "
+                f"Has requirement: {bool(req)}"
+            )
+            
+            if req:
+                current_app.logger.debug(
+                    f"Requirements for course {course.id}: "
+                    f"UTME: {bool(req.utme_requirements)}, "
+                    f"DE: {bool(req.direct_entry_requirements)}, "
+                    f"Subjects: {bool(req.get_subjects())}"
+                )
+            
+            course_data.append({
+                "id": course.id,
+                "course_name": course.course_name,
+                "utme_requirements": (
+                    req.utme_requirements 
+                    if req and req.utme_template 
+                    else "[Not Available]"  # Changed to explicit message
+                ),
+                "direct_entry_requirements": (
+                    req.direct_entry_requirements 
+                    if req and req.de_template 
+                    else "[Not Available]"  # Changed to explicit message
+                ),
+                "subjects": (
+                    req.get_subjects() 
+                    if req and req.subject_requirement 
+                    else "[Not Available]"  # Changed to explicit message
+                )
+            })
 
         response_data = {
             "id": university.id,
@@ -173,24 +236,22 @@ def get_institution_details(uni_id):
             "established": university.established,
             "abbrv": university.abbrv,
             "selected_course": selected_course,
-            "courses": [{
-                "id": course.id,
-                "course_name": course.course_name,
-                "utme_requirements": (course.requirements[0].utme_requirements 
-                                   if course.requirements else "N/A"),
-                "subjects": (course.requirements[0].subject_requirement.subjects 
-                           if course.requirements and 
-                           course.requirements[0].subject_requirement 
-                           else "N/A"),
-                "direct_entry_requirements": (course.requirements[0].direct_entry_requirements 
-                                           if course.requirements else "N/A"),
-            } for course in courses]
+            "courses": course_data
         }
+
+        if not requirements:
+            current_app.logger.warning(
+                f"No requirements found for university {uni_id}. "
+                f"Found {len(courses)} courses without requirements."
+            )
 
         return jsonify(response_data), 200
     except Exception as e:
-        current_app.logger.error(f"Error in get_institution_details: {str(e)}")
-        return jsonify({"error": "An error occurred while fetching institution details."}), 500
+        current_app.logger.error(f"Error in get_institution_details: {str(e)}", exc_info=True)
+        return jsonify({
+            "error": "An error occurred while fetching institution details.",
+            "details": str(e) if current_app.debug else None
+        }), 500
 
 @bp.route('/bookmark', methods=['POST'])
 @login_required

@@ -1,11 +1,11 @@
 // app/static/js/institutionModal.js
 
+// Initialize modal
 function initializeInstitutionModal() {
-  console.log("Initializing institution modal");
   const modal = document.getElementById("institutionModal");
   if (!modal) {
-    console.warn("Modal element not found");
-    return;
+      console.warn("Modal element not found");
+      return;
   }
 
   const bootstrapModal = new bootstrap.Modal(modal);
@@ -14,11 +14,12 @@ function initializeInstitutionModal() {
   modal.addEventListener("shown.bs.modal", handleModalShown);
   modal.addEventListener("hidden.bs.modal", handleModalHidden);
 
+  // Focus search input when modal is shown
   modal.addEventListener("shown.bs.modal", () => {
-    const searchInput = document.getElementById("courseSearch");
-    if (searchInput) {
-      searchInput.focus();
-    }
+      const searchInput = document.getElementById("courseSearch");
+      if (searchInput) {
+          searchInput.focus();
+      }
   });
 }
 
@@ -37,8 +38,13 @@ function handleModalShow(event) {
     return;
   }
 
+  AppState.resetModalState(); // Reset state before new modal
   AppState.modalState.currentInstitution = { id: uniId, selectedCourse };
-  resetModal();
+  AppState.updateModalUI();
+}
+
+function handleModalHidden() {
+  AppState.resetModalState();
 }
 
 function handleModalShown() {
@@ -83,39 +89,58 @@ function resetModal() {
 
 async function fetchInstitutionDetails(uniId, selectedCourse) {
   AppState.setModalLoading(true);
+  AppState.clearError();
 
   try {
     const url = selectedCourse
-      ? `/api/institution/${uniId}?selected_course=${encodeURIComponent(
-          selectedCourse
-        )}`
+      ? `/api/institution/${uniId}?selected_course=${encodeURIComponent(selectedCourse)}`
       : `/api/institution/${uniId}`;
 
+    console.debug(`Fetching institution details from: ${url}`);
     const response = await fetch(url);
-
+    
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(
-        errorData.error || `HTTP error! status: ${response.status}`
-      );
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
+    console.debug('Received institution data:', data);
 
-    if (!data) {
-      throw new Error("No data received from server");
+    if (!data.courses || !Array.isArray(data.courses)) {
+      console.error('Invalid courses data:', data.courses);
+      throw new Error("Invalid courses data received");
     }
 
-    if (selectedCourse) {
-      data.selected_course = selectedCourse;
-    }
+    // Add additional validation for requirements
+    data.courses = data.courses.map(course => ({
+      ...course,
+      utme_requirements: course.utme_requirements || "Not specified",
+      direct_entry_requirements: course.direct_entry_requirements || "Not specified",
+      subjects: course.subjects || "Not specified"
+    }));
 
+    AppState.modalState.currentInstitution = data;
     populateModal(data);
   } catch (error) {
     console.error("Error fetching institution details:", error);
-    showModalError(error.message || "Error loading institution details");
+    AppState.setError(error.message || "Error loading institution details");
+    AppState.resetModalState();
   } finally {
     AppState.setModalLoading(false);
+  }
+}
+
+function showModalError(message) {
+  const errorContainer = document.getElementById("modalErrorMessage");
+  if (errorContainer) {
+      errorContainer.textContent = message;
+      errorContainer.style.display = "block";
+  }
+
+  const loadingIndicator = document.getElementById("loadingIndicator");
+  if (loadingIndicator) {
+      loadingIndicator.style.display = "none";
   }
 }
 
@@ -278,9 +303,14 @@ function populateModal(data) {
 }
 
 function createCourseHTML(course, selectedCourse, index) {
-  const isSelected =
-    selectedCourse &&
-    course.course_name.toLowerCase() === selectedCourse.toLowerCase();
+  const isSelected = selectedCourse && 
+                    course.course_name.toLowerCase() === selectedCourse.toLowerCase();
+  
+  // Helper function to format requirement text
+  const formatRequirement = (text) => {
+    if (!text) return "Not specified";
+    return text.split('+').join('<br>').trim();  // Handle multiline requirements
+  };
 
   return `
       <div class="accordion-item ${isSelected ? "selected-course" : ""}">
