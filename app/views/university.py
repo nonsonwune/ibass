@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, jsonify, current_app, abo
 from flask_login import current_user
 from sqlalchemy import func, distinct
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload
 from ..models.university import University, Course, CourseRequirement
 from ..models.interaction import Bookmark
 from ..extensions import db
@@ -280,12 +281,24 @@ def institution_details(id):
     try:
         university = University.query.get_or_404(id)
         
-        courses = Course.query.join(
-            CourseRequirement,
-            CourseRequirement.course_id == Course.id
-        ).filter(
-            CourseRequirement.university_id == id
-        ).order_by(Course.course_name).all()
+        # Updated query with eager loading
+        courses = (Course.query
+                .join(CourseRequirement)
+                .options(
+                    joinedload(Course.requirements)
+                    .joinedload(CourseRequirement.utme_template)
+                )
+                .options(
+                    joinedload(Course.requirements)
+                    .joinedload(CourseRequirement.de_template)
+                )
+                .options(
+                    joinedload(Course.requirements)
+                    .joinedload(CourseRequirement.subject_requirement)
+                )
+                .filter(CourseRequirement.university_id == id)
+                .order_by(Course.course_name)
+                .all())
 
         return render_template(
             "institution_details.html",

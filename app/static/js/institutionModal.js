@@ -4,8 +4,8 @@
 function initializeInstitutionModal() {
   const modal = document.getElementById("institutionModal");
   if (!modal) {
-      console.warn("Modal element not found");
-      return;
+    console.warn("Modal element not found");
+    return;
   }
 
   const bootstrapModal = new bootstrap.Modal(modal);
@@ -16,10 +16,10 @@ function initializeInstitutionModal() {
 
   // Focus search input when modal is shown
   modal.addEventListener("shown.bs.modal", () => {
-      const searchInput = document.getElementById("courseSearch");
-      if (searchInput) {
-          searchInput.focus();
-      }
+    const searchInput = document.getElementById("courseSearch");
+    if (searchInput) {
+      searchInput.focus();
+    }
   });
 }
 
@@ -93,31 +93,36 @@ async function fetchInstitutionDetails(uniId, selectedCourse) {
 
   try {
     const url = selectedCourse
-      ? `/api/institution/${uniId}?selected_course=${encodeURIComponent(selectedCourse)}`
+      ? `/api/institution/${uniId}?selected_course=${encodeURIComponent(
+          selectedCourse
+        )}`
       : `/api/institution/${uniId}`;
 
     console.debug(`Fetching institution details from: ${url}`);
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.error || `HTTP error! status: ${response.status}`
+      );
     }
 
     const data = await response.json();
-    console.debug('Received institution data:', data);
+    console.debug("Received institution data:", data);
 
     if (!data.courses || !Array.isArray(data.courses)) {
-      console.error('Invalid courses data:', data.courses);
+      console.error("Invalid courses data:", data.courses);
       throw new Error("Invalid courses data received");
     }
 
     // Add additional validation for requirements
-    data.courses = data.courses.map(course => ({
+    data.courses = data.courses.map((course) => ({
       ...course,
       utme_requirements: course.utme_requirements || "Not specified",
-      direct_entry_requirements: course.direct_entry_requirements || "Not specified",
-      subjects: course.subjects || "Not specified"
+      direct_entry_requirements:
+        course.direct_entry_requirements || "Not specified",
+      subjects: course.subjects || "Not specified",
     }));
 
     AppState.modalState.currentInstitution = data;
@@ -134,13 +139,13 @@ async function fetchInstitutionDetails(uniId, selectedCourse) {
 function showModalError(message) {
   const errorContainer = document.getElementById("modalErrorMessage");
   if (errorContainer) {
-      errorContainer.textContent = message;
-      errorContainer.style.display = "block";
+    errorContainer.textContent = message;
+    errorContainer.style.display = "block";
   }
 
   const loadingIndicator = document.getElementById("loadingIndicator");
   if (loadingIndicator) {
-      loadingIndicator.style.display = "none";
+    loadingIndicator.style.display = "none";
   }
 }
 
@@ -303,13 +308,19 @@ function populateModal(data) {
 }
 
 function createCourseHTML(course, selectedCourse, index) {
-  const isSelected = selectedCourse && 
-                    course.course_name.toLowerCase() === selectedCourse.toLowerCase();
-  
+  const isSelected =
+    selectedCourse &&
+    course.course_name.toLowerCase() === selectedCourse.toLowerCase();
+  const requirements = course.requirements && course.requirements[0];
+  const utmeReqs = requirements?.utme_template?.requirements || "Not specified";
+  const deReqs = requirements?.de_template?.requirements || "Not specified";
+  const subjects =
+    requirements?.subject_requirement?.subjects || "Not specified";
+
   // Helper function to format requirement text
   const formatRequirement = (text) => {
     if (!text) return "Not specified";
-    return text.split('+').join('<br>').trim();  // Handle multiline requirements
+    return text.split("+").join("<br>").trim(); // Handle multiline requirements
   };
 
   return `

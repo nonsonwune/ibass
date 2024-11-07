@@ -61,12 +61,12 @@ class CourseRequirement(BaseModel):
     utme_template = db.relationship(
         'UTMERequirementTemplate', 
         back_populates='course_requirements',
-        lazy='joined'  # Change to joined for better performance
+        lazy='select'
     )
     de_template = db.relationship(
         'DirectEntryRequirementTemplate', 
         back_populates='course_requirements',
-        lazy='joined'  # Change to joined for better performance
+        lazy='select'
     )
     
     __table_args__ = (
