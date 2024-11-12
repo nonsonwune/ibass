@@ -19,11 +19,16 @@ class University(BaseModel):
     established = db.Column(db.Integer)
     abbrv = db.Column(db.String(255))
     search_vector = db.Column(TSVECTOR)
+    state_id = db.Column(db.Integer, db.ForeignKey('state.id'), nullable=False)
+    programme_type_id = db.Column(db.Integer, db.ForeignKey('programme_type.id'), nullable=False)
+    
+    # Add relationships for new foreign keys
+    state_info = db.relationship('State', backref='universities')
+    programme_type_info = db.relationship('ProgrammeType', backref='universities')
     
     __table_args__ = (
         Index('idx_university_name', 'university_name'),
-        Index('idx_university_state', 'state'),
-        Index('idx_university_program_type', 'program_type'),
+        Index('idx_university_program_type_hash', 'program_type', postgresql_using='hash'),
         Index('idx_university_search', 'search_vector', postgresql_using='gin'),
     )
     
@@ -43,7 +48,7 @@ class University(BaseModel):
     )
 
     @classmethod
-    def search(cls, query_text, state=None, program_type=None):
+    def search(cls, query_text=None, state_id=None, programme_type_id=None):
         """Enhanced search method with proper query handling"""
         search_query = cls.query
         
@@ -62,10 +67,10 @@ class University(BaseModel):
             except Exception as e:
                 search_query = search_query.filter(cls.university_name.ilike(f"%{query_text}%"))
         
-        if state:
-            search_query = search_query.filter(cls.state == state)
-        if program_type:
-            search_query = search_query.filter(cls.program_type == program_type)
+        if state_id:
+            search_query = search_query.filter(cls.state_id == state_id)
+        if programme_type_id:
+            search_query = search_query.filter(cls.programme_type_id == programme_type_id)
             
         return search_query.order_by(cls.university_name)
     
@@ -91,6 +96,16 @@ class University(BaseModel):
             cache.set(cache_key, states, timeout=3600)
             
         return states
+
+    @property
+    def state_name(self):
+        """Compatibility property for existing views"""
+        return self.state_info.name if self.state_info else self.state
+
+    @property
+    def programme_type_name(self):
+        """Compatibility property for existing views"""
+        return self.programme_type_info.name if self.programme_type_info else self.program_type
 
 class Course(BaseModel):
     __tablename__ = 'course'
@@ -172,3 +187,19 @@ class Course(BaseModel):
         base_query = base_query.distinct().order_by(cls.course_name)
         
         return base_query
+
+# Add new models for state and programme_type
+class State(BaseModel):
+    __tablename__ = 'state'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    created_at = db.Column(db.TIMESTAMP, server_default=db.func.now())
+
+class ProgrammeType(BaseModel):
+    __tablename__ = 'programme_type'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    category = db.Column(db.String(50))
+    created_at = db.Column(db.TIMESTAMP, server_default=db.func.now())
