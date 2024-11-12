@@ -12,6 +12,7 @@ from ..extensions import db
 from ..config import Config
 from ..utils.decorators import admin_required
 import bleach
+from sqlalchemy import text
 
 bp = Blueprint('api', __name__)
 
@@ -93,62 +94,99 @@ def get_universities():
         current_app.logger.error(f"Error retrieving universities: {str(e)}")
         return jsonify({"error": "Failed to retrieve universities."}), 500
 
-@bp.route('/courses', methods=['GET'])
+@bp.route('/courses')
 def get_courses():
-    state = request.args.get('state')
-    programme_types = request.args.get('programme_type', '').split(',')
-    university = request.args.get('university')
-    
     try:
-        # Start with base query joining all necessary tables explicitly
-        query = (db.session.query(Course, University, CourseRequirement)
-                .join(CourseRequirement, Course.id == CourseRequirement.course_id)
-                .join(University, University.id == CourseRequirement.university_id))
+        state = request.args.get('state')
+        program_types = request.args.get('programme_type', '').split(',')
+        load_all = request.args.get('load_all', 'false').lower() == 'true'
+        page = request.args.get('page', 1, type=int)
+        per_page = 1000 if load_all else 50
         
-        # Filter by state if not "ALL"
-        if state and state != "ALL":
-            query = query.filter(University.state == state)
+        base_query = """
+            WITH grouped_courses AS (
+                SELECT 
+                    c.id,
+                    c.course_name,
+                    c.code,
+                    COUNT(DISTINCT u.id) as institution_count,
+                    array_agg(
+                        DISTINCT jsonb_build_object(
+                            'university_name', u.university_name,
+                            'state', u.state,
+                            'program_type', u.program_type
+                        )
+                    ) as institutions
+                FROM course c
+                JOIN course_requirement cr ON c.id = cr.course_id
+                JOIN university u ON u.id = cr.university_id
+                WHERE 1=1
+        """
+        params = {}
         
-        # Handle multiple programme types
-        if programme_types and programme_types[0]:  # Check if not empty string
-            expanded_types = []
-            for ptype in programme_types:
-                if ptype in Config.PROGRAMME_GROUPS:
-                    expanded_types.extend(Config.PROGRAMME_GROUPS[ptype])
-                else:
-                    expanded_types.append(ptype)
+        if program_types and program_types[0]:
+            base_query += " AND u.program_type = ANY(:program_types)"
+            params['program_types'] = program_types
             
-            query = query.filter(University.program_type.in_(expanded_types))
-        
-        if university:
-            query = query.filter(University.university_name == university)
+        if state and state != 'ALL':
+            base_query += " AND u.state = :state"
+            params['state'] = state
             
-        # Execute query and get results
-        results = query.order_by(Course.course_name).all()
+        base_query += """
+                GROUP BY c.id, c.course_name, c.code
+            ),
+            distinct_courses AS (
+                SELECT DISTINCT ON (LOWER(course_name))
+                    id,
+                    course_name,
+                    code,
+                    institution_count,
+                    institutions
+                FROM grouped_courses
+                ORDER BY LOWER(course_name), institution_count DESC
+            )
+            SELECT 
+                id,
+                course_name,
+                code,
+                institution_count,
+                institutions
+            FROM distinct_courses
+            ORDER BY course_name
+        """
         
-        # Process results in a single step
-        response_data = [{
-            "id": course.id,
-            "course_name": course.course_name,
-            "university_name": university.university_name,
-            "state": university.state,
-            "program_type": university.program_type,
-            "abbrv": university.abbrv,
-            "direct_entry_requirements": requirement.direct_entry_requirements,
-            "utme_requirements": requirement.utme_requirements,
-            "subjects": requirement.subject_requirement.subjects if requirement.subject_requirement else None,
-        } for course, university, requirement in results]
+        # Get total count
+        count_query = "SELECT COUNT(*) FROM (" + base_query + ") AS count_query"
+        total = db.session.execute(text(count_query), params).scalar()
         
-        current_app.logger.info(f"Found {len(response_data)} courses for state: {state}, types: {programme_types}")
+        if not load_all:
+            base_query += " LIMIT :limit OFFSET :offset"
+            params['limit'] = per_page
+            params['offset'] = (page - 1) * per_page
         
-        return jsonify(response_data)
+        results = db.session.execute(text(base_query), params).fetchall()
+        
+        courses = [{
+            'id': row.id,
+            'course_name': row.course_name,
+            'code': row.code or '',
+            'institution_count': row.institution_count,
+            'institutions': row.institutions
+        } for row in results]
+        
+        current_app.logger.info(f"Found {len(courses)} unique courses out of {total} total matches")
+        
+        return jsonify({
+            'courses': courses,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'pages': (total + per_page - 1) // per_page
+        })
         
     except Exception as e:
         current_app.logger.error(f"Error retrieving courses: {str(e)}")
-        return jsonify({
-            "error": "Failed to retrieve courses",
-            "message": str(e)
-        }), 500
+        return jsonify({'error': 'Failed to retrieve courses'}), 500
 
 def validate_course_data(course, requirements):
     """Validate course data before sending"""

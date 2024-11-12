@@ -181,3 +181,4 @@ production_dump.sql
 *.json
 /data
 /data/
+.cursurrules

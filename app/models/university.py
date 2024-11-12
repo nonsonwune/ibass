@@ -122,40 +122,53 @@ class Course(BaseModel):
     )
 
     @classmethod
-    def search(cls, query_text, university_id=None, program_type=None):
-        """Enhanced course search method"""
-        search_query = cls.query
+    def search(cls, query_text=None, university_id=None, program_type=None):
+        """Optimized course search method"""
+        # Start with a base query
+        base_query = db.session.query(
+            cls.id,
+            cls.course_name,
+            cls.code,
+            University.program_type,
+            University.university_name
+        ).select_from(cls)
+        
+        # Use join instead of subquery for better performance
+        base_query = base_query.join(
+            CourseRequirement,
+            CourseRequirement.course_id == cls.id
+        ).join(
+            University,
+            University.id == CourseRequirement.university_id
+        )
         
         if query_text:
             clean_query = re.sub(r'[^\w\s]', '', query_text.lower())
             search_terms = clean_query.split()
             
             try:
-                conditions = []
-                for term in search_terms:
-                    conditions.append(
-                        text("search_vector @@ to_tsquery('english', :term)")
-                        .bindparams(term=term + ':*')
-                    )
-                search_query = search_query.filter(db.or_(*conditions))
-            except Exception as e:
-                search_query = search_query.filter(db.or_(
+                # Use GIN index for full-text search
+                combined_terms = ' & '.join(f"{term}:*" for term in search_terms)
+                base_query = base_query.filter(
+                    text("course.search_vector @@ to_tsquery('english', :terms)")
+                    .bindparams(terms=combined_terms)
+                )
+            except Exception:
+                base_query = base_query.filter(db.or_(
                     cls.course_name.ilike(f"%{query_text}%"),
                     cls.code.ilike(f"%{query_text}%")
                 ))
         
-        if university_id or program_type:
-            search_query = search_query.join(
-                CourseRequirement,
-                CourseRequirement.course_id == cls.id
-            ).join(
-                University,
-                University.id == CourseRequirement.university_id
-            )
+        if university_id:
+            base_query = base_query.filter(University.id == university_id)
             
-            if university_id:
-                search_query = search_query.filter(University.id == university_id)
-            if program_type:
-                search_query = search_query.filter(University.program_type == program_type)
-                
-        return search_query.distinct().order_by(cls.course_name)
+        if program_type:
+            if isinstance(program_type, (list, tuple)):
+                base_query = base_query.filter(University.program_type.in_(program_type))
+            else:
+                base_query = base_query.filter(University.program_type == program_type)
+        
+        # Add pagination
+        base_query = base_query.distinct().order_by(cls.course_name)
+        
+        return base_query

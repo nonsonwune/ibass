@@ -447,61 +447,48 @@ document.addEventListener("DOMContentLoaded", function () {
     async fetchCourses(state, programTypes) {
       const programTypesString = Array.from(programTypes).join(",");
       const response = await fetch(
-        `/api/courses?state=${encodeURIComponent(
-          state
-        )}&programme_type=${encodeURIComponent(programTypesString)}`
+        `/api/courses?state=${encodeURIComponent(state)}&programme_type=${encodeURIComponent(programTypesString)}&load_all=true`
       );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(
-          errorData.message || `HTTP error! status: ${response.status}`
-        );
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
       }
 
       return response.json();
     },
 
-    processCourses(courses) {
-      if (!Array.isArray(courses)) {
-        throw new Error("Invalid response format from server");
+    processCourses(response) {
+      if (!response || !response.courses) {
+        throw new Error('Invalid response format from server');
       }
 
+      // Create a Map to store unique courses by name (case-insensitive)
       const coursesMap = new Map();
 
-      courses.forEach((course) => {
-        if (course.course_name === "ALL") return;
-
-        const courseKey = course.course_name.toUpperCase();
+      response.courses.forEach((course) => {
+        const courseKey = course.course_name.toLowerCase();
+        
         if (!coursesMap.has(courseKey)) {
-          coursesMap.set(courseKey, {
-            name: course.course_name,
-            institutions: new Set([
-              {
-                name: course.university_name,
-                state: course.state,
-                type: course.program_type,
-              },
-            ]),
-            details: {
-              utme: course.utme_requirements,
-              subjects: course.subjects,
-              directEntry: course.direct_entry_requirements,
-              abbreviation: course.abbrv,
-            },
-          });
+            coursesMap.set(courseKey, {
+                id: course.id,
+                name: course.course_name,
+                code: course.code,
+                institutions: new Set(course.institutions.map(inst => JSON.stringify(inst)))
+            });
         } else {
-          coursesMap.get(courseKey).institutions.add({
-            name: course.university_name,
-            state: course.state,
-            type: course.program_type,
-          });
+            // Merge institutions if we find the same course
+            course.institutions.forEach(inst => {
+                coursesMap.get(courseKey).institutions.add(JSON.stringify(inst));
+            });
         }
-      });
+    });
 
-      return Array.from(coursesMap.values()).sort((a, b) =>
-        a.name.localeCompare(b.name)
-      );
+    // Convert Map back to array and process institutions
+    return Array.from(coursesMap.values()).map(course => ({
+        ...course,
+        institutions: new Set(Array.from(course.institutions).map(inst => JSON.parse(inst)))
+    })).sort((a, b) => a.name.localeCompare(b.name));
     },
 
     initializeSearchInterface() {
