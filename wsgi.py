@@ -138,9 +138,13 @@ if __name__ == "__main__":
                 'keepalives_count': 5
             }
         }
+        
+        # Get port from environment or use default
         port = int(os.environ.get("PORT", 5001))
-        # Add Gunicorn config when running the app
-        app.run(host="0.0.0.0", port=port, **gunicorn_config)
+        
+        # Run with basic Flask configuration for local development
+        app.run(host="0.0.0.0", port=port)
+        
     except Exception as e:
         logging.error(f"Failed to start application: {str(e)}")
         exit(1)
