@@ -8,6 +8,7 @@ from sqlalchemy import inspect, text
 import sqlalchemy.exc
 import time
 import os
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Configure logging once at the module level
 logging.basicConfig(
@@ -17,6 +18,19 @@ logging.basicConfig(
 )
 
 app = create_app()
+
+# Add these lines after app creation
+app.wsgi_app = ProxyFix(app.wsgi_app)
+# Increase the maximum request line size
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
+app.config['MAX_LINE_SIZE'] = 0  # Disable line length check
+
+# For Gunicorn configuration, add these lines before the if __name__ == "__main__": block
+gunicorn_config = {
+    'limit_request_line': 0,  # Disable request line length limit
+    'limit_request_fields': 1000,
+    'limit_request_field_size': 0
+}
 
 def wait_for_db(max_retries=5, retry_interval=5):
     """Wait for database to become available."""
@@ -125,7 +139,8 @@ if __name__ == "__main__":
             }
         }
         port = int(os.environ.get("PORT", 5001))
-        app.run(host="0.0.0.0", port=port)
+        # Add Gunicorn config when running the app
+        app.run(host="0.0.0.0", port=port, **gunicorn_config)
     except Exception as e:
         logging.error(f"Failed to start application: {str(e)}")
         exit(1)

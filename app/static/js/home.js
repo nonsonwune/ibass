@@ -447,7 +447,18 @@ document.addEventListener("DOMContentLoaded", function () {
     async fetchCourses(state, programTypes) {
       const programTypesString = Array.from(programTypes).join(",");
       const response = await fetch(
-        `/api/courses?state=${encodeURIComponent(state)}&programme_type=${encodeURIComponent(programTypesString)}&load_all=true`
+        `/api/courses`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            state: state,
+            programme_type: programTypesString,
+            load_all: true
+          })
+        }
       );
 
       if (!response.ok) {

@@ -95,15 +95,14 @@ def get_universities():
         current_app.logger.error(f"Error retrieving universities: {str(e)}")
         return jsonify({"error": "Failed to retrieve universities."}), 500
 
-@bp.route('/courses')
+@bp.route('/api/courses', methods=['POST'])
 def get_courses():
+    data = request.get_json()
+    state = data.get('state')
+    programme_types = data.get('programme_type', '').split(',')
+    load_all = data.get('load_all', False)
+    
     try:
-        state = request.args.get('state')
-        program_types = request.args.get('programme_type', '').split(',')
-        load_all = request.args.get('load_all', 'false').lower() == 'true'
-        page = request.args.get('page', 1, type=int)
-        per_page = 1000 if load_all else 50
-        
         base_query = """
             WITH grouped_courses AS (
                 SELECT 
@@ -125,9 +124,9 @@ def get_courses():
         """
         params = {}
         
-        if program_types and program_types[0]:
+        if programme_types and programme_types[0]:
             base_query += " AND u.program_type = ANY(:program_types)"
-            params['program_types'] = program_types
+            params['program_types'] = programme_types
             
         if state and state != 'ALL':
             base_query += " AND u.state = :state"
@@ -162,8 +161,8 @@ def get_courses():
         
         if not load_all:
             base_query += " LIMIT :limit OFFSET :offset"
-            params['limit'] = per_page
-            params['offset'] = (page - 1) * per_page
+            params['limit'] = 50
+            params['offset'] = (1 - 1) * 50
         
         results = db.session.execute(text(base_query), params).fetchall()
         
@@ -180,9 +179,9 @@ def get_courses():
         return jsonify({
             'courses': courses,
             'total': total,
-            'page': page,
-            'per_page': per_page,
-            'pages': (total + per_page - 1) // per_page
+            'page': 1,
+            'per_page': 50,
+            'pages': (total + 50 - 1) // 50
         })
         
     except Exception as e:
