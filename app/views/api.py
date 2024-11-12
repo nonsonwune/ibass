@@ -13,6 +13,7 @@ from ..config import Config
 from ..utils.decorators import admin_required
 import bleach
 from sqlalchemy import text
+from sqlalchemy import func
 
 bp = Blueprint('api', __name__)
 
@@ -571,21 +572,40 @@ def search_courses():
     query = request.args.get('query', '').strip()
     try:
         if query:
-            # Using ilike for case-insensitive search
-            courses = Course.query.filter(
+            # Using a subquery to get all universities for each course
+            courses = (db.session.query(
+                Course.id,
+                Course.course_name,
+                func.array_agg(
+                    func.json_build_object(
+                        'university_name', University.university_name,
+                        'abbrv', University.abbrv
+                    )
+                ).label('universities')
+            )
+            .join(CourseRequirement, Course.id == CourseRequirement.course_id)
+            .join(University, University.id == CourseRequirement.university_id)
+            .filter(
                 db.or_(
                     Course.course_name.ilike(f'%{query}%'),
-                    Course.abbrv.ilike(f'%{query}%')
+                    University.abbrv.ilike(f'%{query}%')
                 )
-            ).order_by(Course.course_name).all()
+            )
+            .group_by(Course.id, Course.course_name)
+            .order_by(Course.course_name)
+            .all())
         else:
             return jsonify({'courses': []})
 
         courses_data = [{
             'id': course.id,
             'course_name': course.course_name,
-            'university_name': course.university_name,
-            'abbrv': course.abbrv or ''  # Ensure abbrv is never null
+            'universities': [
+                {
+                    'university_name': uni['university_name'],
+                    'abbrv': uni['abbrv']
+                } for uni in course.universities
+            ]
         } for course in courses]
 
         return jsonify({'courses': courses_data})
@@ -799,3 +819,71 @@ def format_recommendation_response(paginated_results):
             'total_items': paginated_results.total
         }
     }
+
+@bp.route('/admin/search_universities')
+@login_required
+@admin_required
+def search_universities():
+    query = request.args.get('query', '').strip()
+    try:
+        universities = University.query.filter(
+            db.or_(
+                University.university_name.ilike(f'%{query}%'),
+                University.abbrv.ilike(f'%{query}%')
+            )
+        ).order_by(University.university_name).all()
+        
+        return jsonify({
+            'universities': [{
+                'id': uni.id,
+                'university_name': uni.university_name,
+                'abbrv': uni.abbrv,
+                'program_type': uni.program_type
+            } for uni in universities]
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error searching universities: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/admin/add_university_to_course', methods=['POST'])
+@login_required
+@admin_required
+def add_university_to_course():
+    data = request.get_json()
+    course_id = data.get('course_id')
+    university_id = data.get('university_id')
+    
+    try:
+        requirement = CourseRequirement(
+            course_id=course_id,
+            university_id=university_id
+        )
+        db.session.add(requirement)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error adding university to course: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/admin/remove_university_from_course', methods=['POST'])
+@login_required
+@admin_required
+def remove_university_from_course():
+    data = request.get_json()
+    course_id = data.get('course_id')
+    university_id = data.get('university_id')
+    
+    try:
+        requirement = CourseRequirement.query.filter_by(
+            course_id=course_id,
+            university_id=university_id
+        ).first()
+        if requirement:
+            db.session.delete(requirement)
+            db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error removing university from course: {str(e)}")
+        return jsonify({'error': str(e)}), 500

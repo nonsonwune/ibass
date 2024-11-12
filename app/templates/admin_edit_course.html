@@ -1,27 +1,212 @@
 <!-- app/templates/admin_edit_course.html -->
-{% extends "base.html" %} {% block title %} {% if course %}Edit Course{% else
-%}Add Course{% endif %} - Nigerian Institutions Finder {% endblock %} {% block
-content %}
+{% extends "base.html" %}
+{% block title %}
+  {% if course %}Edit Course{% else %}Add New Course{% endif %} - Nigerian Institutions Finder
+{% endblock %}
+
+{% block content %}
 <div class="container my-5">
   <h1 class="mb-4 text-center">
-    {% if course %}Edit Course{% else %}Add Course{% endif %}
+    {% if course %}Edit Course{% else %}Add New Course{% endif %}
   </h1>
-  <form method="POST">
-    {{ form.csrf_token }} {% for field in form if field.name != 'csrf_token' and
-    field.type != 'SubmitField' %}
-    <div class="mb-3">
-      {{ field.label(class="form-label") }} {{ field(class="form-control") }} {%
-      if field.errors %}
-      <div class="text-danger">
-        {% for error in field.errors %}
-        <p>{{ error }}</p>
-        {% endfor %}
-      </div>
-      {% endif %}
-    </div>
-    {% endfor %}
 
-    <button type="submit" class="btn btn-primary">Save</button>
-  </form>
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <form method="POST" class="needs-validation" novalidate>
+        {{ form.hidden_tag() }}
+        
+        <div class="mb-3">
+          <label for="course_name" class="form-label">Course Name</label>
+          {{ form.course_name(class="form-control", id="course_name", required=true) }}
+          {% if form.course_name.errors %}
+            {% for error in form.course_name.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label for="code" class="form-label">Course Code</label>
+          {{ form.code(class="form-control", id="code") }}
+          {% if form.code.errors %}
+            {% for error in form.code.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Associated Universities</label>
+          <div class="list-group">
+            {% if course and course.requirements %}
+              {% for req in course.requirements %}
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <strong>{{ req.university.university_name }}</strong>
+                      {% if req.university.abbrv %}({{ req.university.abbrv }}){% endif %}
+                      <br>
+                      <small class="text-muted">{{ req.university.program_type }}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-danger remove-university" 
+                            data-university-id="{{ req.university.id }}">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+          <button type="button" class="btn btn-secondary mt-2" id="addUniversityBtn">
+            Add University
+          </button>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-primary">
+            {% if course %}Update Course{% else %}Add Course{% endif %}
+          </button>
+          <a href="{{ url_for('admin.admin_courses') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
+
+<!-- Add University Modal -->
+<div class="modal fade" id="addUniversityModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add University</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="universitySearch" class="form-label">Search University</label>
+          <input type="text" class="form-control" id="universitySearch" 
+                 placeholder="Type to search...">
+        </div>
+        <div id="universityList" class="list-group">
+          <!-- Universities will be populated here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const addUniversityBtn = document.getElementById('addUniversityBtn');
+  const modal = new bootstrap.Modal(document.getElementById('addUniversityModal'));
+  const searchInput = document.getElementById('universitySearch');
+  const universityList = document.getElementById('universityList');
+
+  addUniversityBtn.addEventListener('click', () => {
+    modal.show();
+  });
+
+  searchInput.addEventListener('input', debounce(async () => {
+    const query = searchInput.value.trim();
+    if (query.length < 2) return;
+
+    try {
+      const response = await fetch(`/api/admin/search_universities?query=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      
+      universityList.innerHTML = data.universities.map(uni => `
+        <button type="button" class="list-group-item list-group-item-action"
+                data-university-id="${uni.id}">
+          <strong>${uni.university_name}</strong>
+          ${uni.abbrv ? `(${uni.abbrv})` : ''}
+          <br>
+          <small class="text-muted">${uni.program_type}</small>
+        </button>
+      `).join('');
+
+      // Add click handlers to university items
+      universityList.querySelectorAll('.list-group-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const universityId = item.dataset.universityId;
+          addUniversityToCourse(universityId);
+          modal.hide();
+        });
+      });
+    } catch (error) {
+      console.error('Error searching universities:', error);
+    }
+  }, 300));
+
+  // Handle removing universities
+  document.querySelectorAll('.remove-university').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to remove this university?')) {
+        const universityId = btn.dataset.universityId;
+        const courseId = '{{ course.id if course else "" }}';
+        try {
+          const response = await fetch('/api/admin/remove_university_from_course', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+              course_id: courseId,
+              university_id: universityId
+            })
+          });
+          
+          if (response.ok) {
+            btn.closest('.list-group-item').remove();
+          } else {
+            alert('Failed to remove university');
+          }
+        } catch (error) {
+          console.error('Error removing university:', error);
+          alert('Failed to remove university');
+        }
+      }
+    });
+  });
+});
+
+async function addUniversityToCourse(universityId) {
+  const courseId = '{{ course.id if course else "" }}';
+  try {
+    const response = await fetch('/api/admin/add_university_to_course', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token() }}'
+      },
+      body: JSON.stringify({
+        course_id: courseId,
+        university_id: universityId
+      })
+    });
+    
+    if (response.ok) {
+      // Reload the page to show updated universities
+      window.location.reload();
+    } else {
+      alert('Failed to add university');
+    }
+  } catch (error) {
+    console.error('Error adding university:', error);
+    alert('Failed to add university');
+  }
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+</script>
 {% endblock %}

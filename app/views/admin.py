@@ -6,9 +6,11 @@ from ..models.user import User
 from ..models.interaction import Comment
 from ..models.feedback import Feedback
 from ..models.university import University, Course
+from ..models.requirement import CourseRequirement
 from ..forms.admin import DeleteUserForm, DeleteCommentForm, DeleteFeedbackForm, UniversityForm, CourseForm
 from ..utils.decorators import admin_required
 from ..extensions import db
+from sqlalchemy.orm import joinedload
 
 bp = Blueprint('admin', __name__)
 
@@ -179,15 +181,13 @@ def delete_university(university_id):
 @admin_required
 def admin_courses():
     page = request.args.get('page', 1, type=int)
-    per_page = 50  # You can adjust this number based on your needs
-    
-    # Update your query to use pagination
-    courses = Course.query.order_by(Course.course_name).paginate(
-        page=page, 
-        per_page=per_page,
-        error_out=False
-    )
-    
+    courses = (Course.query
+              .options(
+                  joinedload(Course.requirements)
+                  .joinedload(CourseRequirement.university)
+              )
+              .order_by(Course.course_name)
+              .paginate(page=page, per_page=50, error_out=False))
     return render_template('admin_courses.html', courses=courses)
 
 @bp.route('/admin/course/add', methods=['GET', 'POST'])

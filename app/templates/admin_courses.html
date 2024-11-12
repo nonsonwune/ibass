@@ -35,8 +35,7 @@
         <tr>
           <th>ID</th>
           <th>Course Name</th>
-          <th>University Name</th>
-          <th>Abbreviation</th>
+          <th>Universities</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -46,7 +45,16 @@
           <tr>
             <td>{{ course.id }}</td>
             <td>{{ course.course_name }}</td>
-            <td>{{ course.university_name }}</td>
+            <td>
+              {% for req in course.requirements %}
+                <div>
+                  {{ req.university.university_name }}
+                  {% if req.university.abbrv %}
+                    ({{ req.university.abbrv }})
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </td>
             <td>
               <a href="{{ url_for('admin.edit_course', course_id=course.id) }}" class="btn btn-sm btn-primary">Edit</a>
               <form action="{{ url_for('admin.delete_course', course_id=course.id) }}" method="POST" style="display: inline">
@@ -145,11 +153,9 @@ async function searchCourses() {
   const paginationSection = document.getElementById('paginationSection');
   const tbody = document.getElementById('courseTableBody');
 
-  // Show/hide pagination based on search
   paginationSection.style.display = query ? 'none' : 'block';
 
   if (query.length === 0) {
-    // Reload the page to show original pagination
     window.location.href = "{{ url_for('admin.admin_courses') }}";
     return;
   }
@@ -161,19 +167,25 @@ async function searchCourses() {
     const data = await response.json();
 
     if (response.ok) {
-      tbody.innerHTML = ''; // Clear existing rows
+      tbody.innerHTML = '';
 
       data.courses.forEach(course => {
         const row = document.createElement('tr');
-        // Use Flask's url_for to generate correct URLs
         const editUrl = "{{ url_for('admin.edit_course', course_id=0) }}".replace('0', course.id);
         const deleteUrl = "{{ url_for('admin.delete_course', course_id=0) }}".replace('0', course.id);
+        
+        // Create universities HTML
+        const universitiesHtml = course.universities.map(uni => `
+          <div>
+            ${uni.university_name}
+            ${uni.abbrv ? `(${uni.abbrv})` : ''}
+          </div>
+        `).join('');
         
         row.innerHTML = `
           <td>${course.id}</td>
           <td>${course.course_name}</td>
-          <td>${course.university_name}</td>
-          <td>${course.abbrv || ''}</td>
+          <td>${universitiesHtml}</td>
           <td>
             <a href="${editUrl}" class="btn btn-sm btn-primary">Edit</a>
             <form action="${deleteUrl}" method="POST" style="display: inline">
