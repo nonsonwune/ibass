@@ -95,7 +95,7 @@ def get_universities():
         current_app.logger.error(f"Error retrieving universities: {str(e)}")
         return jsonify({"error": "Failed to retrieve universities."}), 500
 
-@bp.route('/api/courses', methods=['POST'])
+@bp.route('/courses', methods=['POST'])
 def get_courses():
     data = request.get_json()
     state = data.get('state')
