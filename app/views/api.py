@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from ..models.university import University, Course, CourseRequirement, ProgrammeType, State
-from ..models.interaction import Bookmark, Comment, Vote
+from ..models.interaction import Bookmark, Comment, Vote, InstitutionComment, InstitutionCommentVote
 from ..models.user import User
 from ..extensions import db
 from ..config import Config
@@ -1015,3 +1015,128 @@ def search_institutions():
             'status': 'error',
             'message': 'An error occurred while searching institutions'
         }), 500
+
+@bp.route('/institution/<int:institution_id>/comments', methods=['GET'])
+def get_institution_comments(institution_id):
+    try:
+        comments = InstitutionComment.query\
+            .filter_by(institution_id=institution_id, parent_id=None)\
+            .order_by(InstitutionComment.date_posted.desc())\
+            .all()
+            
+        return jsonify({
+            'status': 'success',
+            'comments': [{
+                'id': comment.id,
+                'content': comment.content,
+                'author': comment.author.username,
+                'author_score': comment.author.score,
+                'date': comment.date_posted.strftime('%B %d, %Y at %H:%M'),
+                'likes': comment.likes,
+                'dislikes': comment.dislikes,
+                'replies': [{
+                    'id': reply.id,
+                    'content': reply.content,
+                    'author': reply.author.username,
+                    'author_score': reply.author.score,
+                    'date': reply.date_posted.strftime('%B %d, %Y at %H:%M'),
+                    'likes': reply.likes,
+                    'dislikes': reply.dislikes
+                } for reply in comment.replies]
+            } for comment in comments]
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@bp.route('/institution/<int:institution_id>/comment', methods=['POST'])
+@login_required
+def add_institution_comment(institution_id):
+    try:
+        data = request.get_json()
+        content = data.get('content')
+        parent_id = data.get('parent_id')
+
+        comment = InstitutionComment(
+            content=content,
+            user_id=current_user.id,
+            institution_id=institution_id,
+            parent_id=parent_id
+        )
+        
+        db.session.add(comment)
+        db.session.commit()
+
+        return jsonify({
+            'status': 'success',
+            'comment': {
+                'id': comment.id,
+                'content': comment.content,
+                'author': comment.author.username,
+                'author_score': comment.author.score,
+                'date': comment.date_posted.strftime('%B %d, %Y at %H:%M'),
+                'likes': 0,
+                'dislikes': 0
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@bp.route('/institution/comment/<int:comment_id>/vote', methods=['POST'])
+@login_required
+def vote_institution_comment(comment_id):
+    try:
+        data = request.get_json()
+        vote_type = data.get('vote_type')
+        
+        comment = InstitutionComment.query.get_or_404(comment_id)
+        existing_vote = InstitutionCommentVote.query.filter_by(
+            user_id=current_user.id,
+            comment_id=comment_id
+        ).first()
+
+        # Update both the comment score and user's total score
+        if existing_vote:
+            if existing_vote.vote_type == vote_type:
+                db.session.delete(existing_vote)
+                if vote_type == 'like':
+                    comment.likes -= 1
+                    comment.author.score = comment.author.calculate_score() - 1
+                else:
+                    comment.dislikes -= 1
+                    comment.author.score = comment.author.calculate_score() + 1
+            else:
+                existing_vote.vote_type = vote_type
+                if vote_type == 'like':
+                    comment.likes += 1
+                    comment.dislikes -= 1
+                    comment.author.score = comment.author.calculate_score() + 2
+                else:
+                    comment.likes -= 1
+                    comment.dislikes += 1
+                    comment.author.score = comment.author.calculate_score() - 2
+        else:
+            vote = InstitutionCommentVote(
+                user_id=current_user.id,
+                comment_id=comment_id,
+                vote_type=vote_type
+            )
+            db.session.add(vote)
+            if vote_type == 'like':
+                comment.likes += 1
+                comment.author.score = comment.author.calculate_score() + 1
+            else:
+                comment.dislikes += 1
+                comment.author.score = comment.author.calculate_score() - 1
+
+        db.session.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'likes': comment.likes,
+            'dislikes': comment.dislikes,
+            'author_score': comment.author.score
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'status': 'error', 'message': str(e)}), 500

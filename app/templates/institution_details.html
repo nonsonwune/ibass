@@ -131,78 +131,178 @@
         </div>
     </div>
 
-    <!-- Courses Section -->
-    <div class="card shadow-sm">
+    <!-- Course Section with Horizontal Scroll -->
+    <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <h2 class="h4 mb-4">Available Courses</h2>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="h4 mb-0">Available Courses</h2>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#allCoursesModal">
+                    <i class="fas fa-th-list me-2"></i>View All Courses
+                </button>
+            </div>
 
-            {% if courses %}
-            <div class="row" id="coursesContainer">
-                {% for course in courses %}
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="course-card card h-100">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="course-header mb-3">
-                                    <h5 class="card-title mb-1">{{ course.course_name }}</h5>
-                                    <span class="text-muted small">
-                                        <i class="fas fa-code me-1"></i>{{ university.abbrv }}
-                                    </span>
+            <!-- Horizontal Scrolling Courses -->
+            <div class="courses-scroll-container">
+                <div class="courses-scroll-wrapper" id="coursesScrollWrapper">
+                    {% for course in courses[:10] %}
+                    <div class="course-card-scroll">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="course-header mb-3">
+                                        <h5 class="card-title mb-1">{{ course.course_name }}</h5>
+                                        <span class="text-muted small">
+                                            <i class="fas fa-code me-1"></i>{{ university.abbrv }}
+                                        </span>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input compare-checkbox" 
+                                               type="checkbox" 
+                                               value="{{ course.id }}" 
+                                               id="compareScroll{{ course.id }}"
+                                               aria-label="Select for comparison">
+                                    </div>
                                 </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" 
-                                           type="checkbox" 
-                                           value="{{ course.id }}" 
-                                           id="compare{{ course.id }}"
-                                           aria-label="Select for comparison">
-                                    <label class="form-check-label small text-muted" for="compare{{ course.id }}">
-                                        Compare
-                                    </label>
-                                </div>
-                            </div>
 
-                            <div class="course-details mb-3">
-                                <div class="course-badges d-flex flex-wrap gap-2 mb-3">
-                                    {% if course.duration %}
-                                    <span class="badge bg-primary-soft">
-                                        <i class="fas fa-clock me-1"></i>{{ course.duration }} Years
-                                    </span>
-                                    {% endif %}
-                                    {% if course.program_type %}
-                                    <span class="badge bg-success-soft">
-                                        <i class="fas fa-graduation-cap me-1"></i>{{ course.program_type }}
-                                    </span>
-                                    {% endif %}
+                                <div class="course-actions mt-auto">
+                                    <button class="btn btn-sm btn-primary view-requirements-btn" 
+                                            type="button"
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#courseModal{{ course.id }}">
+                                        <i class="fas fa-info-circle me-1"></i>Requirements
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary share-course-btn" 
+                                            data-course-id="{{ course.id }}">
+                                        <i class="fas fa-share-alt"></i>
+                                    </button>
                                 </div>
-                                
-                                {% if course.description %}
-                                <p class="card-text small text-muted mb-3">{{ course.description|truncate(100) }}</p>
-                                {% endif %}
-                            </div>
-
-                            <div class="course-actions d-flex gap-2">
-                                <button class="btn btn-primary flex-grow-1 d-flex align-items-center justify-content-center" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#courseModal{{ course.id }}">
-                                    <i class="fas fa-info-circle me-2"></i>View Requirements
-                                </button>
-                                <button class="btn btn-outline-primary share-btn" 
-                                        data-course="{{ course.id }}"
-                                        title="Share Course">
-                                    <i class="fas fa-share-alt"></i>
-                                </button>
                             </div>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- All Courses Modal -->
+    <div class="modal fade" id="allCoursesModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">All Available Courses</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Sort and Compare Controls -->
+                    <div class="controls-wrapper mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <button class="btn btn-primary" id="compareSelectedBtn" disabled>
+                                    <i class="fas fa-exchange-alt me-2"></i>Compare Selected 
+                                    (<span id="selectedCount">0</span>)
+                                </button>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <div class="btn-group">
+                                    <button class="btn btn-outline-secondary dropdown-toggle" 
+                                            type="button" 
+                                            data-bs-toggle="dropdown">
+                                        <i class="fas fa-sort me-2"></i>Sort By
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item sort-option" href="#" data-sort="name">Course Name</a></li>
+                                        <li><a class="dropdown-item sort-option" href="#" data-sort="type">Program Type</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Courses Grid -->
+                    <div class="row g-4" id="allCoursesGrid">
+                        {% for course in courses %}
+                        <div class="col-md-6 col-lg-4 course-item" 
+                             data-course-name="{{ course.course_name }}"
+                             data-program-type="{{ course.program_type }}">
+                            <!-- Course card content (same as scroll view) -->
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="course-header mb-3">
+                                            <h5 class="card-title mb-1">{{ course.course_name }}</h5>
+                                            <span class="text-muted small">
+                                                <i class="fas fa-code me-1"></i>{{ university.abbrv }}
+                                            </span>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input compare-checkbox" 
+                                                   type="checkbox" 
+                                                   value="{{ course.id }}" 
+                                                   id="compareModal{{ course.id }}"
+                                                   aria-label="Select for comparison">
+                                        </div>
+                                    </div>
+
+                                    <div class="course-actions mt-auto">
+                                        <button class="btn btn-sm btn-primary view-requirements-btn" 
+                                                type="button"
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#courseModal{{ course.id }}">
+                                            <i class="fas fa-info-circle me-1"></i>Requirements
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary share-course-btn" 
+                                                data-course-id="{{ course.id }}">
+                                            <i class="fas fa-share-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Community Discussion Section -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-gradient">
+            <h2 class="h5 mb-0">
+                <i class="fas fa-comments me-2 text-primary"></i>Community Discussion
+            </h2>
+        </div>
+        <div class="card-body">
+            {% if current_user.is_authenticated %}
+            <div class="comment-form-wrapper mb-4">
+                <form id="institutionCommentForm" class="needs-validation" novalidate>
+                    <div class="form-floating mb-3">
+                        <textarea class="form-control" 
+                                 id="institutionCommentContent" 
+                                 placeholder="Share your thoughts..."
+                                 style="height: 100px"
+                                 required></textarea>
+                        <label for="institutionCommentContent">Share your thoughts about this institution...</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-2"></i>Post Comment
+                    </button>
+                </form>
             </div>
             {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
-                <p class="lead text-muted">No courses available at the moment.</p>
+            <div class="alert alert-info d-flex align-items-center" role="alert">
+                <i class="fas fa-info-circle me-3 fa-lg"></i>
+                <div>
+                    <a href="{{ url_for('auth.login') }}" class="alert-link">Sign in</a> to join the conversation.
+                </div>
             </div>
             {% endif %}
+
+            <!-- Comments List -->
+            <div id="commentsContainer">
+                <!-- Comments will be loaded here -->
+            </div>
         </div>
     </div>
 </div>
@@ -216,14 +316,11 @@
      aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold" id="courseModalLabel{{ course.id }}">
+            <div class="modal-header">
+                <h5 class="modal-title" id="courseModalLabel{{ course.id }}">
                     {{ course.course_name }}
                 </h5>
-                <button type="button" 
-                        class="btn-close" 
-                        data-bs-dismiss="modal" 
-                        aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="requirements-section">
@@ -262,7 +359,7 @@
                             {% endif %}
 
                             {% if requirement.direct_entry_requirements %}
-                            <div>
+                            <div class="mb-4">
                                 <div class="d-flex align-items-center mb-2">
                                     <i class="fas fa-door-open text-warning me-2"></i>
                                     <h6 class="mb-0">Direct Entry Requirements</h6>
@@ -272,27 +369,10 @@
                             {% endif %}
                         {% endif %}
                     {% endfor %}
-
-                    {% if not course.requirements|selectattr('university_id', 'equalto', university.id)|list %}
-                    <div class="text-center text-muted py-3">
-                        <i class="fas fa-info-circle mb-2"></i>
-                        <p>No specific requirements listed for this course.</p>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" 
-                        class="btn btn-secondary" 
-                        data-bs-dismiss="modal">Close</button>
-                {% if university.website %}
-                <a href="{{ university.website }}" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   class="btn btn-primary">
-                    <i class="fas fa-external-link-alt me-1"></i>Visit University Website
-                </a>
-                {% endif %}
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>

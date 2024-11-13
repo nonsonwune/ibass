@@ -254,3 +254,151 @@
         background: rgba(255, 255, 255, 0.1);
     }
 }
+
+/* Horizontal Scroll Styles */
+.courses-scroll-container {
+    position: relative;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+    overflow: hidden;
+}
+
+.courses-scroll-wrapper {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    padding: 1rem 0;
+    scrollbar-width: none; /* Firefox */
+}
+
+.courses-scroll-wrapper::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+}
+
+.course-card-scroll {
+    flex: 0 0 300px;
+    max-width: 300px;
+    transition: transform 0.3s ease;
+}
+
+.course-card-scroll:hover {
+    transform: translateY(-5px);
+}
+
+/* Course Card Styles */
+.course-card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.course-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.course-header {
+    flex: 1;
+}
+
+.course-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
+}
+
+/* Modal Styles */
+.modal-xl {
+    max-width: 1200px;
+}
+
+.controls-wrapper {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Compare Checkbox Styles */
+.form-check {
+    margin: 0;
+}
+
+.form-check-input {
+    cursor: pointer;
+}
+
+/* Share Button Styles */
+.share-course-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Community Discussion Styles */
+.comment-form-wrapper {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.comment-card {
+    background: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+.comment-card:hover {
+    transform: translateY(-2px);
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f0f2f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .course-card-scroll {
+        flex: 0 0 260px;
+        max-width: 260px;
+    }
+    
+    .controls-wrapper {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}

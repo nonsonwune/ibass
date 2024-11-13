@@ -61,8 +61,15 @@ class User(UserMixin, db.Model):
         super(User, self).__init__(**kwargs)
 
     def calculate_score(self):
-        """Calculate user score based on comments"""
-        return sum(comment.score for comment in self.comments)
+        """Calculate user score based on all comments and institution comments"""
+        regular_comment_score = sum(comment.score for comment in self.comments)
+        institution_comment_score = sum(comment.score for comment in self.institution_comments)
+        return regular_comment_score + institution_comment_score
+
+    @property
+    def total_score(self):
+        """Get the combined score from all interactions"""
+        return self.calculate_score()
 
     @property
     def is_admin_bool(self):

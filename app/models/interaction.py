@@ -98,3 +98,49 @@ class Bookmark(BaseModel):
             'university_name': self.university.name if self.university else None,
             'course_name': self.course.name if self.course else None
         }
+
+class InstitutionComment(BaseModel):
+    __tablename__ = 'institution_comment'
+    
+    content = db.Column(db.Text, nullable=False)
+    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    institution_id = db.Column(db.Integer, db.ForeignKey('university.id'), nullable=False, index=True)
+    likes = db.Column(db.Integer, default=0)
+    dislikes = db.Column(db.Integer, default=0)
+    parent_id = db.Column(db.Integer, db.ForeignKey('institution_comment.id', ondelete='CASCADE'), nullable=True)
+    
+    # Relationships
+    replies = db.relationship(
+        'InstitutionComment',
+        backref=db.backref('parent', remote_side='InstitutionComment.id'),
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+        order_by='InstitutionComment.date_posted.asc()'
+    )
+    
+    votes = db.relationship(
+        'InstitutionCommentVote', 
+        backref='comment',
+        lazy=True,
+        cascade='all, delete-orphan'
+    )
+    
+    institution = db.relationship('University', backref='comments')
+    author = db.relationship('User', backref='institution_comments')
+
+class InstitutionCommentVote(BaseModel):
+    __tablename__ = 'institution_comment_vote'
+    
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    comment_id = db.Column(db.Integer, db.ForeignKey('institution_comment.id', ondelete='CASCADE'), nullable=False)
+    vote_type = db.Column(db.String(10), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'comment_id', name='user_institution_comment_uc'),
+        db.CheckConstraint(
+            vote_type.in_(['like', 'dislike']),
+            name='institution_vote_type_check'
+        )
+    )
