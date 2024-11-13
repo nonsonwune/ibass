@@ -257,4 +257,90 @@
 .apply-filters:hover {
     transform: translateY(-2px);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Mobile Filter Button Styles */
+.filter-toggle {
+    position: fixed !important;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background-color: var(--primary-color, #3498db);
+    color: white;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    display: none !important;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    transition: transform 0.2s ease;
+}
+
+.filter-toggle:hover {
+    transform: scale(1.05);
+}
+
+.filter-toggle i {
+    font-size: 1.25rem;
+}
+
+/* Mobile Filter Modal Styles */
+@media (max-width: 991.98px) {
+    .filter-toggle {
+        display: flex !important;
+    }
+
+    .filter-sidebar {
+        display: none;
+    }
+
+    #mobileFiltersModal .modal-dialog {
+        margin: 0;
+        position: fixed;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #mobileFiltersModal .modal-content {
+        height: 100%;
+        border-radius: 0;
+    }
+
+    #mobileFiltersModal .modal-body {
+        padding: 1rem;
+        overflow-y: auto;
+    }
+
+    #mobileFiltersModal .modal-footer {
+        border-top: 1px solid #dee2e6;
+        padding: 1rem;
+        position: sticky;
+        bottom: 0;
+        background: white;
+    }
+
+    .modal {
+        z-index: 1055 !important;
+    }
+
+    .modal-backdrop {
+        z-index: 1054 !important;
+    }
+
+    #mobileFiltersModal .form-check {
+        margin-bottom: 0.75rem;
+    }
+
+    #mobileFiltersModal .filter-group {
+        margin-bottom: 1.5rem;
+    }
+
+    #mobileFiltersModal .form-select {
+        width: 100%;
+    }
 } 

@@ -74,8 +74,8 @@
         <!-- Institutions Grid -->
         <div class="col-md-9">
             <!-- Mobile Filter Toggle -->
-            <button class="btn btn-primary d-md-none w-100 mb-3" id="filterToggleBtn">
-                <i class="fas fa-filter me-2"></i>Filter Institutions
+            <button type="button" class="filter-toggle d-lg-none" id="filterToggleBtn" aria-label="Show filters">
+                <i class="fas fa-filter"></i>
             </button>
 
             <!-- Results Count and Sort -->
@@ -221,15 +221,23 @@
 </div>
 
 <!-- Mobile Filter Modal -->
-<div class="modal fade" id="filterModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="mobileFiltersModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Filter Institutions</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="filterModalLabel">
+                    <i class="fas fa-filter me-2"></i>Filters
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="mobileFilterContainer">
+            <div class="modal-body" id="mobileFilterModalBody">
                 <!-- Filter form will be cloned here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="mobileApplyFiltersBtn">
+                    <i class="fas fa-check me-2"></i>Apply Filters
+                </button>
             </div>
         </div>
     </div>

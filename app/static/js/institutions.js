@@ -300,4 +300,69 @@ document.addEventListener('DOMContentLoaded', function() {
             performSearch();
         }, 300));
     });
+
+    // Update the mobile filter handling
+    function initializeMobileFilters() {
+        const filterToggleBtn = document.getElementById("filterToggleBtn");
+        const mobileFiltersModal = document.getElementById("mobileFiltersModal");
+        const mobileFilterModalBody = document.getElementById("mobileFilterModalBody");
+        const filterForm = document.getElementById("institutionFilterForm");
+        const mobileApplyFiltersBtn = document.getElementById("mobileApplyFiltersBtn");
+
+        if (!filterToggleBtn || !mobileFiltersModal || !mobileFilterModalBody || !filterForm || !mobileApplyFiltersBtn) {
+            console.error("Filter modal elements not found.");
+            return;
+        }
+
+        const modalInstance = new bootstrap.Modal(mobileFiltersModal, {
+            backdrop: "static",
+            keyboard: false,
+        });
+
+        filterToggleBtn.addEventListener("click", function() {
+            // Clone the filter form and prepare it for the modal
+            const clonedForm = filterForm.cloneNode(true);
+            clonedForm.id = "mobileFilterForm";
+            
+            // Remove the original submit button
+            const submitBtn = clonedForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.remove();
+            }
+
+            // Clear the modal body and append the cloned form
+            mobileFilterModalBody.innerHTML = "";
+            mobileFilterModalBody.appendChild(clonedForm);
+
+            // Show the modal
+            modalInstance.show();
+        });
+
+        mobileApplyFiltersBtn.addEventListener("click", function() {
+            const mobileForm = document.getElementById("mobileFilterForm");
+            if (mobileForm) {
+                // Transfer values from mobile form to main form
+                const formData = new FormData(mobileForm);
+                for (const [key, value] of formData.entries()) {
+                    const originalInput = filterForm.querySelector(`[name="${key}"]`);
+                    if (originalInput) {
+                        if (originalInput.type === "checkbox") {
+                            originalInput.checked = mobileForm.querySelector(
+                                `[name="${key}"]`
+                            ).checked;
+                        } else {
+                            originalInput.value = value;
+                        }
+                    }
+                }
+
+                // Hide modal and perform search
+                modalInstance.hide();
+                performSearch();
+            }
+        });
+    }
+
+    // Initialize mobile filters
+    initializeMobileFilters();
 }); 
