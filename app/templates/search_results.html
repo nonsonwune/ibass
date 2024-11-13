@@ -117,8 +117,82 @@
         </div>
     </div>
 </div>
+
+<!-- Course Requirement Modals -->
+{% for course in courses %}
+<div class="modal fade" id="courseModal{{ course.id }}" tabindex="-1" aria-labelledby="courseModalLabel{{ course.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="courseModalLabel{{ course.id }}">{{ course.course_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% for req in course.requirements %}
+                <div class="university-requirements mb-4">
+                    <h6 class="fw-bold mb-3">{{ req.university.university_name }}</h6>
+                    
+                    {% if req.utme_requirements %}
+                    <div class="requirement-section mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <h6 class="mb-0">UTME Requirements</h6>
+                        </div>
+                        <p class="ms-4 mb-0">{{ req.utme_requirements }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if req.subjects %}
+                    <div class="requirement-section mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-book text-primary me-2"></i>
+                            <h6 class="mb-0">Required Subjects</h6>
+                        </div>
+                        <p class="ms-4 mb-0">{{ req.subjects }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if req.direct_entry_requirements %}
+                    <div class="requirement-section">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-door-open text-warning me-2"></i>
+                            <h6 class="mb-0">Direct Entry Requirements</h6>
+                        </div>
+                        <p class="ms-4 mb-0">{{ req.direct_entry_requirements }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/search_results.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap modals
+    const modalTriggers = document.querySelectorAll('[data-bs-toggle="modal"]');
+    modalTriggers.forEach(trigger => {
+        trigger.addEventListener('click', function(e) {
+            const targetModalId = this.getAttribute('data-bs-target').substring(1);
+            const modalElement = document.getElementById(targetModalId);
+            if (modalElement) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/search_results.css') }}">
 {% endblock %}

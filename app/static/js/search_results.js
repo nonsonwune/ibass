@@ -343,14 +343,6 @@ function restoreFilterState() {
           checkbox.checked = true;
       }
   });
-
-  // Initialize any Bootstrap components
-  if (typeof bootstrap !== 'undefined') {
-      const selects = filterForm.querySelectorAll('select');
-      selects.forEach(select => {
-          new bootstrap.Select(select);
-      });
-  }
 }
 
 // Add this to search_results.js to improve error handling

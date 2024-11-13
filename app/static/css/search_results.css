@@ -145,21 +145,39 @@
 
 /* Modal Styles */
 .modal-content {
-    border-radius: 15px;
+    border-radius: 0.5rem;
     border: none;
 }
 
 .modal-header {
-    background: var(--primary-gradient);
-    color: white;
-    border-radius: 15px 15px 0 0;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding: 1.5rem;
 }
 
-.course-requirements {
-    background: #f8f9fa;
-    border-radius: 10px;
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    border-top: 1px solid rgba(0,0,0,0.1);
+    padding: 1rem 1.5rem;
+}
+
+.requirement-section {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
     padding: 1rem;
-    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.university-requirements {
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding-bottom: 1rem;
+}
+
+.university-requirements:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
 }
 
 /* Loading States */
