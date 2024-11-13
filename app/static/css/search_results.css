@@ -558,3 +558,10 @@
 .empty-state .suggestions ul li i {
     font-size: 0.875rem;
 }
+
+/* Add these styles */
+@media (max-width: 767.98px) {
+    .col-md-3 #filterForm {
+        display: none;
+    }
+}

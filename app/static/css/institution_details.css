@@ -4,8 +4,9 @@
                 url('../images/bg.png') center/cover no-repeat;
     color: white;
     padding: 2rem 0;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     position: relative;
+    height: 30vh;
 }
 
 .hero-section h1 {
@@ -222,7 +223,7 @@
     }
 
     .hero-section {
-        padding: 1.5rem 0;
+        height: 20vh;
     }
     
     .hero-section h1 {

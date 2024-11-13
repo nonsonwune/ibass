@@ -3,22 +3,22 @@
 document.addEventListener("DOMContentLoaded", function () {
   const loadingOverlay = document.getElementById("loadingOverlay");
   const filterForm = document.getElementById("filterForm");
-  const searchForm = document.querySelector('form[action*="search_results"]');
+  const mainSearchForm = document.getElementById("mainSearchForm");
   const resultTabs = document.getElementById('resultTabs');
   let currentRequest = null;
 
   // Initialize tooltips
   initializeTooltips();
 
-  // Handle search form submission
-  if (searchForm) {
-      searchForm.addEventListener("submit", function (e) {
+  // Handle main search form submission
+  if (mainSearchForm) {
+      mainSearchForm.addEventListener("submit", function (e) {
           e.preventDefault();
           performSearch();
       });
   }
 
-  // Handle filter form submission
+  // Handle filter form submission if it exists
   if (filterForm) {
       filterForm.addEventListener("submit", function (e) {
           e.preventDefault();
@@ -35,18 +35,32 @@ document.addEventListener("DOMContentLoaded", function () {
               currentRequest.abort();
           }
 
-          // Build search parameters
+          // Build search parameters with better error handling
           const searchParams = new URLSearchParams();
-          const queryInput = searchForm.querySelector('input[name="q"]');
-          if (queryInput) {
-              searchParams.set('q', queryInput.value.trim());
-          }
           
-          // Add filter parameters if they exist
+          // Get query from either the main search form or filter form
+          let queryInput = mainSearchForm?.querySelector('input[name="q"]') || 
+                          filterForm?.querySelector('input[name="q"]');
+                          
+          if (!queryInput) {
+              console.error('Search input not found');
+              throw new Error('Search configuration error');
+          }
+
+          const queryValue = queryInput.value.trim();
+          if (!queryValue) {
+              throw new Error('Please enter a search term');
+          }
+
+          searchParams.set('q', queryValue);
+          
+          // Safely add filter parameters if filter form exists
           if (filterForm) {
               const filterData = new FormData(filterForm);
               filterData.forEach((value, key) => {
-                  if (value) searchParams.append(key, value);
+                  if (value && key !== 'q') { // Avoid duplicating query parameter
+                      searchParams.append(key, value);
+                  }
               });
           }
 
@@ -93,8 +107,7 @@ document.addEventListener("DOMContentLoaded", function () {
               console.debug('Request was cancelled');
               return;
           }
-          console.error('Search error:', error);
-          showError(error.message || 'An unexpected error occurred. Please try again.');
+          handleSearchError(error);
       } finally {
           showLoadingOverlay(false);
           currentRequest = null;
@@ -284,7 +297,11 @@ document.addEventListener("DOMContentLoaded", function () {
               <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>`;
       
-      const container = document.querySelector('.tab-content');
+      // Find the best place to show the error
+      const container = document.querySelector('.tab-content') || 
+                       document.querySelector('.container') ||
+                       document.body;
+      
       if (container) {
           container.insertBefore(alert, container.firstChild);
           
@@ -298,13 +315,9 @@ document.addEventListener("DOMContentLoaded", function () {
       existingAlerts.forEach(alert => alert.remove());
   }
 
-  function initializeTooltips() {
-      const tooltipTriggerList = [].slice.call(
-          document.querySelectorAll('[data-bs-toggle="tooltip"]')
-      );
-      tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-          new bootstrap.Tooltip(tooltipTriggerEl);
-      });
+  function handleSearchError(error) {
+      console.error('Search error:', error);
+      showError(error.message || 'An unexpected error occurred. Please try again.');
   }
 
   // Utility function to escape HTML and prevent XSS
@@ -317,6 +330,16 @@ document.addEventListener("DOMContentLoaded", function () {
           .replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;")
           .replace(/'/g, "&#039;");
+  }
+
+  // Initialize tooltips function
+  function initializeTooltips() {
+      const tooltipTriggerList = [].slice.call(
+          document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      );
+      tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+          new bootstrap.Tooltip(tooltipTriggerEl);
+      });
   }
 
   // Restore filter state from URL parameters
@@ -423,24 +446,4 @@ function restoreFilterState() {
           checkbox.checked = true;
       }
   });
-}
-
-// Add this to search_results.js to improve error handling
-function handleSearchError(error) {
-  console.error('Search error:', error);
-  
-  // Extract meaningful error message
-  let errorMessage = 'An unexpected error occurred. Please try again.';
-  
-  if (error.message) {
-      try {
-          // Try to parse error message if it's JSON
-          const errorData = JSON.parse(error.message);
-          errorMessage = errorData.error || errorData.message || error.message;
-      } catch {
-          errorMessage = error.message;
-      }
-  }
-  
-  showError(errorMessage);
 }
