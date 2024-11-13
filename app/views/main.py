@@ -50,6 +50,16 @@ def search():
         if cached_results:
             return cached_results
 
+        # Get available states and types for filters
+        available_states = db.session.query(State.name).order_by(State.name).all()
+        available_states = [state[0] for state in available_states]
+
+        available_types = db.session.query(ProgrammeType.name)\
+            .distinct()\
+            .order_by(ProgrammeType.name)\
+            .all()
+        available_types = [type[0] for type in available_types]
+
         # Optimize the query with specific columns selection
         universities_query = University.query\
             .join(State, University.state_id == State.id)\
