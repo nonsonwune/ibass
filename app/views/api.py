@@ -953,10 +953,12 @@ def remove_university_from_course():
 @bp.route('/search_institutions', methods=['GET'])
 def search_institutions():
     try:
-        search_term = request.args.get('q', '').lower()
+        search_term = request.args.get('search', '').lower()
         state = request.args.get('state')
         types = request.args.getlist('type')
         program_types = request.args.getlist('program')
+        page = request.args.get('page', 1, type=int)
+        per_page = 12  # Match the main route's pagination
 
         # Base query with joins
         query = University.query\
@@ -985,19 +987,26 @@ def search_institutions():
         if program_types:
             query = query.filter(ProgrammeType.category.in_(program_types))
 
-        # Get results
-        institutions = query.all()
-
+        # Paginate results
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        
         return jsonify({
             'status': 'success',
-            'count': len(institutions),
+            'count': pagination.total,
             'institutions': [{
                 'id': inst.id,
                 'name': inst.university_name,
                 'state': inst.state_info.name,
                 'type': inst.programme_type_info.name,
                 'courses_count': len(inst.courses)
-            } for inst in institutions]
+            } for inst in pagination.items],
+            'pagination': {
+                'page': pagination.page,
+                'pages': pagination.pages,
+                'has_next': pagination.has_next,
+                'has_prev': pagination.has_prev,
+                'total': pagination.total
+            }
         })
 
     except Exception as e:

@@ -90,10 +90,10 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}"
-              href="{{ url_for('main.about') }}">
-              <i class="fas fa-info-circle nav-icon"></i>
-              <span>About</span>
+            <a class="nav-link {% if request.endpoint == 'main.institutions' %}active{% endif %}" 
+               href="{{ url_for('main.institutions') }}">
+                <i class="fas fa-university nav-icon"></i>
+                <span>Institutions</span>
             </a>
           </li>
           <li class="nav-item">
@@ -104,10 +104,10 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link {% if request.endpoint == 'main.institutions' %}active{% endif %}" 
-               href="{{ url_for('main.institutions') }}">
-                <i class="fas fa-university nav-icon"></i>
-                <span>Institutions</span>
+            <a class="nav-link {% if request.endpoint == 'main.about' %}active{% endif %}"
+              href="{{ url_for('main.about') }}">
+              <i class="fas fa-info-circle nav-icon"></i>
+              <span>About</span>
             </a>
           </li>
         </ul>

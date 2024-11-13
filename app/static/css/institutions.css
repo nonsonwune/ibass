@@ -3,18 +3,24 @@
     border-radius: 8px;
     padding: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 20px;
 }
 
 .filter-heading {
-    color: #333;
+    color: #2c3e50;
     font-size: 1.2rem;
     font-weight: 600;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
 }
 
 .filter-section-title {
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: #666;
     margin-bottom: 1rem;
+    font-weight: 500;
 }
 
 .institution-card {
@@ -208,4 +214,47 @@
 /* Add transition for count updates */
 .results-count {
     transition: all 0.3s ease;
+}
+
+.filter-section {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+}
+
+.filter-section:last-child {
+    border-bottom: none;
+}
+
+.filter-check {
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.filter-check:hover {
+    background: #f8f9fa;
+    border-radius: 4px;
+    padding-left: 0.5rem;
+}
+
+.filter-checkbox {
+    cursor: pointer;
+}
+
+.filter-select {
+    border-color: #e0e0e0;
+    box-shadow: none;
+}
+
+.filter-select:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.apply-filters {
+    transition: all 0.3s ease;
+}
+
+.apply-filters:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 } 

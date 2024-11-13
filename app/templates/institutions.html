@@ -14,7 +14,7 @@
                     <!-- State Filter -->
                     <div class="filter-section mb-4">
                         <h5 class="filter-section-title">Location</h5>
-                        <select name="state" class="form-select" id="stateFilter">
+                        <select name="state" class="form-select filter-select" id="stateFilter">
                             <option value="">All States</option>
                             {% for state in states %}
                             <option value="{{ state }}" {% if state == selected_state %}selected{% endif %}>
@@ -29,9 +29,11 @@
                         <h5 class="filter-section-title">Institution Type</h5>
                         <div class="type-filters">
                             {% for type in institution_types %}
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" 
-                                       name="type" value="{{ type }}" 
+                            <div class="form-check filter-check">
+                                <input class="form-check-input filter-checkbox" 
+                                       type="checkbox" 
+                                       name="type" 
+                                       value="{{ type }}" 
                                        id="type_{{ loop.index }}"
                                        {% if type in selected_types %}checked{% endif %}>
                                 <label class="form-check-label" for="type_{{ loop.index }}">
@@ -47,9 +49,11 @@
                         <h5 class="filter-section-title">Program Types</h5>
                         <div class="program-filters">
                             {% for program in program_types %}
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" 
-                                       name="program" value="{{ program }}" 
+                            <div class="form-check filter-check">
+                                <input class="form-check-input filter-checkbox" 
+                                       type="checkbox" 
+                                       name="program" 
+                                       value="{{ program }}" 
                                        id="program_{{ loop.index }}"
                                        {% if program in selected_programs %}checked{% endif %}>
                                 <label class="form-check-label" for="program_{{ loop.index }}">
@@ -60,7 +64,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100">
+                    <button type="submit" class="btn btn-primary w-100 apply-filters">
                         Apply Filters
                     </button>
                 </form>
@@ -93,6 +97,7 @@
                                 <input type="text" 
                                        class="form-control" 
                                        id="institutionSearch" 
+                                       value="{{ request.args.get('search', '') }}"
                                        placeholder="Search by name, state, or type..."
                                        aria-label="Search institutions">
                                 <button class="btn btn-outline-secondary clear-search" type="button" title="Clear search">

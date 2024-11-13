@@ -24,40 +24,45 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentSearchRequest;
     let isSearching = false;
 
+    // Add this function to combine search and filter parameters
+    function getCombinedParams() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const formData = new FormData(filterForm);
+        const params = new URLSearchParams();
+
+        // Add search term if exists
+        if (searchTerm) {
+            params.set('search', searchTerm);
+        }
+
+        // Add filter parameters
+        for (let [key, value] of formData.entries()) {
+            if (value) {
+                params.append(key, value);
+            }
+        }
+
+        return params;
+    }
+
     // Function to perform the search
     async function performSearch() {
-        const searchTerm = searchInput.value.toLowerCase();
         const loadingIndicator = document.querySelector('.search-loading');
         
         try {
-            // Cancel previous request if it exists
             if (currentSearchRequest) {
                 currentSearchRequest.abort();
             }
 
-            // Show loading indicator
             loadingIndicator?.classList.add('active');
             isSearching = true;
 
-            // Get current filter values
-            const formData = new FormData(filterForm);
-            const params = new URLSearchParams();
-            
-            // Add search term
-            params.append('q', searchTerm);
-            
-            // Add filters
-            for (let [key, value] of formData.entries()) {
-                if (value) {
-                    params.append(key, value);
-                }
-            }
+            const params = getCombinedParams();
+            params.set('page', '1'); // Reset to first page when searching
 
-            // Create AbortController for this request
             const controller = new AbortController();
             currentSearchRequest = controller;
 
-            // Make API request
             const response = await fetch(`/api/search_institutions?${params.toString()}`, {
                 signal: controller.signal,
                 headers: {
@@ -65,35 +70,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const data = await response.json();
 
             if (data.status === 'success') {
-                // Animate out old results
-                const oldCards = institutionsGrid.querySelectorAll('.institution-card');
-                oldCards.forEach(card => {
-                    card.style.opacity = '0';
-                    card.style.transform = 'translateY(-20px)';
-                });
+                // Update URL without reloading
+                const newUrl = `${window.location.pathname}?${params.toString()}`;
+                window.history.pushState({ path: newUrl }, '', newUrl);
 
-                // Wait for animation
-                await new Promise(resolve => setTimeout(resolve, 200));
-
-                // Update grid with new results
                 updateInstitutionsGrid(data.institutions);
                 updateResultsCount(data.count);
+                
+                if (data.pagination) {
+                    updatePagination(data.pagination);
+                }
             } else {
                 throw new Error(data.message);
             }
 
         } catch (error) {
-            if (error.name === 'AbortError') {
-                return; // Ignore aborted requests
-            }
+            if (error.name === 'AbortError') return;
             console.error('Search error:', error);
             showErrorMessage();
         } finally {
@@ -195,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Existing filter form handling
     filterForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        applyFilters();
+        performSearch();
     });
 
     // Handle mobile filter toggle
@@ -273,4 +271,33 @@ document.addEventListener('DOMContentLoaded', function() {
             institutionsGrid.appendChild(noResultsMsg);
         }
     }
+
+    // Add function to update pagination
+    function updatePagination(paginationData) {
+        const paginationContainer = document.querySelector('nav[aria-label="Page navigation"]');
+        if (paginationContainer && paginationData) {
+            // Update pagination UI based on the new data
+            // This will depend on your pagination structure
+            // You might want to create a separate function for this
+        }
+    }
+
+    // Update the initialization to restore search state
+    function restoreSearchState() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchTerm = urlParams.get('search');
+        if (searchInput && searchTerm) {
+            searchInput.value = searchTerm;
+        }
+    }
+
+    // Call this in your initialization
+    restoreSearchState();
+
+    // Add change event listeners to filter inputs
+    document.querySelectorAll('.filter-checkbox, .filter-select').forEach(input => {
+        input.addEventListener('change', debounce(() => {
+            performSearch();
+        }, 300));
+    });
 }); 
