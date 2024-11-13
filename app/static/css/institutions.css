@@ -1,0 +1,211 @@
+.filter-sidebar {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-heading {
+    color: #333;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.filter-section-title {
+    font-size: 1rem;
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.institution-card {
+    transition: transform 0.2s;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+.institution-card:hover {
+    transform: translateY(-5px);
+}
+
+.institution-details {
+    color: #666;
+    margin: 1rem 0;
+}
+
+.institution-stats {
+    margin-top: 1rem;
+}
+
+.institutions-header {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.page-title {
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.search-container {
+    position: relative;
+    max-width: 500px;
+    width: 100%;
+}
+
+.search-container .input-group {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: box-shadow 0.3s ease;
+}
+
+.search-container .input-group:focus-within {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.search-container .input-group-text {
+    background: transparent;
+    border: 1px solid #e0e0e0;
+    border-right: none;
+    color: #6c757d;
+    padding-left: 1rem;
+}
+
+.search-container .form-control {
+    border: 1px solid #e0e0e0;
+    border-left: none;
+    border-right: none;
+    padding-left: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.search-container .form-control:focus {
+    box-shadow: none;
+    border-color: #e0e0e0;
+}
+
+.search-container .clear-search {
+    border: 1px solid #e0e0e0;
+    border-left: none;
+    background: transparent;
+    color: #6c757d;
+    padding: 0 1rem;
+    transition: all 0.2s ease;
+}
+
+.search-container .clear-search:hover {
+    background: #f8f9fa;
+    color: #dc3545;
+}
+
+.search-loading {
+    position: absolute;
+    right: 3.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.search-loading.active {
+    opacity: 1;
+}
+
+.institution-card.hidden {
+    display: none;
+}
+
+.institution-card.visible {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Pagination Styles */
+.pagination {
+    margin-top: 2rem;
+}
+
+.pagination .page-link {
+    color: #3498db;
+    border-color: #e9ecef;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    border-radius: 0.25rem;
+    margin: 0 2px;
+}
+
+.pagination .page-link:hover {
+    color: #fff;
+    background-color: #3498db;
+    border-color: #3498db;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #3498db;
+    border-color: #3498db;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+    pointer-events: none;
+    background-color: #fff;
+    border-color: #e9ecef;
+}
+
+/* Page Info Text */
+.text-muted small {
+    font-size: 0.875rem;
+}
+
+/* Pagination Icons */
+.pagination .fas {
+    font-size: 0.8rem;
+}
+
+/* Enhanced card animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Add staggered animation delay for cards */
+.institution-card:nth-child(1) { animation-delay: 0.1s; }
+.institution-card:nth-child(2) { animation-delay: 0.2s; }
+.institution-card:nth-child(3) { animation-delay: 0.3s; }
+/* ... and so on */
+
+/* Enhance the no results message */
+#noResultsMessage {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeIn 0.3s ease forwards;
+}
+
+/* Add transition for count updates */
+.results-count {
+    transition: all 0.3s ease;
+} 

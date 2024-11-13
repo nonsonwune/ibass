@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Enhanced Filter Sidebar -->
+        <div class="col-md-3">
+            <div class="filter-sidebar">
+                <form id="institutionFilterForm" class="sticky-top">
+                    <h4 class="filter-heading mb-4">
+                        <i class="fas fa-filter me-2"></i>Filters
+                    </h4>
+                    
+                    <!-- State Filter -->
+                    <div class="filter-section mb-4">
+                        <h5 class="filter-section-title">Location</h5>
+                        <select name="state" class="form-select" id="stateFilter">
+                            <option value="">All States</option>
+                            {% for state in states %}
+                            <option value="{{ state }}" {% if state == selected_state %}selected{% endif %}>
+                                {{ state }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Institution Type Filter -->
+                    <div class="filter-section mb-4">
+                        <h5 class="filter-section-title">Institution Type</h5>
+                        <div class="type-filters">
+                            {% for type in institution_types %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       name="type" value="{{ type }}" 
+                                       id="type_{{ loop.index }}"
+                                       {% if type in selected_types %}checked{% endif %}>
+                                <label class="form-check-label" for="type_{{ loop.index }}">
+                                    {{ type }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Program Type Filter -->
+                    <div class="filter-section mb-4">
+                        <h5 class="filter-section-title">Program Types</h5>
+                        <div class="program-filters">
+                            {% for program in program_types %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       name="program" value="{{ program }}" 
+                                       id="program_{{ loop.index }}"
+                                       {% if program in selected_programs %}checked{% endif %}>
+                                <label class="form-check-label" for="program_{{ loop.index }}">
+                                    {{ program }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        Apply Filters
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Institutions Grid -->
+        <div class="col-md-9">
+            <!-- Mobile Filter Toggle -->
+            <button class="btn btn-primary d-md-none w-100 mb-3" id="filterToggleBtn">
+                <i class="fas fa-filter me-2"></i>Filter Institutions
+            </button>
+
+            <!-- Results Count and Sort -->
+            <div class="institutions-header mb-4">
+                <!-- Title and Search Row -->
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h4 class="page-title mb-0">Browse Institutions</h4>
+                        <p class="text-muted mb-md-0">
+                            <span class="results-count">{{ total_institutions }}</span> institutions available
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="search-container ms-md-auto">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="institutionSearch" 
+                                       placeholder="Search by name, state, or type..."
+                                       aria-label="Search institutions">
+                                <button class="btn btn-outline-secondary clear-search" type="button" title="Clear search">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                <div class="search-loading">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Institutions Grid -->
+            <div class="row g-4" id="institutionsGrid">
+                {% for institution in institutions %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 institution-card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ institution.university_name }}</h5>
+                            <div class="institution-details">
+                                <p class="location">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    {{ institution.state_info.name }}
+                                </p>
+                                <p class="type">
+                                    <i class="fas fa-building me-2"></i>
+                                    {{ institution.programme_type_info.name }}
+                                </p>
+                            </div>
+                            <div class="institution-stats">
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-graduation-cap me-1"></i>
+                                    {{ institution.courses|length }} Courses
+                                </span>
+                            </div>
+                            <a href="{{ url_for('university.institution_details', id=institution.id) }}" 
+                               class="btn btn-primary w-100 mt-3">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if pagination.pages > 1 %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <!-- First Page -->
+                    {% if pagination.page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.institutions', page=1, state=selected_state, type=selected_types, program=selected_programs, sort=request.args.get('sort', 'name')) }}" aria-label="First">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <!-- Previous Page -->
+                    {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.institutions', page=pagination.prev_num, state=selected_state, type=selected_types, program=selected_programs, sort=request.args.get('sort', 'name')) }}" aria-label="Previous">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <!-- Page Numbers -->
+                    {%- for page in pagination.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+                        {% if page %}
+                            {% if page == pagination.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('main.institutions', page=page, state=selected_state, type=selected_types, program=selected_programs, sort=request.args.get('sort', 'name')) }}">{{ page }}</a>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">…</span>
+                            </li>
+                        {% endif %}
+                    {%- endfor %}
+
+                    <!-- Next Page -->
+                    {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.institutions', page=pagination.next_num, state=selected_state, type=selected_types, program=selected_programs, sort=request.args.get('sort', 'name')) }}" aria-label="Next">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <!-- Last Page -->
+                    {% if pagination.page < pagination.pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.institutions', page=pagination.pages, state=selected_state, type=selected_types, program=selected_programs, sort=request.args.get('sort', 'name')) }}" aria-label="Last">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+
+            <!-- Page Info -->
+            <div class="text-center text-muted mt-2">
+                <small>
+                    Showing page {{ pagination.page }} of {{ pagination.pages }}
+                    ({{ pagination.total }} total institutions)
+                </small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Filter Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Filter Institutions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="mobileFilterContainer">
+                <!-- Filter form will be cloned here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/institutions.css') }}">
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/institutions.js') }}"></script>
+{% endblock %} 

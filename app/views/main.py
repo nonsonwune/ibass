@@ -212,3 +212,68 @@ def delete_comment(comment_id):
     else:
         flash("You do not have permission to delete this comment.", "danger")
     return redirect(url_for("main.contact"))
+
+
+@bp.route("/institutions")
+def institutions():
+    try:
+        # Get filter parameters
+        state = request.args.get("state")
+        types = request.args.getlist("type")
+        program_types = request.args.getlist("program")
+        sort = request.args.get("sort", "name")  # Default sort by name
+
+        # Base query with joins
+        query = University.query\
+            .join(State, University.state_id == State.id)\
+            .join(ProgrammeType, University.programme_type_id == ProgrammeType.id)\
+            .options(
+                joinedload(University.state_info),
+                joinedload(University.programme_type_info),
+                joinedload(University.courses)
+            )
+
+        # Apply filters
+        if state:
+            query = query.filter(State.name == state)
+        if types:
+            query = query.filter(ProgrammeType.name.in_(types))
+
+        # Apply sorting
+        if sort == "name":
+            query = query.order_by(University.university_name)
+        elif sort == "name_desc":
+            query = query.order_by(University.university_name.desc())
+        elif sort == "state":
+            query = query.order_by(State.name, University.university_name)
+        elif sort == "type":
+            query = query.order_by(ProgrammeType.name, University.university_name)
+
+        # Get all states and institution types for filters
+        states = db.session.query(State.name).order_by(State.name).all()
+        institution_types = db.session.query(ProgrammeType.name).distinct().order_by(ProgrammeType.name).all()
+        program_type_list = db.session.query(ProgrammeType.category).distinct().order_by(ProgrammeType.category).all()
+
+        # Pagination
+        page = request.args.get('page', 1, type=int)
+        per_page = 12  # Number of institutions per page
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        institutions = pagination.items
+
+        return render_template(
+            "institutions.html",
+            institutions=institutions,
+            pagination=pagination,
+            states=[state[0] for state in states],
+            institution_types=[type[0] for type in institution_types],
+            program_types=[prog[0] for prog in program_type_list],
+            selected_state=state,
+            selected_types=types,
+            selected_programs=program_types,
+            total_institutions=pagination.total
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"Error in institutions view: {str(e)}")
+        flash("An error occurred while loading institutions.", "danger")
+        return redirect(url_for("main.home"))

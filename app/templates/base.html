@@ -103,6 +103,13 @@
               <span>Contact</span>
             </a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'main.institutions' %}active{% endif %}" 
+               href="{{ url_for('main.institutions') }}">
+                <i class="fas fa-university nav-icon"></i>
+                <span>Institutions</span>
+            </a>
+          </li>
         </ul>
 
         <!-- Enhanced Search -->

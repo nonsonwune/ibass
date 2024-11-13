@@ -949,3 +949,60 @@ def remove_university_from_course():
         db.session.rollback()
         current_app.logger.error(f"Error removing university from course: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@bp.route('/search_institutions', methods=['GET'])
+def search_institutions():
+    try:
+        search_term = request.args.get('q', '').lower()
+        state = request.args.get('state')
+        types = request.args.getlist('type')
+        program_types = request.args.getlist('program')
+
+        # Base query with joins
+        query = University.query\
+            .join(State, University.state_id == State.id)\
+            .join(ProgrammeType, University.programme_type_id == ProgrammeType.id)\
+            .options(
+                joinedload(University.state_info),
+                joinedload(University.programme_type_info)
+            )
+
+        # Apply search filter
+        if search_term:
+            query = query.filter(
+                db.or_(
+                    University.university_name.ilike(f'%{search_term}%'),
+                    State.name.ilike(f'%{search_term}%'),
+                    ProgrammeType.name.ilike(f'%{search_term}%')
+                )
+            )
+
+        # Apply additional filters
+        if state:
+            query = query.filter(State.name == state)
+        if types:
+            query = query.filter(ProgrammeType.name.in_(types))
+        if program_types:
+            query = query.filter(ProgrammeType.category.in_(program_types))
+
+        # Get results
+        institutions = query.all()
+
+        return jsonify({
+            'status': 'success',
+            'count': len(institutions),
+            'institutions': [{
+                'id': inst.id,
+                'name': inst.university_name,
+                'state': inst.state_info.name,
+                'type': inst.programme_type_info.name,
+                'courses_count': len(inst.courses)
+            } for inst in institutions]
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error in search_institutions: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'An error occurred while searching institutions'
+        }), 500
