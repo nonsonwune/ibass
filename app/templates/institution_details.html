@@ -1,236 +1,306 @@
 <!-- app/templates/institution_details.html -->
-{% extends "base.html" %} {% block content %}
+{% extends "base.html" %}
+
+{% block content %}
 <!-- Hero Section -->
 <div class="hero-section">
-  <div class="container">
-    <div class="row align-items-center">
-      <div class="col-md-8">
-        <h1 class="display-4 fw-bold mb-3">{{ university.university_name }}</h1>
-        <p class="lead mb-0">
-          {{ university.state }} {% if university.established %}• Est. {{
-          university.established }}{% endif %}
-        </p>
-      </div>
-      <div class="col-md-4 text-md-end">
-        {% if university.website %}
-        <a
-          href="{{ university.website }}"
-          target="_blank"
-          class="btn btn-light btn-lg"
-        >
-          <i class="fas fa-external-link-alt me-2"></i>Visit Website
-        </a>
-        {% endif %}
-      </div>
+    <div class="container">
+        <div class="row align-items-center py-4">
+            <div class="col-md-8">
+                <h1 class="display-5 fw-bold mb-2">{{ university.university_name }}</h1>
+                <p class="lead mb-0 d-flex align-items-center">
+                    <i class="fas fa-map-marker-alt me-2"></i>{{ university.state_info.name }} 
+                    {% if university.established %}
+                    <span class="mx-2">•</span>
+                    <i class="fas fa-calendar-alt me-2"></i>Est. {{ university.established }}
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                {% if university.website %}
+                    <a href="{{ university.website }}" 
+                       target="_blank" 
+                       rel="noopener noreferrer" 
+                       class="btn btn-light btn-lg hover-lift">
+                        <i class="fas fa-external-link-alt me-2"></i>Visit Website
+                    </a>
+                {% endif %}
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
+<!-- Breadcrumb Navigation -->
 <div class="container mb-4">
-  <nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="{{ url_for('main.home') }}">Home</a></li>
-      <li class="breadcrumb-item"><a href="{{ url_for('main.search') }}">Institutions</a></li>
-      <li class="breadcrumb-item active">{{ university.university_name }}</li>
-    </ol>
-  </nav>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.home') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.search') }}">Institutions</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ university.university_name }}</li>
+        </ol>
+    </nav>
 </div>
 
 <div class="container">
-  <!-- Quick Facts -->
-  <div class="quick-facts">
-    <div class="stats-card">
-      <div class="d-flex align-items-center">
-        <div class="info-icon">
-          <i class="fas fa-map-marker-alt"></i>
-        </div>
-        <div>
-          <h6 class="mb-1">Location</h6>
-          <p class="mb-0 fw-bold">{{ university.state }}</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="stats-card">
-      <div class="d-flex align-items-center">
-        <div class="info-icon">
-          <i class="fas fa-university"></i>
-        </div>
-        <div>
-          <h6 class="mb-1">Program Type</h6>
-          <p class="mb-0 fw-bold">{{ university.program_type }}</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="stats-card">
-      <div class="d-flex align-items-center">
-        <div class="info-icon">
-          <i class="fas fa-graduation-cap"></i>
-        </div>
-        <div>
-          <h6 class="mb-1">Available Courses</h6>
-          <p class="mb-0 fw-bold">{{ courses|length }}</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="stats-card">
-      <div class="d-flex align-items-center">
-        <div class="info-icon">
-          <i class="fas fa-users"></i>
-        </div>
-        <div>
-          <h6 class="mb-1">Institution Type</h6>
-          <p class="mb-0 fw-bold">{{ university.institution_type }}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add filtering before course listings -->
-  <div class="card shadow-sm mb-4">
-    <div class="card-body">
-      <div class="row align-items-center">
-        <div class="col-md-6">
-          <input type="text" class="form-control" id="courseSearch" 
-                 placeholder="Search courses...">
-        </div>
-        <div class="col-md-6">
-          <div class="d-flex justify-content-end gap-2">
-            <button class="btn btn-outline-primary btn-sm" id="compareBtn">
-              Compare Selected
-            </button>
-            <div class="dropdown">
-              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
-                      type="button" id="sortDropdown" data-bs-toggle="dropdown">
-                Sort By
-              </button>
-              <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#" data-sort="name">Course Name</a></li>
-                <li><a class="dropdown-item" href="#" data-sort="type">Program Type</a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Available Courses Section -->
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <h2 class="h4 mb-4">Available Courses</h2>
-
-      {% if courses %}
-      <div class="row">
-        {% for course in courses %}
-        <div class="col-md-6 col-lg-4">
-          <div class="course-card card h-100">
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <h5 class="card-title">{{ course.course_name }}</h5>
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" 
-                         value="{{ course.id }}" id="compare{{ course.id }}">
+    <!-- Quick Facts Section -->
+    <div class="quick-facts">
+        <div class="stats-card">
+            <div class="d-flex align-items-center">
+                <div class="info-icon">
+                    <i class="fas fa-map-marker-alt"></i>
                 </div>
-              </div>
-              <p class="card-text text-muted">{{ university.abbrv }}</p>
-              <div class="course-preview mb-3">
-                <span class="badge bg-light text-dark me-2">
-                  {{ course.duration }} Years
-                </span>
-                <span class="badge bg-light text-dark">
-                  {{ course.program_type }}
-                </span>
-              </div>
-              <div class="d-flex gap-2">
-                <button class="btn btn-primary flex-grow-1" data-bs-toggle="modal" 
-                        data-bs-target="#courseModal{{ course.id }}">
-                  View Details
-                </button>
-                <button class="btn btn-outline-primary share-btn" 
-                        data-course="{{ course.id }}">
-                  <i class="fas fa-share-alt"></i>
-                </button>
-              </div>
+                <div>
+                    <h6 class="mb-1">Location</h6>
+                    <p class="mb-0 fw-bold">{{ university.state_info.name }}</p>
+                </div>
             </div>
-          </div>
         </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="text-center py-5">
-        <i class="fas fa-books fa-3x text-muted mb-3"></i>
-        <p class="lead text-muted">No courses available at the moment.</p>
-      </div>
-      {% endif %}
+
+        <div class="stats-card">
+            <div class="d-flex align-items-center">
+                <div class="info-icon">
+                    <i class="fas fa-university"></i>
+                </div>
+                <div>
+                    <h6 class="mb-1">Program Type</h6>
+                    <p class="mb-0 fw-bold">{{ university.programme_type_info.name }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-card">
+            <div class="d-flex align-items-center">
+                <div class="info-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h6 class="mb-1">Available Courses</h6>
+                    <p class="mb-0 fw-bold">{{ courses|length }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-card">
+            <div class="d-flex align-items-center">
+                <div class="info-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div>
+                    <h6 class="mb-1">Institution Type</h6>
+                    <p class="mb-0 fw-bold">{{ university.programme_type_info.institution_type }}</p>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <!-- Course Search and Filter Section -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="search-wrapper">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" 
+                               class="form-control" 
+                               id="courseSearch" 
+                               placeholder="Search courses..."
+                               aria-label="Search courses">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-outline-primary btn-sm" id="compareBtn">
+                            <i class="fas fa-exchange-alt me-1"></i>Compare Selected
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                                    type="button" 
+                                    id="sortDropdown" 
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                <i class="fas fa-sort me-1"></i>Sort By
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="sortDropdown">
+                                <li><a class="dropdown-item" href="#" data-sort="name">Course Name</a></li>
+                                <li><a class="dropdown-item" href="#" data-sort="type">Program Type</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Courses Section -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h2 class="h4 mb-4">Available Courses</h2>
+
+            {% if courses %}
+            <div class="row" id="coursesContainer">
+                {% for course in courses %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="course-card card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="course-header mb-3">
+                                    <h5 class="card-title mb-1">{{ course.course_name }}</h5>
+                                    <span class="text-muted small">
+                                        <i class="fas fa-code me-1"></i>{{ university.abbrv }}
+                                    </span>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           value="{{ course.id }}" 
+                                           id="compare{{ course.id }}"
+                                           aria-label="Select for comparison">
+                                    <label class="form-check-label small text-muted" for="compare{{ course.id }}">
+                                        Compare
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="course-details mb-3">
+                                <div class="course-badges d-flex flex-wrap gap-2 mb-3">
+                                    {% if course.duration %}
+                                    <span class="badge bg-primary-soft">
+                                        <i class="fas fa-clock me-1"></i>{{ course.duration }} Years
+                                    </span>
+                                    {% endif %}
+                                    {% if course.program_type %}
+                                    <span class="badge bg-success-soft">
+                                        <i class="fas fa-graduation-cap me-1"></i>{{ course.program_type }}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if course.description %}
+                                <p class="card-text small text-muted mb-3">{{ course.description|truncate(100) }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="course-actions d-flex gap-2">
+                                <button class="btn btn-primary flex-grow-1 d-flex align-items-center justify-content-center" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#courseModal{{ course.id }}">
+                                    <i class="fas fa-info-circle me-2"></i>View Requirements
+                                </button>
+                                <button class="btn btn-outline-primary share-btn" 
+                                        data-course="{{ course.id }}"
+                                        title="Share Course">
+                                    <i class="fas fa-share-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
+                <p class="lead text-muted">No courses available at the moment.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
 <!-- Course Modals -->
 {% for course in courses %}
-<div class="modal fade" id="courseModal{{ course.id }}" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header border-0">
-        <h5 class="modal-title fw-bold">{{ course.course_name }}</h5>
-        <button
-          type="button"
-          class="btn-close"
-          data-bs-dismiss="modal"
-        ></button>
-      </div>
-      <div class="modal-body">
-        <div class="requirements-section">
-          <h6 class="fw-bold mb-4">Entry Requirements</h6>
+<div class="modal fade" 
+     id="courseModal{{ course.id }}" 
+     tabindex="-1" 
+     aria-labelledby="courseModalLabel{{ course.id }}" 
+     aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="courseModalLabel{{ course.id }}">
+                    {{ course.course_name }}
+                </h5>
+                <button type="button" 
+                        class="btn-close" 
+                        data-bs-dismiss="modal" 
+                        aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="requirements-section">
+                    <h6 class="fw-bold mb-4">Entry Requirements</h6>
 
-          {% if course.utme_requirements %}
-          <div class="mb-4">
-            <div class="d-flex align-items-center mb-2">
-              <i class="fas fa-check-circle text-success me-2"></i>
-              <h6 class="mb-0">UTME Requirements</h6>
+                    {% for requirement in course.requirements %}
+                        {% if requirement.university_id == university.id %}
+                            {% if requirement.utme_requirements %}
+                            <div class="mb-4">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    <h6 class="mb-0">UTME Requirements</h6>
+                                </div>
+                                <p class="ms-4 mb-0">{{ requirement.utme_requirements }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if requirement.subject_requirement and requirement.subject_requirement.subjects %}
+                            <div class="mb-4">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-book text-primary me-2"></i>
+                                    <h6 class="mb-0">UTME Subjects</h6>
+                                </div>
+                                <p class="ms-4 mb-0">{{ requirement.subject_requirement.subjects }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if requirement.subjects %}
+                            <div class="mb-4">
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-book text-primary me-2"></i>
+                                    <h6 class="mb-0">Required Subjects</h6>
+                                </div>
+                                <p class="ms-4 mb-0">{{ requirement.subjects }}</p>
+                            </div>
+                            {% endif %}
+
+                            {% if requirement.direct_entry_requirements %}
+                            <div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-door-open text-warning me-2"></i>
+                                    <h6 class="mb-0">Direct Entry Requirements</h6>
+                                </div>
+                                <p class="ms-4 mb-0">{{ requirement.direct_entry_requirements }}</p>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if not course.requirements|selectattr('university_id', 'equalto', university.id)|list %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-info-circle mb-2"></i>
+                        <p>No specific requirements listed for this course.</p>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            <p class="ms-4 mb-0">{{ course.utme_requirements }}</p>
-          </div>
-          {% endif %} {% if course.subjects %}
-          <div class="mb-4">
-            <div class="d-flex align-items-center mb-2">
-              <i class="fas fa-book text-primary me-2"></i>
-              <h6 class="mb-0">Required Subjects</h6>
+            <div class="modal-footer border-0">
+                <button type="button" 
+                        class="btn btn-secondary" 
+                        data-bs-dismiss="modal">Close</button>
+                {% if university.website %}
+                <a href="{{ university.website }}" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="btn btn-primary">
+                    <i class="fas fa-external-link-alt me-1"></i>Visit University Website
+                </a>
+                {% endif %}
             </div>
-            <p class="ms-4 mb-0">{{ course.subjects }}</p>
-          </div>
-          {% endif %} {% if course.direct_entry_requirements %}
-          <div>
-            <div class="d-flex align-items-center mb-2">
-              <i class="fas fa-door-open text-warning me-2"></i>
-              <h6 class="mb-0">Direct Entry Requirements</h6>
-            </div>
-            <p class="ms-4 mb-0">{{ course.direct_entry_requirements }}</p>
-          </div>
-          {% endif %}
         </div>
-      </div>
-      <div class="modal-footer border-0">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          Close
-        </button>
-        {% if university.website %}
-        <a
-          href="{{ university.website }}"
-          target="_blank"
-          class="btn btn-primary"
-        >
-          Visit University Website
-        </a>
-        {% endif %}
-      </div>
     </div>
-  </div>
 </div>
-{% endfor %} {% endblock %} {% block extra_head %}
+{% endfor %}
+{% endblock %}
+
+{% block extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/institution_details.css') }}">
 {% endblock %}
 

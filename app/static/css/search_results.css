@@ -399,3 +399,162 @@
       width: 100%;
   }
 }
+
+/* Course Result Card Styles */
+.course-result-card {
+    border: none;
+    border-radius: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.course-result-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+}
+
+.universities-list {
+    max-height: 100px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.university-item {
+    padding: 0.25rem 0;
+    transition: background-color 0.2s ease;
+}
+
+.university-item:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+
+.university-item a {
+    color: inherit;
+}
+
+.university-item a:hover {
+    color: var(--primary-color);
+}
+
+.more-universities {
+    padding: 0.25rem 0;
+    font-style: italic;
+}
+
+.course-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.course-stats .badge {
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5em 1em;
+}
+
+/* Course Controls */
+.course-controls {
+    background: white;
+    border-radius: 1rem;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.search-wrapper {
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+}
+
+#courseSearchInput {
+    padding-left: 2.5rem;
+    border-radius: 2rem;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 3rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: var(--shadow-md);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+/* Modal Accordion Styles */
+.accordion-item {
+    border: none;
+    margin-bottom: 0.5rem;
+}
+
+.accordion-button {
+    border-radius: 0.5rem;
+    padding: 1rem;
+    font-weight: 500;
+    background-color: #f8f9fa;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(0,0,0,0.125);
+}
+
+.requirement-section {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 1rem;
+}
+
+.accordion-body {
+    padding: 1.5rem;
+}
+
+/* Empty State Styles */
+.empty-state {
+    background: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin: 1rem 0;
+}
+
+.empty-state i {
+    color: var(--primary-color);
+    opacity: 0.7;
+}
+
+.empty-state h4 {
+    color: #2d3748;
+    font-weight: 600;
+}
+
+.empty-state .suggestions {
+    max-width: 300px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+.empty-state .suggestions ul li {
+    margin-bottom: 0.5rem;
+    color: #4a5568;
+}
+
+.empty-state .suggestions ul li i {
+    font-size: 0.875rem;
+}

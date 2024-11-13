@@ -156,11 +156,17 @@ function populateModal(data) {
       throw new Error("Institution details container not found");
     }
 
-    // Build institution details HTML with state_info and programme_type_info
+    // Build institution details HTML
     institutionDetails.innerHTML = `
         <div class="row">
             <div class="col-12">
-                <h3 id="institutionName" class="mb-4">${data.university_name || "N/A"}</h3>
+                <div class="d-flex justify-content-between align-items-start mb-4">
+                    <h3 id="institutionName" class="mb-0">${data.university_name || "N/A"}</h3>
+                    <a href="/institution/${data.id}" 
+                       class="btn btn-primary">
+                        <i class="fas fa-external-link-alt me-2"></i>View Full Details
+                    </a>
+                </div>
                 <div class="institution-info">
                     <div class="row g-3">
                         <div class="col-md-6">

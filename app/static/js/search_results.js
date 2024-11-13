@@ -321,6 +321,86 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Restore filter state from URL parameters
   restoreFilterState();
+
+  // Course tab functionality
+  function initializeCourseTab() {
+      const courseSearchInput = document.getElementById('courseSearchInput');
+      const courseCards = document.querySelectorAll('.course-result-card');
+      const compareBtn = document.getElementById('compareCoursesBtn');
+      const shareButtons = document.querySelectorAll('.share-course');
+
+      // Course search
+      if (courseSearchInput) {
+          courseSearchInput.addEventListener('input', debounce(function(e) {
+              const searchTerm = e.target.value.toLowerCase();
+              filterCourses(searchTerm);
+          }, 300));
+      }
+
+      // Course comparison
+      if (compareBtn) {
+          compareBtn.addEventListener('click', function() {
+              const selectedCourses = document.querySelectorAll('.course-compare:checked');
+              if (selectedCourses.length < 2) {
+                  showNotification('Please select at least 2 courses to compare', 'warning');
+                  return;
+              }
+              // Implement comparison logic
+              compareCourses(Array.from(selectedCourses).map(cb => cb.value));
+          });
+      }
+
+      // Share functionality
+      shareButtons.forEach(btn => {
+          btn.addEventListener('click', async function() {
+              const courseId = this.dataset.courseId;
+              const courseTitle = this.closest('.card').querySelector('.card-title').textContent;
+              try {
+                  await shareCourse(courseId, courseTitle);
+              } catch (error) {
+                  showNotification('Failed to share course', 'error');
+              }
+          });
+      });
+  }
+
+  function filterCourses(searchTerm) {
+      const courseCards = document.querySelectorAll('.course-result-card');
+      courseCards.forEach(card => {
+          const courseName = card.querySelector('.card-title').textContent.toLowerCase();
+          const universities = Array.from(card.querySelectorAll('.university-item'))
+              .map(item => item.textContent.toLowerCase());
+          
+          const matches = courseName.includes(searchTerm) || 
+                         universities.some(uni => uni.includes(searchTerm));
+          
+          card.closest('.col-md-6').style.display = matches ? 'block' : 'none';
+      });
+  }
+
+  async function shareCourse(courseId, courseTitle) {
+      const shareData = {
+          title: courseTitle,
+          text: `Check out this course: ${courseTitle}`,
+          url: `${window.location.origin}/course/${courseId}`
+      };
+
+      try {
+          if (navigator.share) {
+              await navigator.share(shareData);
+          } else {
+              await navigator.clipboard.writeText(shareData.url);
+              showNotification('Link copied to clipboard!', 'success');
+          }
+      } catch (error) {
+          throw error;
+      }
+  }
+
+  // Initialize when DOM is loaded
+  document.addEventListener('DOMContentLoaded', function() {
+      initializeCourseTab();
+  });
 });
 
 function restoreFilterState() {

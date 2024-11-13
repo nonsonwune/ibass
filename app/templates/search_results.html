@@ -69,6 +69,7 @@
             <div class="tab-content mt-4" id="resultTabsContent">
                 <!-- Universities Tab -->
                 <div class="tab-pane fade show active" id="institutions" role="tabpanel">
+                    {% if universities %}
                     <div class="row g-4">
                         {% for university in universities %}
                         <div class="col-md-6">
@@ -88,30 +89,149 @@
                         </div>
                         {% endfor %}
                     </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <div class="text-center py-5">
+                            <i class="fas fa-university fa-3x text-muted mb-3"></i>
+                            <h4 class="mb-3">No Institutions Found</h4>
+                            <p class="text-muted mb-4">We couldn't find any institutions matching your search criteria.</p>
+                            <div class="suggestions">
+                                <p class="fw-bold mb-2">Try:</p>
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-check-circle text-success me-2"></i>Adjusting your search terms</li>
+                                    <li><i class="fas fa-check-circle text-success me-2"></i>Removing some filters</li>
+                                    <li><i class="fas fa-check-circle text-success me-2"></i>Checking for spelling errors</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <!-- Courses Tab -->
                 <div class="tab-pane fade" id="courses" role="tabpanel">
+                    <!-- Course Search and Filter Bar -->
+                    <div class="course-controls mb-4">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="search-wrapper">
+                                    <i class="fas fa-search search-icon"></i>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="courseSearchInput" 
+                                           placeholder="Search within results..."
+                                           aria-label="Search courses">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex gap-2 justify-content-md-end">
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-secondary dropdown-toggle" 
+                                                type="button" 
+                                                id="courseSortDropdown" 
+                                                data-bs-toggle="dropdown" 
+                                                aria-expanded="false">
+                                            <i class="fas fa-sort me-1"></i>Sort By
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="courseSortDropdown">
+                                            <li><a class="dropdown-item" href="#" data-sort="name">Course Name</a></li>
+                                            <li><a class="dropdown-item" href="#" data-sort="universities">Number of Universities</a></li>
+                                        </ul>
+                                    </div>
+                                    <button class="btn btn-outline-primary" id="compareCoursesBtn">
+                                        <i class="fas fa-exchange-alt me-1"></i>Compare
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Courses Grid -->
                     <div class="row g-4">
                         {% for course in courses %}
-                        <div class="col-md-6">
-                            <div class="card h-100">
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 course-result-card">
                                 <div class="card-body">
-                                    <h5 class="card-title">{{ course.course_name }}</h5>
-                                    {% for req in course.requirements %}
-                                    <p class="card-text">
-                                        <i class="fas fa-university me-2"></i>{{ req.university.university_name }}
-                                    </p>
-                                    {% endfor %}
-                                    <button class="btn btn-primary w-100" data-bs-toggle="modal" 
-                                            data-bs-target="#courseModal{{ course.id }}">
-                                        View Requirements
-                                    </button>
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h5 class="card-title">{{ course.course_name }}</h5>
+                                        <div class="form-check">
+                                            <input class="form-check-input course-compare" 
+                                                   type="checkbox" 
+                                                   value="{{ course.id }}" 
+                                                   id="compareCourse{{ course.id }}"
+                                                   aria-label="Select for comparison">
+                                        </div>
+                                    </div>
+
+                                    <!-- Universities offering this course -->
+                                    <div class="universities-list mb-3">
+                                        {% for req in course.requirements[:3] %}
+                                        <div class="university-item">
+                                            <i class="fas fa-university text-primary me-2"></i>
+                                            <a href="{{ url_for('university.institution_details', id=req.university.id) }}" 
+                                               class="text-decoration-none">
+                                                {{ req.university.university_name }}
+                                            </a>
+                                        </div>
+                                        {% endfor %}
+                                        {% if course.requirements|length > 3 %}
+                                        <div class="more-universities text-muted">
+                                            <small>+ {{ course.requirements|length - 3 }} more universities</small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Course Stats -->
+                                    <div class="course-stats mb-3">
+                                        <span class="badge bg-light text-dark me-2">
+                                            <i class="fas fa-university me-1"></i>
+                                            {{ course.requirements|length }} Universities
+                                        </span>
+                                        {% if course.program_type %}
+                                        <span class="badge bg-light text-dark">
+                                            <i class="fas fa-graduation-cap me-1"></i>
+                                            {{ course.program_type }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Action Buttons -->
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-primary flex-grow-1" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#courseModal{{ course.id }}">
+                                            <i class="fas fa-info-circle me-1"></i>View Requirements
+                                        </button>
+                                        <button class="btn btn-outline-primary share-course" 
+                                                data-course-id="{{ course.id }}"
+                                                title="Share Course">
+                                            <i class="fas fa-share-alt"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
+
+                    <!-- Empty State -->
+                    {% if not courses %}
+                    <div class="empty-state">
+                        <div class="text-center py-5">
+                            <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
+                            <h4 class="mb-3">No Courses Available</h4>
+                            <p class="text-muted mb-4">We couldn't find any courses matching your search criteria.</p>
+                            <div class="suggestions">
+                                <p class="fw-bold mb-2">Suggestions:</p>
+                                <ul class="list-unstyled">
+                                    <li><i class="fas fa-check-circle text-success me-2"></i>Try different search keywords</li>
+                                    <li><i class="fas fa-check-circle text-success me-2"></i>Clear your current filters</li>
+                                    <li><i class="fas fa-check-circle text-success me-2"></i>Broaden your search criteria</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -128,41 +248,65 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                {% for req in course.requirements %}
-                <div class="university-requirements mb-4">
-                    <h6 class="fw-bold mb-3">{{ req.university.university_name }}</h6>
-                    
-                    {% if req.utme_requirements %}
-                    <div class="requirement-section mb-3">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="fas fa-check-circle text-success me-2"></i>
-                            <h6 class="mb-0">UTME Requirements</h6>
-                        </div>
-                        <p class="ms-4 mb-0">{{ req.utme_requirements }}</p>
-                    </div>
-                    {% endif %}
+                <div class="accordion" id="requirementsAccordion{{ course.id }}">
+                    {% for req in course.requirements %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading{{ course.id }}{{ req.university.id }}">
+                            <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" 
+                                    type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse{{ course.id }}{{ req.university.id }}" 
+                                    aria-expanded="{{ 'true' if loop.first else 'false' }}" 
+                                    aria-controls="collapse{{ course.id }}{{ req.university.id }}">
+                                {{ req.university.university_name }}
+                            </button>
+                        </h2>
+                        <div id="collapse{{ course.id }}{{ req.university.id }}" 
+                             class="accordion-collapse collapse {% if loop.first %}show{% endif %}" 
+                             aria-labelledby="heading{{ course.id }}{{ req.university.id }}" 
+                             data-bs-parent="#requirementsAccordion{{ course.id }}">
+                            <div class="accordion-body">
+                                {% if req.utme_requirements %}
+                                <div class="requirement-section mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        <h6 class="mb-0">UTME Requirements</h6>
+                                    </div>
+                                    <p class="ms-4 mb-0">{{ req.utme_requirements }}</p>
+                                </div>
+                                {% endif %}
 
-                    {% if req.subjects %}
-                    <div class="requirement-section mb-3">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="fas fa-book text-primary me-2"></i>
-                            <h6 class="mb-0">Required Subjects</h6>
-                        </div>
-                        <p class="ms-4 mb-0">{{ req.subjects }}</p>
-                    </div>
-                    {% endif %}
+                                {% if req.subjects %}
+                                <div class="requirement-section mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-book text-primary me-2"></i>
+                                        <h6 class="mb-0">Required Subjects</h6>
+                                    </div>
+                                    <p class="ms-4 mb-0">{{ req.subjects }}</p>
+                                </div>
+                                {% endif %}
 
-                    {% if req.direct_entry_requirements %}
-                    <div class="requirement-section">
-                        <div class="d-flex align-items-center mb-2">
-                            <i class="fas fa-door-open text-warning me-2"></i>
-                            <h6 class="mb-0">Direct Entry Requirements</h6>
+                                {% if req.direct_entry_requirements %}
+                                <div class="requirement-section">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-door-open text-warning me-2"></i>
+                                        <h6 class="mb-0">Direct Entry Requirements</h6>
+                                    </div>
+                                    <p class="ms-4 mb-0">{{ req.direct_entry_requirements }}</p>
+                                </div>
+                                {% endif %}
+
+                                <div class="mt-3">
+                                    <a href="{{ url_for('university.institution_details', id=req.university.id) }}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-university me-1"></i>View Institution
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                        <p class="ms-4 mb-0">{{ req.direct_entry_requirements }}</p>
                     </div>
-                    {% endif %}
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -181,11 +325,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalTriggers = document.querySelectorAll('[data-bs-toggle="modal"]');
     modalTriggers.forEach(trigger => {
         trigger.addEventListener('click', function(e) {
-            const targetModalId = this.getAttribute('data-bs-target').substring(1);
-            const modalElement = document.getElementById(targetModalId);
+            e.preventDefault();
+            const targetModalId = this.getAttribute('data-bs-target');
+            const modalElement = document.querySelector(targetModalId);
             if (modalElement) {
-                const modal = new bootstrap.Modal(modalElement);
-                modal.show();
+                const bsModal = new bootstrap.Modal(modalElement);
+                modalElement.addEventListener('hidden.bs.modal', function () {
+                    // Remove modal backdrop and reset body classes when modal is closed
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) backdrop.remove();
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                });
+                bsModal.show();
             }
         });
     });

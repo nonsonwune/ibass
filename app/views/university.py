@@ -336,36 +336,16 @@ def get_course(course_id):
 
 @bp.route("/institution/<int:id>")
 def institution_details(id):
-    try:
-        university = University.query.get_or_404(id)
-        
-        # Updated query with eager loading
-        courses = (Course.query
-                .join(CourseRequirement)
-                .options(
-                    joinedload(Course.requirements)
-                    .joinedload(CourseRequirement.utme_template)
-                )
-                .options(
-                    joinedload(Course.requirements)
-                    .joinedload(CourseRequirement.de_template)
-                )
-                .options(
-                    joinedload(Course.requirements)
-                    .joinedload(CourseRequirement.subject_requirement)
-                )
-                .filter(CourseRequirement.university_id == id)
-                .order_by(Course.course_name)
-                .all())
-
-        return render_template(
-            "institution_details.html",
-            university=university,
-            courses=courses
-        )
-    except Exception as e:
-        current_app.logger.error(f"Error rendering institution details: {str(e)}")
-        abort(500)
+    university = University.query.get_or_404(id)
+    courses = Course.query\
+        .join(CourseRequirement)\
+        .filter(CourseRequirement.university_id == id)\
+        .options(joinedload(Course.requirements))\
+        .all()
+    
+    return render_template('institution_details.html', 
+                         university=university, 
+                         courses=courses)
 
 @bp.route("/institution/<int:id>/courses")
 def get_institution_courses(id):

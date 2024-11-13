@@ -110,9 +110,9 @@
           {% for uni in recommendations %}
           <div class="col">
             <div class="recommendation-card">
-              <div class="card-body d-flex flex-column">
+              <div class="card-body p-4">
                 <!-- Card Header -->
-                <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="d-flex justify-content-between align-items-start mb-4">
                   <h5 class="card-title mb-0">{{ uni.university_name }}</h5>
                   <span class="institution-type type-{{ uni.program_type|lower }}">
                     {{ uni.program_type }}
@@ -120,8 +120,8 @@
                 </div>
 
                 <!-- Institution Info -->
-                <div class="institution-info mb-3">
-                  <p class="mb-2">
+                <div class="institution-info mb-4">
+                  <p class="mb-3">
                     <i class="fas fa-map-marker-alt me-2 text-primary"></i>
                     {{ uni.state }}
                   </p>
@@ -132,8 +132,8 @@
                 </div>
 
                 <!-- Card Actions -->
-                <div class="mt-auto">
-                  <button class="btn btn-primary w-100 mb-2 view-details-btn"
+                <div class="mt-auto d-flex flex-column gap-2">
+                  <button class="btn btn-primary view-details-btn"
                           data-bs-toggle="modal"
                           data-bs-target="#institutionModal"
                           data-uni-id="{{ uni.id }}"
@@ -144,7 +144,7 @@
                   </button>
 
                   {% if current_user.is_authenticated %}
-                  <button class="btn {% if uni.id in user_bookmarks %}btn-secondary{% else %}btn-outline-secondary{% endif %} w-100 bookmark-btn"
+                  <button class="btn {% if uni.id in user_bookmarks %}btn-secondary{% else %}btn-outline-secondary{% endif %} bookmark-btn"
                           data-uni-id="{{ uni.id }}"
                           data-bookmarked="{{ 'true' if uni.id in user_bookmarks else 'false' }}">
                     <i class="fas {% if uni.id in user_bookmarks %}fa-check{% else %}fa-bookmark{% endif %} me-1"></i>
@@ -154,7 +154,7 @@
                   </button>
                   {% else %}
                   <a href="{{ url_for('auth.login', next=request.url) }}" 
-                     class="btn btn-outline-secondary w-100">
+                     class="btn btn-outline-secondary">
                     <i class="fas fa-bookmark me-1"></i>Login to Bookmark
                   </a>
                   {% endif %}
