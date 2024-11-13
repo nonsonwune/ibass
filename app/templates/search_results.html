@@ -1,274 +1,118 @@
 {% extends "base.html" %}
-{% block title %}Search Results - Naija! Find Uni{% endblock %}
-
-{% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/search_results.css') }}" />
-{% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section class="hero-section search-hero-section">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-8 text-center">
-                <h1 class="mb-4">Search Results</h1>
-                <form class="d-flex justify-content-center" action="{{ url_for('main.search_results') }}" method="GET">
-                    <div class="input-group input-group-lg" style="max-width: 600px">
-                        <input type="text" class="form-control" name="q" value="{{ query }}"
-                            placeholder="Search institutions or courses..." />
-                        <button class="btn btn-primary" type="submit">
-                            <i class="fas fa-search me-2"></i>Search
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</section>
-
-<div class="container">
-    <!-- Loading Overlay -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="text-center">
-            <div class="spinner-border text-primary mb-3" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mb-0">Loading results...</p>
-        </div>
-    </div>
-
+<div class="container mt-4">
     <div class="row">
-        <!-- Filters Sidebar -->
-        <div class="col-lg-3 mb-4">
-            <div class="filter-section">
-                <h4 class="mb-4">Filters</h4>
-                <form id="filterForm">
-                    <!-- State Filter -->
-                    <div class="filter-group">
-                        <label class="fw-bold mb-2">State</label>
-                        <select class="form-select" id="stateFilter" name="state">
-                            <option value="">All States</option>
-                            {% for state in states %}
-                            <option value="{{ state }}" {% if state == selected_state %}selected{% endif %}>
-                                {{ state }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
+        <!-- Search Results Header -->
+        <div class="col-12">
+            <h2 class="results-count mb-4">
+                Found {{ total_results }} results for "{{ query }}"
+            </h2>
+        </div>
 
-                    <!-- Institution Type Filter -->
-                    <div class="filter-group">
-                        <label class="fw-bold mb-2">Institution Type</label>
-                        <div class="custom-checkboxes">
-                            {% for type in institution_types %}
-                            <label class="custom-checkbox">
-                                <input type="checkbox" name="type" value="{{ type }}" 
-                                    {% if type in selected_types %}checked{% endif %} />
-                                {{ type|title }}
-                            </label>
-                            {% endfor %}
-                        </div>
-                    </div>
+        <!-- Filters Section -->
+        <div class="col-md-3">
+            <form id="filterForm" class="mb-4">
+                <input type="hidden" name="q" value="{{ query }}">
+                
+                <!-- State Filter -->
+                <div class="mb-3">
+                    <label for="state" class="form-label">State</label>
+                    <select name="state" id="state" class="form-select">
+                        <option value="">All States</option>
+                        {% for state in states %}
+                        <option value="{{ state }}" {% if state == selected_state %}selected{% endif %}>
+                            {{ state }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-filter me-2"></i>Apply Filters
-                    </button>
-                </form>
-            </div>
+                <!-- Institution Type Filter -->
+                <div class="mb-3">
+                    <label class="form-label">Institution Type</label>
+                    {% for type in institution_types %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="type" 
+                               value="{{ type }}" id="type_{{ loop.index }}"
+                               {% if type in selected_types %}checked{% endif %}>
+                        <label class="form-check-label" for="type_{{ loop.index }}">
+                            {{ type }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+            </form>
         </div>
 
         <!-- Results Section -->
-        <div class="col-lg-9">
-            <!-- Results Count -->
-            <div class="results-count">
-                Found {{ total_results }} results for "{{ query }}"
-            </div>
-
+        <div class="col-md-9">
             <!-- Results Tabs -->
             <ul class="nav nav-tabs" id="resultTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="institutions-tab" data-bs-toggle="tab"
-                        data-bs-target="#institutions" type="button" role="tab">
+                    <button class="nav-link active" id="institutions-tab" data-bs-toggle="tab" 
+                            data-bs-target="#institutions" type="button" role="tab">
                         <i class="fas fa-university me-2"></i>Institutions ({{ universities_count }})
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="courses-tab" data-bs-toggle="tab" data-bs-target="#courses"
-                        type="button" role="tab">
+                    <button class="nav-link" id="courses-tab" data-bs-toggle="tab" 
+                            data-bs-target="#courses" type="button" role="tab">
                         <i class="fas fa-book me-2"></i>Courses ({{ courses_count }})
                     </button>
                 </li>
             </ul>
 
             <!-- Tab Content -->
-            <div class="tab-content" id="resultTabsContent">
-                <!-- Institutions Tab -->
+            <div class="tab-content mt-4" id="resultTabsContent">
+                <!-- Universities Tab -->
                 <div class="tab-pane fade show active" id="institutions" role="tabpanel">
-                    {% if universities %}
                     <div class="row g-4">
                         {% for university in universities %}
                         <div class="col-md-6">
-                            <div class="result-card">
+                            <div class="card h-100">
                                 <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <h5 class="card-title mb-0">
-                                            {{ university.university_name }}
-                                        </h5>
-                                        <span class="institution-type type-{{ university.programme_type_info.name|lower }}">
-                                            {{ university.programme_type_info.name }}
-                                        </span>
-                                    </div>
+                                    <h5 class="card-title">{{ university.university_name }}</h5>
                                     <p class="card-text">
-                                        <i class="fas fa-map-marker-alt me-2 text-primary"></i>
-                                        {{ university.state_info.name }}
+                                        <i class="fas fa-map-marker-alt me-2"></i>{{ university.state_info.name }}
                                     </p>
-                                    <div class="mt-3">
-                                        <a href="{{ url_for('university.institution_details', id=university.id) }}"
-                                            class="btn btn-primary w-100">
-                                            <i class="fas fa-info-circle me-2"></i>View Details
-                                        </a>
-                                    </div>
+                                    <p class="card-text">
+                                        <i class="fas fa-graduation-cap me-2"></i>{{ university.programme_type_info.name }}
+                                    </p>
+                                    <a href="{{ url_for('university.institution_details', id=university.id) }}" 
+                                       class="btn btn-primary w-100">View Details</a>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
-                    {% else %}
-                    <div class="no-results">
-                        <i class="fas fa-university mb-3"></i>
-                        <h3>No Institutions Found</h3>
-                        <p class="text-muted">Try adjusting your search criteria or filters</p>
-                    </div>
-                    {% endif %}
                 </div>
 
                 <!-- Courses Tab -->
                 <div class="tab-pane fade" id="courses" role="tabpanel">
-                    {% if courses %}
                     <div class="row g-4">
                         {% for course in courses %}
                         <div class="col-md-6">
-                            <div class="result-card">
+                            <div class="card h-100">
                                 <div class="card-body">
-                                    <h5 class="card-title mb-3">{{ course.course_name }}</h5>
+                                    <h5 class="card-title">{{ course.course_name }}</h5>
                                     {% for req in course.requirements %}
-                                    <p class="card-text mb-2">
-                                        <i class="fas fa-university me-2 text-primary"></i>
-                                        {{ req.university.university_name }}
-                                    </p>
-                                    <p class="card-text mb-2">
-                                        <i class="fas fa-map-marker-alt me-2 text-success"></i>
-                                        {{ req.university.state_info.name }}
-                                    </p>
-                                    <p class="card-text mb-3">
-                                        <i class="fas fa-graduation-cap me-2 text-info"></i>
-                                        {{ req.university.programme_type_info.name }}
+                                    <p class="card-text">
+                                        <i class="fas fa-university me-2"></i>{{ req.university.university_name }}
                                     </p>
                                     {% endfor %}
-                                    <button class="btn btn-primary w-100" data-bs-toggle="modal"
-                                        data-bs-target="#courseModal{{ course.id }}">
-                                        <i class="fas fa-info-circle me-2"></i>View Requirements
+                                    <button class="btn btn-primary w-100" data-bs-toggle="modal" 
+                                            data-bs-target="#courseModal{{ course.id }}">
+                                        View Requirements
                                     </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Course Modal -->
-                        <div class="modal fade course-modal" id="courseModal{{ course.id }}" tabindex="-1"
-                            data-course-id="{{ course.id }}">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">{{ course.course_name }}</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        {% for req in course.requirements %}
-                                        <div class="mb-4">
-                                            <h6 class="mb-3">{{ req.university.university_name }}</h6>
-                                            <p class="text-muted mb-2">
-                                                <i class="fas fa-map-marker-alt me-2"></i>
-                                                {{ req.university.state_info.name }}
-                                            </p>
-                                            <p class="text-muted mb-3">
-                                                <i class="fas fa-graduation-cap me-2"></i>
-                                                {{ req.university.programme_type_info.name }}
-                                            </p>
-                                            <div class="requirement-section">
-                                                {% if req.utme_requirements %}
-                                                <div class="mb-3">
-                                                    <h6 class="text-primary">UTME Requirements:</h6>
-                                                    <p>{{ req.utme_requirements }}</p>
-                                                </div>
-                                                {% endif %}
-                                                {% if req.direct_entry_requirements %}
-                                                <div class="mb-3">
-                                                    <h6 class="text-primary">Direct Entry Requirements:</h6>
-                                                    <p>{{ req.direct_entry_requirements }}</p>
-                                                </div>
-                                                {% endif %}
-                                                {% if req.subject_requirement and req.subject_requirement.subjects %}
-                                                <div class="mb-3">
-                                                    <h6 class="text-primary">Required Subjects:</h6>
-                                                    <p>{{ req.subject_requirement.subjects }}</p>
-                                                </div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                    <div class="modal-footer">
-                                        {% for req in course.requirements %}
-                                        <a href="{{ url_for('university.institution_details', id=req.university.id) }}"
-                                            class="btn btn-primary">
-                                            <i class="fas fa-university me-2"></i>View {{ req.university.university_name }}
-                                        </a>
-                                        {% endfor %}
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                            Close
-                                        </button>
-                                    </div>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
-                    {% else %}
-                    <div class="no-results">
-                        <i class="fas fa-book mb-3"></i>
-                        <h3>No Courses Found</h3>
-                        <p class="text-muted">Try adjusting your search criteria or filters</p>
-                    </div>
-                    {% endif %}
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Mobile Filter Toggle -->
-<button type="button" class="filter-toggle d-lg-none" id="filterToggleBtn" aria-label="Show filters">
-    <i class="fas fa-filter"></i>
-</button>
-
-<!-- Mobile Filters Modal -->
-<div class="modal fade" id="mobileFiltersModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen-sm-down">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="filterModalLabel">
-                    <i class="fas fa-filter me-2"></i>Filters
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="mobileFilterModalBody">
-                <!-- Filter form will be cloned here -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="mobileApplyFiltersBtn">
-                    <i class="fas fa-check me-2"></i>Apply Filters
-                </button>
             </div>
         </div>
     </div>
@@ -277,5 +121,4 @@
 
 {% block extra_scripts %}
 <script src="{{ url_for('static', filename='js/search_results.js') }}"></script>
-<script src="{{ url_for('static', filename='js/search_results_filter.js') }}"></script>
 {% endblock %}

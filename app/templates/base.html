@@ -530,8 +530,8 @@
               const searchQuery = mainSearchInput.value.trim();
               if (!searchQuery) return;
 
-              // Redirect to search results page with query
-              window.location.href = `/api/search?q=${encodeURIComponent(searchQuery)}`;
+              // Redirect to search route instead of search_results
+              window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
           });
       }
   });

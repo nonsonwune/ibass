@@ -15,7 +15,7 @@ from ..models.feedback import Feedback
 from ..forms.feedback import ContactForm
 from ..extensions import db, cache
 from ..models.interaction import Comment
-from ..models.university import University, Course, CourseRequirement
+from ..models.university import University, Course, CourseRequirement, State, ProgrammeType
 from ..models.user import User
 from ..utils.search import perform_search
 from sqlalchemy import or_, func, text
@@ -36,7 +36,7 @@ def about():
 
 
 @bp.route("/search")
-def search_results():
+def search():
     query_text = request.args.get("q", "").strip()
     state = request.args.get("state")
     types = request.args.getlist("type")  # Handle multiple type selections
@@ -105,14 +105,6 @@ def search_results():
         courses_count = len(courses)
         total_results = universities_count + courses_count
 
-        # Handle case where selected filters no longer match any results
-        if state and state not in available_states:
-            available_states.append(state)
-        if types:
-            for type_ in types:
-                if type_ not in available_types:
-                    available_types.append(type_)
-
         return render_template(
             "search_results.html",
             query=query_text,
@@ -124,8 +116,6 @@ def search_results():
             institution_types=available_types,
             selected_state=state,
             selected_types=types,
-            selected_levels=[],  # Keeping for backwards compatibility
-            program_levels=[],  # Keeping for backwards compatibility
             total_results=total_results,
         )
 

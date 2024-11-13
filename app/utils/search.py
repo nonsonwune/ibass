@@ -139,10 +139,15 @@ def perform_search(query_text, state=None, program_type=None, page=1, per_page=1
             )
             total_courses = get_course_count(query_text, state, program_type)
             
-            # Create paginated results
+            # Create paginated results with properly mapped fields
             results = {
                 'universities': {
-                    'items': universities,
+                    'items': [{
+                        'id': uni['id'],
+                        'university_name': uni['university_name'],
+                        'state': uni['state_name'],  # Map from the query result
+                        'program_type': uni['program_type_name']  # Map from the query result
+                    } for uni in universities],
                     'total': total_unis,
                     'has_next': offset + per_page < total_unis,
                     'has_prev': page > 1,
@@ -168,26 +173,22 @@ def perform_search(query_text, state=None, program_type=None, page=1, per_page=1
 def execute_university_search(query_text, state, program_type, limit, offset):
     """Execute university search query"""
     query = text("""
-        WITH filtered_universities AS (
-            SELECT 
-                u.id,
-                u.university_name,
-                s.name as state,
-                pt.name as program_type
-            FROM university u
-            JOIN state s ON u.state_id = s.id
-            JOIN programme_type pt ON u.programme_type_id = pt.id
-            WHERE (:state IS NULL OR s.name = :state)
-            AND (:program_type IS NULL OR pt.name = :program_type)
-            AND (
-                :query IS NULL 
-                OR u.search_vector @@ plainto_tsquery('english', :query)
-                OR u.university_name ILIKE :like_query
-            )
+        SELECT 
+            u.id,
+            u.university_name,
+            s.name as state_name,
+            pt.name as program_type_name
+        FROM university u
+        LEFT JOIN state s ON u.state_id = s.id
+        LEFT JOIN programme_type pt ON u.programme_type_id = pt.id
+        WHERE (:state IS NULL OR s.name = :state)
+        AND (:program_type IS NULL OR pt.name = :program_type)
+        AND (
+            :query IS NULL 
+            OR u.search_vector @@ plainto_tsquery('english', :query)
+            OR u.university_name ILIKE :like_query
         )
-        SELECT *
-        FROM filtered_universities
-        ORDER BY university_name
+        ORDER BY u.university_name
         LIMIT :limit OFFSET :offset
     """)
     

@@ -148,7 +148,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                   <span class="institution-type type-${(uni.program_type || '').toLowerCase()}">${escapeHtml(uni.program_type || '')}</span>
                               </div>
                               <p class="card-text">
-                                  <i class="fas fa-map-marker-alt me-2 text-primary"></i>${escapeHtml(uni.state || '')}
+                                  <i class="fas fa-map-marker-alt me-2 text-primary"></i>${escapeHtml(uni.location || 'Location not available')}
                               </p>
                               <div class="mt-3">
                                   <a href="/university/institution/${uni.id}" class="btn btn-primary w-100">

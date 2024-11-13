@@ -18,7 +18,7 @@ class State(BaseModel):
     region = db.Column(db.String(20))
     created_at = db.Column(db.TIMESTAMP, server_default=db.func.now())
     
-    # Add relationship to University
+    # Define relationship with back_populates
     universities = db.relationship('University', back_populates='state_info')
     
     def __repr__(self):
@@ -38,7 +38,7 @@ class ProgrammeType(BaseModel):
     institution_type = db.Column(db.String(50))  # Added this column
     created_at = db.Column(db.TIMESTAMP, server_default=db.func.now())
     
-    # Add relationship to University
+    # Define relationship with back_populates
     universities = db.relationship('University', back_populates='programme_type_info')
     
     def __repr__(self):
@@ -49,18 +49,21 @@ class University(BaseModel):
     __tablename__ = 'university'
     
     id = db.Column(db.Integer, primary_key=True)
-    university_name = db.Column(db.String(256), unique=True, nullable=False)
+    university_name = db.Column(db.String(200), nullable=False)
+    state_id = db.Column(db.Integer, db.ForeignKey('state.id'))
+    programme_type_id = db.Column(db.Integer, db.ForeignKey('programme_type.id'))
     website = db.Column(db.String(255))
     established = db.Column(db.Integer)
-    abbrv = db.Column(db.String(255))
+    abbrv = db.Column(db.String(255))  # Added this column to match database schema
     search_vector = db.Column(TSVECTOR)
-    state_id = db.Column(db.Integer, db.ForeignKey('state.id'), nullable=False)
-    programme_type_id = db.Column(db.Integer, db.ForeignKey('programme_type.id'), nullable=False)
     
-    # Update relationships with back_populates
-    state_info = db.relationship('State', back_populates='universities')
-    programme_type_info = db.relationship('ProgrammeType', back_populates='universities')
+    # Update relationships to use back_populates instead of backref
+    state_info = db.relationship('State', back_populates='universities', lazy='joined')
+    programme_type_info = db.relationship('ProgrammeType', back_populates='universities', lazy='joined')
     
+    # Add search vector column
+    search_vector = db.Column(TSVECTOR)
+
     # Single __table_args__ definition with valid indexes
     __table_args__ = (
         Index('idx_university_name', 'university_name'),
