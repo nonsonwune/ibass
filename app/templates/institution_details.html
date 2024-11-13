@@ -1,80 +1,103 @@
 <!-- app/templates/institution_details.html -->
-{% extends "base.html" %} {% block title %}{{ university.university_name }} -
-Details{% endblock %} {% block content %}
-<div class="container py-5">
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <h1 class="card-title mb-4">{{ university.university_name }}</h1>
+{% extends "base.html" %} {% block content %}
+<!-- Hero Section -->
+<div class="hero-section">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h1 class="display-4 fw-bold mb-3">{{ university.university_name }}</h1>
+        <p class="lead mb-0">
+          {{ university.state }} {% if university.established %}• Est. {{
+          university.established }}{% endif %}
+        </p>
+      </div>
+      <div class="col-md-4 text-md-end">
+        {% if university.website %}
+        <a
+          href="{{ university.website }}"
+          target="_blank"
+          class="btn btn-light btn-lg"
+        >
+          <i class="fas fa-external-link-alt me-2"></i>Visit Website
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
 
-      <div class="row mb-4">
-        <div class="col-md-6">
-          <p class="mb-2">
-            <strong
-              ><i class="fas fa-map-marker-alt text-primary me-2"></i
-              >State:</strong
-            >
-            {{ university.state }}
-          </p>
-          <p class="mb-2">
-            <strong
-              ><i class="fas fa-university text-primary me-2"></i>Program
-              Type:</strong
-            >
-            {{ university.program_type }}
-          </p>
-          {% if university.website %}
-          <p class="mb-2">
-            <strong
-              ><i class="fas fa-globe text-primary me-2"></i>Website:</strong
-            >
-            <a href="{{ university.website }}" target="_blank"
-              >{{ university.website }}</a
-            >
-          </p>
-          {% endif %} {% if university.established %}
-          <p class="mb-2">
-            <strong
-              ><i class="fas fa-calendar text-primary me-2"></i
-              >Established:</strong
-            >
-            {{ university.established }}
-          </p>
-          {% endif %}
+<div class="container">
+  <!-- Quick Facts -->
+  <div class="quick-facts">
+    <div class="stats-card">
+      <div class="d-flex align-items-center">
+        <div class="info-icon">
+          <i class="fas fa-map-marker-alt"></i>
+        </div>
+        <div>
+          <h6 class="mb-1">Location</h6>
+          <p class="mb-0 fw-bold">{{ university.state }}</p>
         </div>
       </div>
+    </div>
 
-      <h2 class="h4 mb-3">Available Courses</h2>
+    <div class="stats-card">
+      <div class="d-flex align-items-center">
+        <div class="info-icon">
+          <i class="fas fa-university"></i>
+        </div>
+        <div>
+          <h6 class="mb-1">Program Type</h6>
+          <p class="mb-0 fw-bold">{{ university.program_type }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-card">
+      <div class="d-flex align-items-center">
+        <div class="info-icon">
+          <i class="fas fa-graduation-cap"></i>
+        </div>
+        <div>
+          <h6 class="mb-1">Available Courses</h6>
+          <p class="mb-0 fw-bold">{{ courses|length }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Available Courses Section -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h2 class="h4 mb-4">Available Courses</h2>
+
       {% if courses %}
-      <div class="table-responsive">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>Course Name</th>
-              <th>Abbreviation</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for course in courses %}
-            <tr>
-              <td>{{ course.course_name }}</td>
-              <td>{{ university.abbrv }}</td>
-              <td>
+      <div class="row">
+        {% for course in courses %}
+        <div class="col-md-6 col-lg-4">
+          <div class="course-card card h-100">
+            <div class="card-body">
+              <h5 class="card-title">{{ course.course_name }}</h5>
+              <p class="card-text text-muted">{{ university.abbrv }}</p>
+              <div class="d-grid">
                 <button
-                  class="btn btn-primary btn-sm"
+                  class="btn btn-primary"
                   data-bs-toggle="modal"
                   data-bs-target="#courseModal{{ course.id }}"
                 >
-                  View Details
+                  View Requirements <i class="fas fa-arrow-right ms-2"></i>
                 </button>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
       </div>
       {% else %}
-      <p class="text-muted">No courses available.</p>
+      <div class="text-center py-5">
+        <i class="fas fa-books fa-3x text-muted mb-3"></i>
+        <p class="lead text-muted">No courses available at the moment.</p>
+      </div>
       {% endif %}
     </div>
   </div>
@@ -85,8 +108,8 @@ Details{% endblock %} {% block content %}
 <div class="modal fade" id="courseModal{{ course.id }}" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">{{ course.course_name }}</h5>
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold">{{ course.course_name }}</h5>
         <button
           type="button"
           class="btn-close"
@@ -94,32 +117,114 @@ Details{% endblock %} {% block content %}
         ></button>
       </div>
       <div class="modal-body">
-        <div class="course-requirements">
-          <h6 class="mb-3">Entry Requirements</h6>
+        <div class="requirements-section">
+          <h6 class="fw-bold mb-4">Entry Requirements</h6>
+
           {% if course.utme_requirements %}
-          <div class="mb-3">
-            <strong>UTME Requirements:</strong>
-            <p class="mb-2">{{ course.utme_requirements }}</p>
+          <div class="mb-4">
+            <div class="d-flex align-items-center mb-2">
+              <i class="fas fa-check-circle text-success me-2"></i>
+              <h6 class="mb-0">UTME Requirements</h6>
+            </div>
+            <p class="ms-4 mb-0">{{ course.utme_requirements }}</p>
           </div>
           {% endif %} {% if course.subjects %}
-          <div class="mb-3">
-            <strong>Required Subjects:</strong>
-            <p class="mb-2">{{ course.subjects }}</p>
+          <div class="mb-4">
+            <div class="d-flex align-items-center mb-2">
+              <i class="fas fa-book text-primary me-2"></i>
+              <h6 class="mb-0">Required Subjects</h6>
+            </div>
+            <p class="ms-4 mb-0">{{ course.subjects }}</p>
           </div>
           {% endif %} {% if course.direct_entry_requirements %}
           <div>
-            <strong>Direct Entry Requirements:</strong>
-            <p class="mb-0">{{ course.direct_entry_requirements }}</p>
+            <div class="d-flex align-items-center mb-2">
+              <i class="fas fa-door-open text-warning me-2"></i>
+              <h6 class="mb-0">Direct Entry Requirements</h6>
+            </div>
+            <p class="ms-4 mb-0">{{ course.direct_entry_requirements }}</p>
           </div>
           {% endif %}
         </div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer border-0">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
           Close
         </button>
+        {% if university.website %}
+        <a
+          href="{{ university.website }}"
+          target="_blank"
+          class="btn btn-primary"
+        >
+          Visit University Website
+        </a>
+        {% endif %}
       </div>
     </div>
   </div>
 </div>
-{% endfor %} {% endblock %}
+{% endfor %} {% endblock %} {% block extra_head %}
+<style>
+  .hero-section {
+    background: linear-gradient(135deg, #0061f2 0%, #00a6fb 100%);
+    color: white;
+    padding: 3rem 0;
+    margin-bottom: 2rem;
+  }
+
+  .stats-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+  }
+
+  .stats-card:hover {
+    transform: translateY(-5px);
+  }
+
+  .info-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 97, 242, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    color: #0061f2;
+  }
+
+  .course-card {
+    border: none;
+    border-radius: 1rem;
+    transition: all 0.3s;
+    margin-bottom: 1rem;
+  }
+
+  .course-card:hover {
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .requirements-section {
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin: 1rem 0;
+  }
+
+  .quick-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .modal-content {
+    border-radius: 1rem;
+    border: none;
+  }
+</style>
+{% endblock %}

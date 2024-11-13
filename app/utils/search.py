@@ -1,6 +1,7 @@
 # app/utils/search.py
+
 from ..extensions import db, cache
-from ..models.university import University, Course
+from ..models.university import University, Course, CourseRequirement, State, ProgrammeType
 from sqlalchemy import func, text
 from sqlalchemy.exc import SQLAlchemyError
 from flask import current_app
@@ -77,24 +78,44 @@ def repair_search_vectors():
         return False
 
 def init_search_vectors():
-    """Initialize search vectors for universities"""
-    sql = """
-        WITH university_data AS (
-            SELECT 
-                u.id,
-                COALESCE(u.university_name, '') || ' ' ||
-                COALESCE(s.name, '') || ' ' ||
-                COALESCE(pt.name, '') as combined_text
-            FROM university u
-            LEFT JOIN state s ON u.state_id = s.id
-            LEFT JOIN programme_type pt ON u.programme_type_id = pt.id
-        )
-        UPDATE university u
-        SET search_vector = to_tsvector('english', ud.combined_text)
-        FROM university_data ud
-        WHERE u.id = ud.id
-    """
-    return db.session.execute(text(sql))
+    """Initialize search vectors for universities and courses"""
+    try:
+        # Initialize university search vectors
+        university_sql = """
+            WITH university_data AS (
+                SELECT 
+                    u.id,
+                    COALESCE(u.university_name, '') || ' ' ||
+                    COALESCE(s.name, '') || ' ' ||
+                    COALESCE(pt.name, '') as combined_text
+                FROM university u
+                LEFT JOIN state s ON u.state_id = s.id
+                LEFT JOIN programme_type pt ON u.programme_type_id = pt.id
+            )
+            UPDATE university u
+            SET search_vector = to_tsvector('english', ud.combined_text)
+            FROM university_data ud
+            WHERE u.id = ud.id
+        """
+        db.session.execute(text(university_sql))
+        
+        # Initialize course search vectors
+        course_sql = """
+            UPDATE course
+            SET search_vector = to_tsvector('english',
+                COALESCE(course_name, '') || ' ' ||
+                COALESCE(code, '')
+            )
+        """
+        db.session.execute(text(course_sql))
+        
+        db.session.commit()
+        return True
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error initializing search vectors: {str(e)}")
+        return False
 
 def perform_search(query_text, state=None, program_type=None, page=1, per_page=10):
     """Unified search function with caching and optimized queries"""
@@ -103,127 +124,20 @@ def perform_search(query_text, state=None, program_type=None, page=1, per_page=1
     
     if results is None:
         try:
-            # Use materialized query for better performance
-            base_university_query = text("""
-                WITH filtered_universities AS (
-                    SELECT *
-                    FROM university
-                    WHERE (:state IS NULL OR state = :state)
-                    AND (:program_type IS NULL OR program_type = :program_type)
-                    AND (
-                        :query IS NULL 
-                        OR search_vector @@ plainto_tsquery('english', :query)
-                        OR university_name ILIKE :like_query
-                    )
-                )
-                SELECT *
-                FROM filtered_universities
-                ORDER BY university_name
-                LIMIT :limit OFFSET :offset
-            """)
-            
             # Calculate pagination
             offset = (page - 1) * per_page
             
-            # Execute university query with fallback to ILIKE
-            universities = db.session.execute(
-                base_university_query,
-                {
-                    'state': state,
-                    'program_type': program_type,
-                    'query': query_text,
-                    'like_query': f'%{query_text}%' if query_text else None,
-                    'limit': per_page,
-                    'offset': offset
-                }
-            ).mappings().all()
-            
-            # Get total count
-            total_unis = db.session.scalar(
-                text("""
-                    SELECT COUNT(*)
-                    FROM university
-                    WHERE (:state IS NULL OR state = :state)
-                    AND (:program_type IS NULL OR program_type = :program_type)
-                    AND (
-                        :query IS NULL 
-                        OR search_vector @@ plainto_tsquery('english', :query)
-                        OR university_name ILIKE :like_query
-                    )
-                """),
-                {
-                    'state': state,
-                    'program_type': program_type,
-                    'query': query_text,
-                    'like_query': f'%{query_text}%' if query_text else None
-                }
+            # Enhanced university query with better join handling
+            universities = execute_university_search(
+                query_text, state, program_type, per_page, offset
             )
+            total_unis = get_university_count(query_text, state, program_type)
             
-            # Similar optimization for courses with JOIN
-            base_course_query = text("""
-                WITH filtered_courses AS (
-                    SELECT 
-                        c.*,
-                        u.state,
-                        u.program_type,
-                        cr.utme_requirements,
-                        cr.direct_entry_requirements,
-                        sr.subjects
-                    FROM course c
-                    JOIN course_requirement cr ON c.id = cr.course_id
-                    JOIN university u ON cr.university_id = u.id
-                    LEFT JOIN subject_requirement sr ON cr.id = sr.course_requirement_id
-                    WHERE (:state IS NULL OR u.state = :state)
-                    AND (:program_type IS NULL OR u.program_type = :program_type)
-                    AND (
-                        :query IS NULL 
-                        OR c.search_vector @@ plainto_tsquery('english', :query)
-                        OR c.course_name ILIKE :like_query
-                        OR c.code ILIKE :like_query
-                    )
-                )
-                SELECT *
-                FROM filtered_courses
-                ORDER BY course_name
-                LIMIT :limit OFFSET :offset
-            """)
-            
-            # Execute course query
-            courses = db.session.execute(
-                base_course_query,
-                {
-                    'state': state,
-                    'program_type': program_type,
-                    'query': query_text,
-                    'like_query': f'%{query_text}%' if query_text else None,
-                    'limit': per_page,
-                    'offset': offset
-                }
-            ).mappings().all()
-            
-            # Get total course count
-            total_courses = db.session.scalar(
-                text("""
-                    SELECT COUNT(*)
-                    FROM course c
-                    JOIN course_requirement cr ON c.id = cr.course_id
-                    JOIN university u ON cr.university_id = u.id
-                    WHERE (:state IS NULL OR u.state = :state)
-                    AND (:program_type IS NULL OR u.program_type = :program_type)
-                    AND (
-                        :query IS NULL 
-                        OR c.search_vector @@ plainto_tsquery('english', :query)
-                        OR c.course_name ILIKE :like_query
-                        OR c.code ILIKE :like_query
-                    )
-                """),
-                {
-                    'state': state,
-                    'program_type': program_type,
-                    'query': query_text,
-                    'like_query': f'%{query_text}%' if query_text else None
-                }
+            # Enhanced course query with better join handling
+            courses = execute_course_search(
+                query_text, state, program_type, per_page, offset
             )
+            total_courses = get_course_count(query_text, state, program_type)
             
             # Create paginated results
             results = {
@@ -250,3 +164,142 @@ def perform_search(query_text, state=None, program_type=None, page=1, per_page=1
             raise
             
     return results
+
+def execute_university_search(query_text, state, program_type, limit, offset):
+    """Execute university search query"""
+    query = text("""
+        WITH filtered_universities AS (
+            SELECT 
+                u.id,
+                u.university_name,
+                s.name as state,
+                pt.name as program_type
+            FROM university u
+            JOIN state s ON u.state_id = s.id
+            JOIN programme_type pt ON u.programme_type_id = pt.id
+            WHERE (:state IS NULL OR s.name = :state)
+            AND (:program_type IS NULL OR pt.name = :program_type)
+            AND (
+                :query IS NULL 
+                OR u.search_vector @@ plainto_tsquery('english', :query)
+                OR u.university_name ILIKE :like_query
+            )
+        )
+        SELECT *
+        FROM filtered_universities
+        ORDER BY university_name
+        LIMIT :limit OFFSET :offset
+    """)
+    
+    return db.session.execute(
+        query,
+        {
+            'state': state,
+            'program_type': program_type,
+            'query': query_text,
+            'like_query': f'%{query_text}%' if query_text else None,
+            'limit': limit,
+            'offset': offset
+        }
+    ).mappings().all()
+
+def get_university_count(query_text, state, program_type):
+    """Get total count of matching universities"""
+    query = text("""
+        SELECT COUNT(*)
+        FROM university u
+        JOIN state s ON u.state_id = s.id
+        JOIN programme_type pt ON u.programme_type_id = pt.id
+        WHERE (:state IS NULL OR s.name = :state)
+        AND (:program_type IS NULL OR pt.name = :program_type)
+        AND (
+            :query IS NULL 
+            OR u.search_vector @@ plainto_tsquery('english', :query)
+            OR u.university_name ILIKE :like_query
+        )
+    """)
+    
+    return db.session.scalar(
+        query,
+        {
+            'state': state,
+            'program_type': program_type,
+            'query': query_text,
+            'like_query': f'%{query_text}%' if query_text else None
+        }
+    )
+
+def execute_course_search(query_text, state, program_type, limit, offset):
+    """Execute course search query"""
+    query = text("""
+        WITH filtered_courses AS (
+            SELECT 
+                c.id,
+                c.course_name,
+                c.code,
+                s.name as state,
+                pt.name as program_type,
+                cr.utme_requirements,
+                cr.direct_entry_requirements,
+                sr.subjects
+            FROM course c
+            JOIN course_requirement cr ON c.id = cr.course_id
+            JOIN university u ON cr.university_id = u.id
+            JOIN state s ON u.state_id = s.id
+            JOIN programme_type pt ON u.programme_type_id = pt.id
+            LEFT JOIN subject_requirement sr ON cr.id = sr.course_requirement_id
+            WHERE (:state IS NULL OR s.name = :state)
+            AND (:program_type IS NULL OR pt.name = :program_type)
+            AND (
+                :query IS NULL 
+                OR c.search_vector @@ plainto_tsquery('english', :query)
+                OR c.course_name ILIKE :like_query
+                OR c.code ILIKE :like_query
+            )
+        )
+        SELECT *
+        FROM filtered_courses
+        ORDER BY course_name
+        LIMIT :limit OFFSET :offset
+    """)
+    
+    return db.session.execute(
+        query,
+        {
+            'state': state,
+            'program_type': program_type,
+            'query': query_text,
+            'like_query': f'%{query_text}%' if query_text else None,
+            'limit': limit,
+            'offset': offset
+        }
+    ).mappings().all()
+
+def get_course_count(query_text, state, program_type):
+    """Get total count of matching courses"""
+    query = text("""
+        SELECT COUNT(*)
+        FROM course c
+        JOIN course_requirement cr ON c.id = cr.course_id
+        JOIN university u ON cr.university_id = u.id
+        JOIN state s ON u.state_id = s.id
+        JOIN programme_type pt ON u.programme_type_id = pt.id
+        WHERE (:state IS NULL OR s.name = :state)
+        AND (:program_type IS NULL OR pt.name = :program_type)
+        AND (
+            :query IS NULL 
+            OR c.search_vector @@ plainto_tsquery('english', :query)
+            OR c.course_name ILIKE :like_query
+            OR c.code ILIKE :like_query
+        )
+    """)
+    
+    return db.session.scalar(
+        query,
+        {
+            'state': state,
+            'program_type': program_type,
+            'query': query_text,
+            'like_query': f'%{query_text}%' if query_text else None
+        }
+    )

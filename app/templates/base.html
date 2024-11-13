@@ -106,14 +106,20 @@
         </ul>
 
         <!-- Enhanced Search -->
-        <form class="d-flex me-2 nav-search" action="{{ url_for('main.search_results') }}" method="GET">
-          <div class="input-group">
-            <input class="form-control search-input" type="search" placeholder="search institutions/courses..." name="q"
-              aria-label="Search" autocomplete="off" />
-            <button class="btn btn-outline-light" type="submit">
-              <i class="fas fa-search"></i>
-            </button>
-          </div>
+        <form class="d-flex me-2 nav-search" id="mainSearchForm" onsubmit="return false;">
+            <div class="input-group">
+                <input 
+                    class="form-control search-input" 
+                    type="search" 
+                    placeholder="search institutions/courses..." 
+                    name="q"
+                    id="mainSearchInput"
+                    aria-label="Search" 
+                    autocomplete="off" />
+                <button class="btn btn-outline-light" type="submit">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
         </form>
 
         <!-- Authentication Navigation -->
@@ -351,7 +357,11 @@
   <!-- App Utilities -->
   <script defer src="{{ url_for('static', filename='js/utils.js') }}"></script>
   <script defer src="{{ url_for('static', filename='js/state.js') }}"></script>
+  
+  {% if request.endpoint in ['course.list', 'course.details'] %}
+  <!-- Course Search - Only load on course-related pages -->
   <script defer src="{{ url_for('static', filename='js/courseSearch.js') }}"></script>
+  {% endif %}
 
   <!-- Page-Specific Scripts -->
   {% block extra_scripts %}{% endblock %}
@@ -507,6 +517,24 @@
       // Run verification
       verifyIcons();
     });
+  </script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+      const mainSearchForm = document.getElementById('mainSearchForm');
+      const mainSearchInput = document.getElementById('mainSearchInput');
+
+      if (mainSearchForm) {
+          mainSearchForm.addEventListener('submit', function(e) {
+              e.preventDefault();
+              
+              const searchQuery = mainSearchInput.value.trim();
+              if (!searchQuery) return;
+
+              // Redirect to search results page with query
+              window.location.href = `/api/search?q=${encodeURIComponent(searchQuery)}`;
+          });
+      }
+  });
   </script>
   </body>
 

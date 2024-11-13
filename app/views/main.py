@@ -42,57 +42,59 @@ def search_results():
     types = request.args.getlist("type")  # Handle multiple type selections
 
     try:
-        # Base universities query
-        universities_query = University.query.filter(
-            or_(
-                University.university_name.ilike(f"%{query_text}%"),
-                text(
-                    "university.search_vector @@ plainto_tsquery('english', :query)"
-                ).bindparams(query=query_text),
+        # Base universities query with proper joins
+        universities_query = University.query\
+            .join(State, University.state_id == State.id)\
+            .join(ProgrammeType, University.programme_type_id == ProgrammeType.id)\
+            .filter(
+                or_(
+                    University.university_name.ilike(f"%{query_text}%"),
+                    text("university.search_vector @@ plainto_tsquery('english', :query)")
+                    .bindparams(query=query_text),
+                )
             )
-        )
 
         # Base courses query using relationships
-        courses_query = Course.query.join(
-            CourseRequirement,
-            CourseRequirement.course_id == Course.id
-        ).join(
-            University,
-            University.id == CourseRequirement.university_id
-        ).filter(
-            or_(
-                Course.course_name.ilike(f"%{query_text}%"),
-                University.abbrv.ilike(f"%{query_text}%"),
-                text(
-                    "course.search_vector @@ plainto_tsquery('english', :query)"
-                ).bindparams(query=query_text),
+        courses_query = Course.query\
+            .join(CourseRequirement, CourseRequirement.course_id == Course.id)\
+            .join(University, University.id == CourseRequirement.university_id)\
+            .join(State, University.state_id == State.id)\
+            .join(ProgrammeType, University.programme_type_id == ProgrammeType.id)\
+            .filter(
+                or_(
+                    Course.course_name.ilike(f"%{query_text}%"),
+                    University.abbrv.ilike(f"%{query_text}%"),
+                    text("course.search_vector @@ plainto_tsquery('english', :query)")
+                    .bindparams(query=query_text),
+                )
+            ).options(
+                joinedload(Course.requirements)
+                .joinedload(CourseRequirement.university)
+                .joinedload(University.state_info)
             )
-        ).options(
-            joinedload(Course.requirements).joinedload(CourseRequirement.university)
-        )
 
         # Get all matching results before filtering for filter options
         all_matching_universities = universities_query.all()
         all_matching_courses = courses_query.all()
 
-        # Extract available filter options from results
+        # Extract available filter options from results using relationships
         available_states = sorted(
-            list(set(uni.state for uni in all_matching_universities))
+            list(set(uni.state_info.name for uni in all_matching_universities))
         )
         available_types = sorted(
-            list(set(uni.program_type for uni in all_matching_universities))
+            list(set(uni.programme_type_info.name for uni in all_matching_universities))
         )
 
         # Apply filters if selected
         if state:
-            universities_query = universities_query.filter(University.state == state)
-            courses_query = courses_query.filter(University.state == state)
+            universities_query = universities_query.filter(State.name == state)
+            courses_query = courses_query.filter(State.name == state)
 
         if types:
             universities_query = universities_query.filter(
-                University.program_type.in_(types)
+                ProgrammeType.name.in_(types)
             )
-            courses_query = courses_query.filter(University.program_type.in_(types))
+            courses_query = courses_query.filter(ProgrammeType.name.in_(types))
 
         # Get final filtered results
         universities = universities_query.all()

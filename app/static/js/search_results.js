@@ -4,210 +4,371 @@ document.addEventListener("DOMContentLoaded", function () {
   const loadingOverlay = document.getElementById("loadingOverlay");
   const filterForm = document.getElementById("filterForm");
   const searchForm = document.querySelector('form[action*="search_results"]');
-
-  // Handle new search - clear filters
-  if (searchForm) {
-    searchForm.addEventListener("submit", function () {
-      // Clear all saved filters when starting a new search
-      localStorage.removeItem("filter_state");
-      localStorage.removeItem("filter_type");
-      localStorage.removeItem("filter_level");
-    });
-  }
-
-  // Handle filter form submission
-  if (filterForm) {
-    filterForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-      showLoadingOverlay(true);
-
-      const formData = new FormData(this);
-      const searchParams = new URLSearchParams(window.location.search);
-
-      // Update search parameters
-      ["state", "q"].forEach((key) => {
-        if (formData.has(key)) {
-          searchParams.set(key, formData.get(key));
-        } else {
-          searchParams.delete(key);
-        }
-      });
-
-      // Handle multiple checkbox selections
-      ["type", "level"].forEach((key) => {
-        searchParams.delete(key);
-        const values = formData.getAll(key);
-        values.forEach((value) => {
-          searchParams.append(key, value);
-        });
-      });
-
-      // Navigate to filtered results
-      window.location.href = `${
-        window.location.pathname
-      }?${searchParams.toString()}`;
-    });
-  }
+  const resultTabs = document.getElementById('resultTabs');
+  let currentRequest = null;
 
   // Initialize tooltips
   initializeTooltips();
 
+  // Handle search form submission
+  if (searchForm) {
+      searchForm.addEventListener("submit", function (e) {
+          e.preventDefault();
+          performSearch();
+      });
+  }
+
+  // Handle filter form submission
+  if (filterForm) {
+      filterForm.addEventListener("submit", function (e) {
+          e.preventDefault();
+          performSearch();
+      });
+  }
+
+  async function performSearch() {
+      try {
+          showLoadingOverlay(true);
+
+          // Cancel any pending requests
+          if (currentRequest) {
+              currentRequest.abort();
+          }
+
+          // Build search parameters
+          const searchParams = new URLSearchParams();
+          const queryInput = searchForm.querySelector('input[name="q"]');
+          if (queryInput) {
+              searchParams.set('q', queryInput.value.trim());
+          }
+          
+          // Add filter parameters if they exist
+          if (filterForm) {
+              const filterData = new FormData(filterForm);
+              filterData.forEach((value, key) => {
+                  if (value) searchParams.append(key, value);
+              });
+          }
+
+          // Create AbortController for this request
+          const controller = new AbortController();
+          currentRequest = controller;
+
+          // Log the request parameters for debugging
+          console.debug('Search parameters:', searchParams.toString());
+
+          // Perform API call with improved error handling
+          const response = await fetch(`/api/search?${searchParams.toString()}`, {
+              signal: controller.signal,
+              headers: {
+                  'Accept': 'application/json',
+                  'X-Requested-With': 'XMLHttpRequest'
+              }
+          });
+
+          console.debug('Response status:', response.status);
+
+          // Handle non-OK responses
+          if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Search failed');
+          }
+
+          const data = await response.json();
+          console.debug('Search response:', data);
+
+          // Validate response data
+          if (!data.universities || !data.courses) {
+              throw new Error('Invalid response format');
+          }
+
+          // Update URL without reload
+          window.history.pushState({}, '', `${window.location.pathname}?${searchParams.toString()}`);
+
+          // Update results
+          updateResults(data);
+
+      } catch (error) {
+          if (error.name === 'AbortError') {
+              console.debug('Request was cancelled');
+              return;
+          }
+          console.error('Search error:', error);
+          showError(error.message || 'An unexpected error occurred. Please try again.');
+      } finally {
+          showLoadingOverlay(false);
+          currentRequest = null;
+      }
+  }
+
+  function updateResults(data) {
+      try {
+          const { universities, courses } = data;
+
+          // Clear existing error messages
+          clearErrors();
+
+          // Update counts
+          updateResultCounts(data);
+
+          // Update universities tab
+          const universitiesContainer = document.getElementById('institutions');
+          if (universitiesContainer) {
+              universitiesContainer.innerHTML = renderUniversities(universities.items);
+          }
+
+          // Update courses tab
+          const coursesContainer = document.getElementById('courses');
+          if (coursesContainer) {
+              coursesContainer.innerHTML = renderCourses(courses.items);
+          }
+
+          // Initialize course modals
+          initializeCourseModals();
+
+      } catch (error) {
+          console.error('Error updating results:', error);
+          showError('Error displaying results. Please try again.');
+      }
+  }
+
+  function renderUniversities(universities) {
+      if (!Array.isArray(universities) || universities.length === 0) {
+          return renderNoResults('universities');
+      }
+
+      return `
+          <div class="row g-4">
+              ${universities.map(uni => `
+                  <div class="col-md-6">
+                      <div class="result-card">
+                          <div class="card-body">
+                              <div class="d-flex justify-content-between align-items-start mb-3">
+                                  <h5 class="card-title mb-0">${escapeHtml(uni.university_name)}</h5>
+                                  <span class="institution-type type-${(uni.program_type || '').toLowerCase()}">${escapeHtml(uni.program_type || '')}</span>
+                              </div>
+                              <p class="card-text">
+                                  <i class="fas fa-map-marker-alt me-2 text-primary"></i>${escapeHtml(uni.state || '')}
+                              </p>
+                              <div class="mt-3">
+                                  <a href="/university/institution/${uni.id}" class="btn btn-primary w-100">
+                                      <i class="fas fa-info-circle me-2"></i>View Details
+                                  </a>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              `).join('')}
+          </div>`;
+  }
+
+  function renderCourses(courses) {
+      if (!Array.isArray(courses) || courses.length === 0) {
+          return renderNoResults('courses');
+      }
+
+      return `
+          <div class="row g-4">
+              ${courses.map(course => `
+                  <div class="col-md-6">
+                      <div class="result-card">
+                          <div class="card-body">
+                              <h5 class="card-title mb-3">${escapeHtml(course.course_name)}</h5>
+                              <p class="card-text mb-2">
+                                  <i class="fas fa-university me-2 text-primary"></i>${escapeHtml(course.state || '')}
+                              </p>
+                              <p class="card-text mb-3">
+                                  <i class="fas fa-graduation-cap me-2 text-success"></i>${escapeHtml(course.program_type || '')}
+                              </p>
+                              <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#courseModal${course.id}">
+                                  <i class="fas fa-info-circle me-2"></i>View Requirements
+                              </button>
+                          </div>
+                      </div>
+                  </div>
+
+                  <!-- Course Modal -->
+                  <div class="modal fade course-modal" id="courseModal${course.id}" tabindex="-1" data-course-id="${course.id}">
+                      <div class="modal-dialog modal-lg">
+                          <div class="modal-content">
+                              <div class="modal-header">
+                                  <h5 class="modal-title">${escapeHtml(course.course_name)}</h5>
+                                  <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                              </div>
+                              <div class="modal-body">
+                                  <div class="requirement-section">
+                                      ${course.utme_requirements ? `
+                                          <div class="mb-3">
+                                              <h6 class="text-primary">UTME Requirements:</h6>
+                                              <p>${escapeHtml(course.utme_requirements)}</p>
+                                          </div>
+                                      ` : ''}
+                                      ${course.direct_entry_requirements ? `
+                                          <div class="mb-3">
+                                              <h6 class="text-primary">Direct Entry Requirements:</h6>
+                                              <p>${escapeHtml(course.direct_entry_requirements)}</p>
+                                          </div>
+                                      ` : ''}
+                                      ${course.subjects ? `
+                                          <div class="mb-3">
+                                              <h6 class="text-primary">Required Subjects:</h6>
+                                              <p>${escapeHtml(course.subjects)}</p>
+                                          </div>
+                                      ` : ''}
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              `).join('')}
+          </div>`;
+  }
+
+  function renderNoResults(type) {
+      return `
+          <div class="no-results">
+              <i class="fas fa-${type === 'universities' ? 'university' : 'book'} mb-3"></i>
+              <h3>No ${type === 'universities' ? 'Institutions' : 'Courses'} Found</h3>
+              <p class="text-muted">Try adjusting your search criteria or filters</p>
+          </div>`;
+  }
+
+  function updateResultCounts(data) {
+      try {
+          const { universities, courses, metadata } = data;
+          const query = searchForm.querySelector('input[name="q"]').value.trim();
+
+          // Update total results count
+          const resultsCount = document.querySelector('.results-count');
+          if (resultsCount) {
+              const total = metadata ? metadata.total_universities + metadata.total_courses :
+                  universities.total + courses.total;
+              resultsCount.textContent = `Found ${total} results for "${escapeHtml(query)}"`;
+          }
+
+          // Update tab counts
+          const universitiesTab = document.querySelector('#institutions-tab');
+          if (universitiesTab) {
+              const uniTotal = metadata ? metadata.total_universities : universities.total;
+              universitiesTab.innerHTML = `<i class="fas fa-university me-2"></i>Institutions (${uniTotal})`;
+          }
+
+          const coursesTab = document.querySelector('#courses-tab');
+          if (coursesTab) {
+              const courseTotal = metadata ? metadata.total_courses : courses.total;
+              coursesTab.innerHTML = `<i class="fas fa-book me-2"></i>Courses (${courseTotal})`;
+          }
+      } catch (error) {
+          console.error('Error updating result counts:', error);
+      }
+  }
+
+  function showLoadingOverlay(show) {
+      if (loadingOverlay) {
+          loadingOverlay.style.display = show ? "flex" : "none";
+          loadingOverlay.setAttribute('aria-busy', show ? 'true' : 'false');
+      }
+  }
+
+  function showError(message) {
+      // Remove any existing error alerts
+      clearErrors();
+
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-danger alert-dismissible fade show';
+      alert.setAttribute('role', 'alert');
+      alert.innerHTML = `
+          <div class="d-flex align-items-center">
+              <i class="fas fa-exclamation-circle me-2"></i>
+              <div>${escapeHtml(message)}</div>
+              <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>`;
+      
+      const container = document.querySelector('.tab-content');
+      if (container) {
+          container.insertBefore(alert, container.firstChild);
+          
+          // Scroll to error message
+          alert.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+  }
+
+  function clearErrors() {
+      const existingAlerts = document.querySelectorAll('.alert-danger');
+      existingAlerts.forEach(alert => alert.remove());
+  }
+
+  function initializeTooltips() {
+      const tooltipTriggerList = [].slice.call(
+          document.querySelectorAll('[data-bs-toggle="tooltip"]')
+      );
+      tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+          new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+  }
+
+  // Utility function to escape HTML and prevent XSS
+  function escapeHtml(unsafe) {
+      if (unsafe == null) return '';
+      return unsafe
+          .toString()
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+  }
+
   // Restore filter state from URL parameters
   restoreFilterState();
-
-  // Handle course modals
-  initializeCourseModals();
 });
 
-// Show or hide loading overlay
-function showLoadingOverlay(show) {
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  if (loadingOverlay) {
-    loadingOverlay.style.display = show ? "flex" : "none";
-  }
-}
-
-// Restore filter state from URL parameters
 function restoreFilterState() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const filterForm = document.getElementById("filterForm");
-
   if (!filterForm) return;
 
+  const urlParams = new URLSearchParams(window.location.search);
+  
   // Restore state filter
-  const state = urlParams.get("state");
-  if (state) {
-    const stateSelect = filterForm.querySelector('select[name="state"]');
-    if (stateSelect) {
+  const stateSelect = filterForm.querySelector('select[name="state"]');
+  const state = urlParams.get('state');
+  if (stateSelect && state) {
       stateSelect.value = state;
-    }
   }
 
-  // Restore type checkboxes
-  const types = urlParams.getAll("type");
-  if (types.length > 0) {
-    types.forEach((type) => {
-      const typeCheckbox = filterForm.querySelector(
-        `input[name="type"][value="${type}"]`
-      );
-      if (typeCheckbox) {
-        typeCheckbox.checked = true;
+  // Restore program type filter
+  const programTypes = urlParams.getAll('program_type');
+  programTypes.forEach(type => {
+      const checkbox = filterForm.querySelector(`input[name="program_type"][value="${type}"]`);
+      if (checkbox) {
+          checkbox.checked = true;
       }
-    });
-  }
-
-  // Restore level checkboxes
-  const levels = urlParams.getAll("level");
-  if (levels.length > 0) {
-    levels.forEach((level) => {
-      const levelCheckbox = filterForm.querySelector(
-        `input[name="level"][value="${level}"]`
-      );
-      if (levelCheckbox) {
-        levelCheckbox.checked = true;
-      }
-    });
-  }
-}
-
-// Initialize tooltips
-function initializeTooltips() {
-  const tooltipTriggerList = [].slice.call(
-    document.querySelectorAll('[data-bs-toggle="tooltip"]')
-  );
-  tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-    new bootstrap.Tooltip(tooltipTriggerEl);
   });
+
+  // Initialize any Bootstrap components
+  if (typeof bootstrap !== 'undefined') {
+      const selects = filterForm.querySelectorAll('select');
+      selects.forEach(select => {
+          new bootstrap.Select(select);
+      });
+  }
 }
 
-// Initialize course modals
-function initializeCourseModals() {
-  const modals = document.querySelectorAll(".course-modal");
-  modals.forEach((modal) => {
-    modal.addEventListener("show.bs.modal", function () {
-      const modalBody = this.querySelector(".modal-body");
-      const courseId = this.getAttribute("data-course-id");
-
-      // Add loading spinner
-      modalBody.innerHTML = `
-          <div class="text-center py-4">
-            <div class="spinner-border text-primary" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2">Loading course details...</p>
-          </div>`;
-
-      // Fetch course details
-      fetchCourseDetails(courseId, modalBody, this);
-    });
-  });
-}
-
-// Fetch course details from API
-function fetchCourseDetails(courseId, modalBody, modalElement) {
-  fetch(`/university/course/${courseId}`)
-    .then((response) => response.json())
-    .then((courseDetails) => {
-      if (courseDetails.error) {
-        modalBody.innerHTML = `
-            <div class="alert alert-danger">
-              <i class="fas fa-exclamation-circle me-2"></i>${courseDetails.error}
-            </div>`;
-        return;
+// Add this to search_results.js to improve error handling
+function handleSearchError(error) {
+  console.error('Search error:', error);
+  
+  // Extract meaningful error message
+  let errorMessage = 'An unexpected error occurred. Please try again.';
+  
+  if (error.message) {
+      try {
+          // Try to parse error message if it's JSON
+          const errorData = JSON.parse(error.message);
+          errorMessage = errorData.error || errorData.message || error.message;
+      } catch {
+          errorMessage = error.message;
       }
-
-      let content = `
-        <div class="course-requirements">
-          <h6 class="mb-3">Entry Requirements</h6>
-      `;
-
-      // Add university name and requirements
-      content += `
-        <h6 class="mb-3">
-          <i class="fas fa-university me-2 text-primary"></i>${
-            courseDetails.university_name || "Unknown University"
-          }
-        </h6>
-        <div class="mb-3">
-          <strong>UTME Requirements:</strong>
-          <p class="mb-2">${
-            courseDetails.utme_requirements || "Not specified"
-          }</p>
-        </div>
-        <div class="mb-3">
-          <strong>Required Subjects:</strong>
-          <p class="mb-2">${courseDetails.subjects || "Not specified"}</p>
-        </div>
-        <div>
-          <strong>Direct Entry Requirements:</strong>
-          <p class="mb-0">${
-            courseDetails.direct_entry_requirements || "Not specified"
-          }</p>
-        </div>
-      `;
-
-      content += "</div>";
-      modalBody.innerHTML = content;
-
-      // Update "View Institution" button link
-      const viewInstitutionBtn = modalElement.querySelector(
-        ".view-institution-btn"
-      );
-      if (viewInstitutionBtn && courseDetails.university_id) {
-        viewInstitutionBtn.href = `/university/institution/${courseDetails.university_id}`;
-      }
-    })
-    .catch((error) => {
-      console.error("Error fetching course details:", error);
-      modalBody.innerHTML = `
-          <div class="alert alert-danger">
-            <i class="fas fa-exclamation-circle me-2"></i>Failed to load course details.
-          </div>`;
-    });
+  }
+  
+  showError(errorMessage);
 }
-
-// Expose functions globally if needed
-window.showLoadingOverlay = showLoadingOverlay;
-window.initializeTooltips = initializeTooltips;
-window.restoreFilterState = restoreFilterState;
-window.initializeCourseModals = initializeCourseModals;
