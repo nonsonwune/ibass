@@ -50,6 +50,21 @@ def update_last_backup_time():
 
 def backup_database():
     """Perform the database backup."""
+    # First verify database connection and existence
+    try:
+        conn = psycopg2.connect(
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST,
+            port=DB_PORT
+        )
+        conn.close()
+    except psycopg2.OperationalError as e:
+        logging.error(f"Database connection failed: {e}")
+        print(f"Database connection failed: {e}")
+        return
+    
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     backup_filename = f'backup_{timestamp}.sql'
     backup_path = os.path.join(BACKUP_DIR, backup_filename)

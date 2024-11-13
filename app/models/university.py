@@ -8,13 +8,48 @@ from sqlalchemy.sql import expression
 import re
 from .requirement import CourseRequirement
 
+# Define State model first
+class State(BaseModel):
+    __tablename__ = 'state'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    code = db.Column(db.String(2))
+    region = db.Column(db.String(20))
+    created_at = db.Column(db.TIMESTAMP, server_default=db.func.now())
+    
+    # Add relationship to University
+    universities = db.relationship('University', back_populates='state_info')
+    
+    def __repr__(self):
+        return f"<State {self.name}>"
+    
+    @property
+    def safe_name(self):
+        return self.name if self.name else ""
+
+# Define ProgrammeType model second
+class ProgrammeType(BaseModel):
+    __tablename__ = 'programme_type'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    category = db.Column(db.String(50))
+    institution_type = db.Column(db.String(50))  # Added this column
+    created_at = db.Column(db.TIMESTAMP, server_default=db.func.now())
+    
+    # Add relationship to University
+    universities = db.relationship('University', back_populates='programme_type_info')
+    
+    def __repr__(self):
+        return f"<ProgrammeType {self.name}>"
+
+# Then define University model
 class University(BaseModel):
     __tablename__ = 'university'
     
     id = db.Column(db.Integer, primary_key=True)
     university_name = db.Column(db.String(256), unique=True, nullable=False)
-    state = db.Column(db.String(50), nullable=False)
-    program_type = db.Column(db.String(50), nullable=False)
     website = db.Column(db.String(255))
     established = db.Column(db.Integer)
     abbrv = db.Column(db.String(255))
@@ -22,30 +57,25 @@ class University(BaseModel):
     state_id = db.Column(db.Integer, db.ForeignKey('state.id'), nullable=False)
     programme_type_id = db.Column(db.Integer, db.ForeignKey('programme_type.id'), nullable=False)
     
-    # Add relationships for new foreign keys
-    state_info = db.relationship('State', backref='universities')
-    programme_type_info = db.relationship('ProgrammeType', backref='universities')
+    # Update relationships with back_populates
+    state_info = db.relationship('State', back_populates='universities')
+    programme_type_info = db.relationship('ProgrammeType', back_populates='universities')
     
+    # Single __table_args__ definition with valid indexes
     __table_args__ = (
         Index('idx_university_name', 'university_name'),
-        Index('idx_university_program_type_hash', 'program_type', postgresql_using='hash'),
         Index('idx_university_search', 'search_vector', postgresql_using='gin'),
     )
     
-    courses = db.relationship(
-        'Course',
-        secondary='course_requirement',
-        primaryjoin="University.id == CourseRequirement.university_id",
-        secondaryjoin="CourseRequirement.course_id == Course.id",
-        back_populates='universities',
-        viewonly=True
-    )
-    
-    course_requirements = db.relationship(
-        'CourseRequirement',
-        back_populates='university',
-        cascade='all, delete-orphan'
-    )
+    @property
+    def state_name(self):
+        """Get state name through relationship"""
+        return self.state_info.name if self.state_info else None
+
+    @property
+    def programme_type_name(self):
+        """Get programme type name through relationship"""
+        return self.programme_type_info.name if self.programme_type_info else None
 
     @classmethod
     def search(cls, query_text=None, state_id=None, programme_type_id=None):
@@ -74,13 +104,6 @@ class University(BaseModel):
             
         return search_query.order_by(cls.university_name)
     
-    __table_args__ = (
-        Index('idx_university_filters', 'state', 'program_type'),
-        Index('idx_university_name', 'university_name'),
-        Index('idx_university_program_type', 'program_type'),
-        Index('idx_university_search', 'search_vector', postgresql_using='gin'),
-    )
-
     @classmethod
     def get_all_states(cls):
         """Get all states with caching"""
@@ -88,25 +111,52 @@ class University(BaseModel):
         states = cache.get(cache_key)
         
         if states is None:
-            states = [state[0] for state in 
-                     db.session.query(cls.state)
-                     .distinct()
-                     .order_by(cls.state)
+            states = [state.name for state in 
+                     db.session.query(State.name)
+                     .order_by(State.name)
                      .all()]
             cache.set(cache_key, states, timeout=3600)
             
         return states
 
-    @property
-    def state_name(self):
-        """Compatibility property for existing views"""
-        return self.state_info.name if self.state_info else self.state
+    # Restore the course_requirements relationship
+    course_requirements = db.relationship(
+        'CourseRequirement',
+        back_populates='university',
+        cascade='all, delete-orphan'
+    )
+    
+    courses = db.relationship(
+        'Course',
+        secondary='course_requirement',
+        primaryjoin="University.id == CourseRequirement.university_id",
+        secondaryjoin="CourseRequirement.course_id == Course.id",
+        back_populates='universities',
+        viewonly=True
+    )
 
-    @property
-    def programme_type_name(self):
-        """Compatibility property for existing views"""
-        return self.programme_type_info.name if self.programme_type_info else self.program_type
+    @classmethod
+    def initialize_search_vectors(cls):
+        """Initialize search vectors with joined data"""
+        sql = """
+            WITH university_data AS (
+                SELECT 
+                    u.id,
+                    COALESCE(u.university_name, '') || ' ' ||
+                    COALESCE(s.name, '') || ' ' ||
+                    COALESCE(pt.name, '') as combined_text
+                FROM university u
+                LEFT JOIN state s ON u.state_id = s.id
+                LEFT JOIN programme_type pt ON u.programme_type_id = pt.id
+            )
+            UPDATE university u
+            SET search_vector = to_tsvector('english', ud.combined_text)
+            FROM university_data ud
+            WHERE u.id = ud.id
+        """
+        return sql
 
+# Then define Course model
 class Course(BaseModel):
     __tablename__ = 'course'
     
@@ -137,24 +187,25 @@ class Course(BaseModel):
     )
 
     @classmethod
-    def search(cls, query_text=None, university_id=None, program_type=None):
+    def search(cls, query_text=None, university_id=None, programme_type_id=None):
         """Optimized course search method"""
-        # Start with a base query
         base_query = db.session.query(
             cls.id,
             cls.course_name,
             cls.code,
-            University.program_type,
+            ProgrammeType.name.label('programme_type'),
             University.university_name
         ).select_from(cls)
         
-        # Use join instead of subquery for better performance
         base_query = base_query.join(
             CourseRequirement,
             CourseRequirement.course_id == cls.id
         ).join(
             University,
             University.id == CourseRequirement.university_id
+        ).join(
+            ProgrammeType,
+            ProgrammeType.id == University.programme_type_id
         )
         
         if query_text:
@@ -162,7 +213,6 @@ class Course(BaseModel):
             search_terms = clean_query.split()
             
             try:
-                # Use GIN index for full-text search
                 combined_terms = ' & '.join(f"{term}:*" for term in search_terms)
                 base_query = base_query.filter(
                     text("course.search_vector @@ to_tsquery('english', :terms)")
@@ -177,29 +227,7 @@ class Course(BaseModel):
         if university_id:
             base_query = base_query.filter(University.id == university_id)
             
-        if program_type:
-            if isinstance(program_type, (list, tuple)):
-                base_query = base_query.filter(University.program_type.in_(program_type))
-            else:
-                base_query = base_query.filter(University.program_type == program_type)
+        if programme_type_id:
+            base_query = base_query.filter(University.programme_type_id == programme_type_id)
         
-        # Add pagination
-        base_query = base_query.distinct().order_by(cls.course_name)
-        
-        return base_query
-
-# Add new models for state and programme_type
-class State(BaseModel):
-    __tablename__ = 'state'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False, unique=True)
-    created_at = db.Column(db.TIMESTAMP, server_default=db.func.now())
-
-class ProgrammeType(BaseModel):
-    __tablename__ = 'programme_type'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)
-    category = db.Column(db.String(50))
-    created_at = db.Column(db.TIMESTAMP, server_default=db.func.now())
+        return base_query.distinct().order_by(cls.course_name)

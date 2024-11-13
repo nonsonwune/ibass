@@ -36,15 +36,18 @@ def verify_search_vector_integrity():
 def repair_search_vectors():
     """Repair any null or invalid search vectors"""
     try:
-        # Update any null university vectors
+        # Update any null university vectors using the new schema
         result = db.session.execute(text("""
-            UPDATE university
+            UPDATE university u
             SET search_vector = to_tsvector('english', 
-                COALESCE(university_name, '') || ' ' ||
-                COALESCE(state, '') || ' ' ||
-                COALESCE(program_type, '')
+                COALESCE(u.university_name, '') || ' ' ||
+                COALESCE(s.name, '') || ' ' ||
+                COALESCE(pt.name, '')
             )
-            WHERE search_vector IS NULL
+            FROM state s, programme_type pt
+            WHERE u.state_id = s.id 
+            AND u.programme_type_id = pt.id
+            AND u.search_vector IS NULL
         """))
         fixed_unis = result.rowcount
         
@@ -53,8 +56,7 @@ def repair_search_vectors():
             UPDATE course
             SET search_vector = to_tsvector('english',
                 COALESCE(course_name, '') || ' ' ||
-                COALESCE(abbrv, '') || ' ' ||
-                COALESCE(subjects, '')
+                COALESCE(code, '')
             )
             WHERE search_vector IS NULL
         """))
@@ -75,88 +77,25 @@ def repair_search_vectors():
         return False
 
 def init_search_vectors():
-    """Initialize search vectors with integrity checking"""
-    try:
-        with db.session.no_autoflush:
-            start_time = time.time()
-            
-            current_app.logger.info("Starting search vector initialization...")
-            
-            # Update universities
-            result = db.session.execute(text("""
-                WITH university_data AS (
-                    SELECT 
-                        id,
-                        COALESCE(university_name, '') || ' ' ||
-                        COALESCE(state, '') || ' ' ||
-                        COALESCE(program_type, '') as combined_text
-                    FROM university
-                )
-                UPDATE university u
-                SET search_vector = to_tsvector('english', ud.combined_text)
-                FROM university_data ud
-                WHERE u.id = ud.id
-            """))
-            
-            db.session.commit()
-            updated_unis = result.rowcount
-            uni_time = time.time() - start_time
-            
-            current_app.logger.info(
-                f"Updated {updated_unis} universities in {uni_time:.1f} seconds "
-                f"({updated_unis/uni_time:.1f} records/second)"
-            )
-            
-            # Update courses
-            course_start_time = time.time()
-            result = db.session.execute(text("""
-                WITH course_data AS (
-                    SELECT 
-                        c.id,
-                        COALESCE(c.course_name, '') || ' ' ||
-                        COALESCE(c.code, '') || ' ' ||
-                        COALESCE(string_agg(u.university_name, ' '), '') || ' ' ||
-                        COALESCE(string_agg(sr.subjects, ' '), '') as combined_text
-                    FROM course c
-                    LEFT JOIN course_requirement cr ON c.id = cr.course_id
-                    LEFT JOIN university u ON cr.university_id = u.id
-                    LEFT JOIN subject_requirement sr ON cr.id = sr.course_requirement_id
-                    GROUP BY c.id, c.course_name, c.code
-                )
-                UPDATE course c
-                SET search_vector = to_tsvector('english', cd.combined_text)
-                FROM course_data cd
-                WHERE c.id = cd.id
-            """))
-            
-            db.session.commit()
-            updated_courses = result.rowcount
-            course_time = time.time() - course_start_time
-            total_time = time.time() - start_time
-            
-            current_app.logger.info(
-                f"Updated {updated_courses} courses in {course_time:.1f} seconds "
-                f"({updated_courses/course_time:.1f} records/second)"
-            )
-            
-            # Verify integrity after updates
-            if not verify_search_vector_integrity():
-                current_app.logger.warning("Detected incomplete search vectors, attempting repair...")
-                if repair_search_vectors():
-                    current_app.logger.info("Successfully repaired search vectors")
-                else:
-                    current_app.logger.error("Failed to repair search vectors")
-            
-            current_app.logger.info(
-                f"Total search vector initialization completed in {total_time:.1f} seconds. "
-                f"Updated {updated_unis + updated_courses} total records."
-            )
-            
-    except Exception as e:
-        current_app.logger.error(f"Error updating search vectors: {str(e)}")
-        db.session.rollback()
-        raise
-    
+    """Initialize search vectors for universities"""
+    sql = """
+        WITH university_data AS (
+            SELECT 
+                u.id,
+                COALESCE(u.university_name, '') || ' ' ||
+                COALESCE(s.name, '') || ' ' ||
+                COALESCE(pt.name, '') as combined_text
+            FROM university u
+            LEFT JOIN state s ON u.state_id = s.id
+            LEFT JOIN programme_type pt ON u.programme_type_id = pt.id
+        )
+        UPDATE university u
+        SET search_vector = to_tsvector('english', ud.combined_text)
+        FROM university_data ud
+        WHERE u.id = ud.id
+    """
+    return db.session.execute(text(sql))
+
 def perform_search(query_text, state=None, program_type=None, page=1, per_page=10):
     """Unified search function with caching and optimized queries"""
     cache_key = f'search:{query_text}:{state}:{program_type}:{page}'

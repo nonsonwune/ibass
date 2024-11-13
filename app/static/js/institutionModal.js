@@ -156,111 +156,95 @@ function populateModal(data) {
       throw new Error("Institution details container not found");
     }
 
-    // Build institution details HTML
+    // Build institution details HTML with state_info and programme_type_info
     institutionDetails.innerHTML = `
         <div class="row">
-          <div class="col-12">
-            <h3 id="institutionName" class="mb-4">${
-              data.university_name || "N/A"
-            }</h3>
-            <div class="institution-info">
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <div class="d-flex align-items-center">
-                    <i class="fas fa-map-marker-alt me-2 text-primary"></i>
-                    <div>
-                      <strong>State:</strong>
-                      <span id="institutionState" class="ms-2">${
-                        data.state || "N/A"
-                      }</span>
+            <div class="col-12">
+                <h3 id="institutionName" class="mb-4">${data.university_name || "N/A"}</h3>
+                <div class="institution-info">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-map-marker-alt me-2 text-primary"></i>
+                                <div>
+                                    <strong>State:</strong>
+                                    <span id="institutionState" class="ms-2">${data.state || "N/A"}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-graduation-cap me-2 text-primary"></i>
+                                <div>
+                                    <strong>Program Type:</strong>
+                                    <span id="institutionProgramType" class="ms-2">${data.program_type || "N/A"}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-globe me-2 text-primary"></i>
+                                <div>
+                                    <strong>Website:</strong>
+                                    <span id="institutionWebsite" class="ms-2">
+                                        ${data.website 
+                                            ? `<a href="${data.website}" target="_blank" rel="noopener noreferrer">${data.website}</a>`
+                                            : "Not Available"
+                                        }
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-calendar-alt me-2 text-primary"></i>
+                                <div>
+                                    <strong>Established:</strong>
+                                    <span id="institutionEstablished" class="ms-2">${data.established || "Not Available"}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                  </div>
                 </div>
-                <div class="col-md-6">
-                  <div class="d-flex align-items-center">
-                    <i class="fas fa-graduation-cap me-2 text-primary"></i>
-                    <div>
-                      <strong>Program Type:</strong>
-                      <span id="institutionProgramType" class="ms-2">${
-                        data.program_type || "N/A"
-                      }</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="d-flex align-items-center">
-                    <i class="fas fa-globe me-2 text-primary"></i>
-                    <div>
-                      <strong>Website:</strong>
-                      <span id="institutionWebsite" class="ms-2">
-                        ${
-                          data.website
-                            ? `<a href="${data.website}" target="_blank" rel="noopener noreferrer">${data.website}</a>`
-                            : "Not Available"
-                        }
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="d-flex align-items-center">
-                    <i class="fas fa-calendar-alt me-2 text-primary"></i>
-                    <div>
-                      <strong>Established:</strong>
-                      <span id="institutionEstablished" class="ms-2">${
-                        data.established || "Not Available"
-                      }</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
-          </div>
         </div>
-  
+
         <!-- Selected Course Section -->
         <div id="selectedCourseSection" class="mt-4" style="display: none">
-          <div class="card border-success">
-            <div class="card-header bg-success text-white d-flex align-items-center">
-              <i class="fas fa-star me-2"></i>
-              <h5 class="mb-0">Selected Course</h5>
+            <div class="card border-success">
+                <div class="card-header bg-success text-white d-flex align-items-center">
+                    <i class="fas fa-star me-2"></i>
+                    <h5 class="mb-0">Selected Course</h5>
+                </div>
+                <div class="card-body" id="selectedCourseDetails"></div>
             </div>
-            <div class="card-body" id="selectedCourseDetails"></div>
-          </div>
         </div>
-  
+
         <div class="courses-section mt-4">
-          <div class="course-search-header d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">Available Courses</h5>
-            <span id="courseCount" class="badge bg-secondary">0 courses</span>
-          </div>
-          <div class="course-search-wrapper mb-3">
-            <input type="text" class="form-control" id="courseSearch" placeholder="Search courses...">
-            <i class="fas fa-search search-icon"></i>
-          </div>
-          <div id="coursesList" class="accordion"></div>
+            <div class="course-search-header d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Available Courses</h5>
+                <span id="courseCount" class="badge bg-secondary">0 courses</span>
+            </div>
+            <div class="course-search-wrapper mb-3">
+                <input type="text" class="form-control" id="courseSearch" placeholder="Search courses...">
+                <i class="fas fa-search search-icon"></i>
+            </div>
+            <div id="coursesList" class="accordion"></div>
         </div>
-      `;
+    `;
 
     // Handle selected course if exists
-    if (data.selected_course) {
+    if (data.selected_course && data.courses) {
       const selectedCourseData = data.courses.find(
-        (course) =>
-          course.course_name.toLowerCase() ===
-          data.selected_course.toLowerCase()
+        course => course.course_name.toLowerCase() === data.selected_course.toLowerCase()
       );
 
       if (selectedCourseData) {
-        const selectedCourseSection = document.getElementById(
-          "selectedCourseSection"
-        );
-        const selectedCourseDetails = document.getElementById(
-          "selectedCourseDetails"
-        );
+        const selectedCourseSection = document.getElementById("selectedCourseSection");
+        const selectedCourseDetails = document.getElementById("selectedCourseDetails");
 
         selectedCourseSection.style.display = "block";
-        selectedCourseDetails.innerHTML =
-          createCourseDetailsHTML(selectedCourseData);
+        selectedCourseDetails.innerHTML = createCourseDetailsHTML(selectedCourseData);
       }
     }
 
@@ -268,20 +252,14 @@ function populateModal(data) {
     if (Array.isArray(data.courses) && data.courses.length > 0) {
       const coursesList = document.getElementById("coursesList");
       coursesList.innerHTML = data.courses
-        .map((course, index) =>
-          createCourseHTML(course, data.selected_course, index)
-        )
+        .map((course, index) => createCourseHTML(course, data.selected_course, index))
         .join("");
 
       // Update course count
       const totalCourses = data.courses.length;
-      const coursesCounter = document.querySelector(
-        ".course-search-header .badge"
-      );
+      const coursesCounter = document.querySelector(".course-search-header .badge");
       if (coursesCounter) {
-        coursesCounter.textContent = `${totalCourses} course${
-          totalCourses !== 1 ? "s" : ""
-        }`;
+        coursesCounter.textContent = `${totalCourses} course${totalCourses !== 1 ? "s" : ""}`;
       }
     } else {
       const coursesList = document.getElementById("coursesList");
@@ -291,12 +269,6 @@ function populateModal(data) {
             <p class="mb-0">No courses available for this institution.</p>
           </div>
         `;
-      const coursesCounter = document.querySelector(
-        ".course-search-header .badge"
-      );
-      if (coursesCounter) {
-        coursesCounter.textContent = "0 courses";
-      }
     }
 
     // Initialize course search functionality

@@ -4,81 +4,139 @@ from flask_login import current_user
 from sqlalchemy import func, distinct
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
-from ..models.university import University, Course, CourseRequirement
+from ..models.university import University, Course, CourseRequirement, State, ProgrammeType
 from ..models.interaction import Bookmark
 from ..extensions import db
 from ..config import Config
 
 bp = Blueprint("university", __name__)
 
-@bp.route("/recommend", methods=["GET"])
+@bp.route("/recommend")
 def recommend():
     try:
-        # Get pagination and filter parameters
-        page = request.args.get("page", 1, type=int)
-        location = request.args.get("location")
-        programme_types = request.args.get("programme_type", "").split(",")
-        preferred_course = request.args.get("course")
-        
-        per_page = current_app.config.get('RESULTS_PER_PAGE', 6)
+        # Get filter parameters
+        location = request.args.get('location', '')
+        programme_types = request.args.get('programme_type', '').split(',')
+        course = request.args.get('course', '')
+        page = int(request.args.get('page', 1))
+        per_page = 10
 
-        # Start with base query including course join if needed
-        base_query = db.session.query(University).distinct()
-        
-        if preferred_course:
-            base_query = base_query.join(
-                CourseRequirement,
-                University.course_requirements
-            ).join(
-                Course,
-                CourseRequirement.course_id == Course.id
-            ).filter(Course.course_name == preferred_course)
+        # Build base query with eager loading
+        query = University.query\
+            .options(joinedload(University.state_info))\
+            .options(joinedload(University.programme_type_info))\
+            .options(joinedload(University.courses))\
+            .join(State, University.state_id == State.id)\
+            .join(ProgrammeType, University.programme_type_id == ProgrammeType.id)
 
-        # Get filter counts and available options before applying remaining filters
-        filter_results = get_filter_counts_and_options(base_query, location)
+        # If course is specified, join with course tables
+        if course and course != 'ALL':
+            query = query.join(CourseRequirement, University.id == CourseRequirement.university_id)\
+                        .join(Course, Course.id == CourseRequirement.course_id)\
+                        .filter(Course.course_name == course)
 
-        # Apply remaining filters
-        query = apply_filters(base_query, location, programme_types)
+        # Apply filters
+        if location:
+            query = query.filter(State.name == location)
         
-        # Get active filters for current result set
-        active_filters = get_active_filters(query)
+        if programme_types and programme_types[0]:
+            query = query.filter(ProgrammeType.name.in_(programme_types))
+
+        # Get total count before pagination
+        total = query.count()
         
-        # Get paginated results
-        pagination_data = get_paginated_results(query, page, per_page)
+        # Add pagination
+        paginated_unis = query.paginate(page=page, per_page=per_page, error_out=False)
         
-        # Process and format university results
-        formatted_results = format_university_results(
-            pagination_data['results'], 
-            preferred_course
+        # Format universities for display
+        recommendations = []
+        for uni in paginated_unis.items:
+            uni_data = {
+                'id': uni.id,
+                'university_name': uni.university_name,
+                'state': uni.state_info.name,  # Use state_info relationship
+                'program_type': uni.programme_type_info.name,  # Use programme_type_info relationship
+                'total_courses': len(uni.courses),
+                'selected_course': course if course else None
+            }
+            recommendations.append(uni_data)
+
+        # Get available filters based on current selection
+        available_states = db.session.query(State.name)\
+            .join(University)\
+            .distinct()\
+            .order_by(State.name)\
+            .all()
+        available_states = [state[0] for state in available_states]
+
+        available_program_types = db.session.query(ProgrammeType.name)\
+            .join(University)\
+            .distinct()\
+            .order_by(ProgrammeType.name)\
+            .all()
+        available_program_types = [pt[0] for pt in available_program_types]
+
+        # Get active filters (those that would return results)
+        active_query = University.query
+        if course and course != 'ALL':
+            active_query = active_query.join(CourseRequirement)\
+                                     .join(Course)\
+                                     .filter(Course.course_name == course)
+
+        active_states = db.session.query(State.name)\
+            .join(University, State.id == University.state_id)\
+            .filter(University.id.in_(active_query.with_entities(University.id)))\
+            .distinct()\
+            .all()
+        active_states = [state[0] for state in active_states]
+
+        active_program_types = db.session.query(ProgrammeType.name)\
+            .join(University, ProgrammeType.id == University.programme_type_id)\
+            .filter(University.id.in_(active_query.with_entities(University.id)))\
+            .distinct()\
+            .all()
+        active_program_types = [pt[0] for pt in active_program_types]
+
+        # Get counts for filters
+        state_counts = dict(
+            db.session.query(State.name, func.count(University.id))
+            .join(University, State.id == University.state_id)
+            .group_by(State.name)
+            .all()
         )
 
-        # Get user bookmarks if authenticated
-        user_bookmarks = get_user_bookmarks()
+        program_type_counts = dict(
+            db.session.query(ProgrammeType.name, func.count(University.id))
+            .join(University, ProgrammeType.id == University.programme_type_id)
+            .group_by(ProgrammeType.name)
+            .all()
+        )
 
-        # Prepare template data
-        template_data = {
-            'recommendations': formatted_results,
-            'location': location,
-            'course': preferred_course,
-            'user_bookmarks': user_bookmarks,
-            'total_results': pagination_data['total_results'],
-            'page': page,
-            'total_pages': pagination_data['total_pages'],
-            'has_prev': pagination_data['has_prev'],
-            'has_next': pagination_data['has_next'],
-            'programme_types': programme_types if programme_types[0] else [],
-            **filter_results,
-            **active_filters
-        }
-
-        return render_template("recommend.html", **template_data)
+        return render_template('recommend.html',
+            recommendations=recommendations,
+            total_results=total,
+            page=page,
+            per_page=per_page,
+            total_pages=paginated_unis.pages,
+            has_next=paginated_unis.has_next,
+            has_prev=paginated_unis.has_prev,
+            location=location,
+            programme_types=programme_types,
+            course=course,
+            available_states=available_states,
+            available_program_types=available_program_types,
+            active_states=active_states,
+            active_program_types=active_program_types,
+            state_counts=state_counts,
+            program_type_counts=program_type_counts,
+            user_bookmarks=get_user_bookmarks() if current_user.is_authenticated else []
+        )
 
     except Exception as e:
-        current_app.logger.error(f"Error in recommendations: {str(e)}")
-        return render_template("recommend.html", 
+        current_app.logger.error(f"Error in recommendations: {str(e)}", exc_info=True)
+        return render_template('recommend.html',
             recommendations=[],
-            error="An error occurred while getting recommendations. Please try again.",
-            **get_empty_template_data(location, programme_types, preferred_course)
+            error="An error occurred while fetching recommendations."
         )
 
 def get_filter_counts_and_options(query, location=None):

@@ -5,15 +5,18 @@ from flask_login import login_required, current_user
 from contextlib import contextmanager
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
-from ..models.university import University, Course, CourseRequirement
+from ..models.university import University, Course, CourseRequirement, ProgrammeType, State
 from ..models.interaction import Bookmark, Comment, Vote
 from ..models.user import User
 from ..extensions import db
 from ..config import Config
 from ..utils.decorators import admin_required
 import bleach
-from sqlalchemy import text
+from sqlalchemy import distinct, text
 from sqlalchemy import func
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+import time
 
 bp = Blueprint('api', __name__)
 
@@ -26,66 +29,155 @@ ALLOWED_ATTRIBUTES = {
 @bp.route('/locations')
 def get_locations():
     try:
-        locations = University.get_all_states()
-        # Add "All States" as the first option
-        locations.insert(0, "ALL")
-        current_app.logger.info(f"Retrieved {len(locations)} locations including ALL option")
-        return jsonify(locations)
+        # Add debug logging for query
+        current_app.logger.debug("Starting location query")
+        
+        # Enable SQLAlchemy query logging
+        @event.listens_for(Engine, "before_cursor_execute")
+        def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+            conn.info.setdefault('query_start_time', []).append(time.time())
+            current_app.logger.debug("SQL: %s", statement)
+
+        @event.listens_for(Engine, "after_cursor_execute")
+        def after_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+            total = time.time() - conn.info['query_start_time'].pop(-1)
+            current_app.logger.debug("Total Time: %f", total)
+
+        # Query all states
+        try:
+            states = db.session.query(State).order_by(State.name).all()
+            current_app.logger.debug(f"Raw states from database: {states}")
+        except Exception as db_error:
+            current_app.logger.error(f"Database query error: {str(db_error)}")
+            raise
+
+        # Process states
+        try:
+            locations = []
+            for state in states:
+                current_app.logger.debug(f"Processing state: {state}")
+                if hasattr(state, 'name') and state.name:
+                    locations.append(state.name)
+                else:
+                    current_app.logger.warning(f"Invalid state object: {state}")
+        except Exception as proc_error:
+            current_app.logger.error(f"State processing error: {str(proc_error)}")
+            raise
+
+        current_app.logger.debug(f"Processed locations: {locations}")
+        
+        if locations:
+            locations.insert(0, "ALL")
+            current_app.logger.info(f"Retrieved {len(locations)} locations including ALL option")
+            return jsonify(locations)
+        else:
+            current_app.logger.warning("No states found in database")
+            return jsonify({
+                "status": "error",
+                "message": "No states available in the database"
+            }), 404
+            
     except Exception as e:
-        current_app.logger.error(f"Error retrieving locations: {str(e)}")
-        return jsonify({"error": "Failed to retrieve locations"}), 500
+        current_app.logger.error(f"Error retrieving locations: {str(e)}", exc_info=True)
+        return jsonify({
+            "status": "error",
+            "message": "Failed to retrieve locations",
+            "details": str(e) if current_app.debug else None
+        }), 500
 
 @bp.route('/programme_types', methods=['GET'])
-def get_programme_types():
-    state = request.args.get('state')
+def get_all_programme_types():
+    """Get all programme types when no state is selected"""
     try:
-        if state:
-            programme_types = (
-                db.session.query(University.program_type)
-                .filter(University.state == state)
-                .distinct()
-                .order_by(University.program_type)
-                .all()
-            )
-        else:
-            programme_types = (
-                db.session.query(University.program_type)
-                .distinct()
-                .order_by(University.program_type)
-                .all()
-            )
+        current_app.logger.debug("Fetching all programme types")
+        
+        # Query directly from ProgrammeType table
+        programme_types = db.session.query(
+            ProgrammeType.name,
+            ProgrammeType.category,
+            ProgrammeType.institution_type
+        ).order_by(ProgrammeType.name).all()
+        
+        current_app.logger.debug(f"Found {len(programme_types)} programme types")
+        
+        # Format response
+        types_list = [{
+            'name': pt[0],
+            'category': pt[1],
+            'institution_type': pt[2]
+        } for pt in programme_types]
+        
+        return jsonify({
+            'status': 'success',
+            'data': types_list
+        }), 200
 
-        # Convert list of tuples to list of strings
-        programme_types_list = [ptype[0] for ptype in programme_types]
-
-        # Add "ALL_INSTITUTION_TYPES" as the first option if not already present
-        if programme_types_list and "ALL_INSTITUTION_TYPES" not in programme_types_list:
-            programme_types_list.insert(0, "ALL_INSTITUTION_TYPES")
-
-        # Sort programme types alphabetically, keeping "ALL_INSTITUTION_TYPES" at the top
-        if "ALL_INSTITUTION_TYPES" in programme_types_list:
-            all_institution = programme_types_list.pop(
-                programme_types_list.index("ALL_INSTITUTION_TYPES")
-            )
-            programme_types_list.sort()
-            programme_types_list.insert(0, all_institution)
-        else:
-            programme_types_list.sort()
-
-        current_app.logger.info(f"Retrieved {len(programme_types_list)} programme types for state: {state}")
-        return jsonify(programme_types_list)
     except Exception as e:
-        current_app.logger.error(f"Error in get_programme_types: {str(e)}")
-        return jsonify({"error": "An error occurred while fetching programme types."}), 500
+        current_app.logger.error(f"Error in get_all_programme_types: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': f"Database error: {str(e)}"
+        }), 500
+
+@bp.route('/programme-types/<state>', methods=['GET'])
+def get_programme_types(state):
+    """Get programme types for institutions in a specific state"""
+    try:
+        # Base query for programme types
+        query = db.session.query(
+            ProgrammeType.name,
+            ProgrammeType.category,
+            ProgrammeType.institution_type
+        )
+        
+        if state != 'ALL':
+            # Join with University and State tables only if filtering by state
+            query = query.join(
+                University, 
+                University.programme_type_id == ProgrammeType.id
+            ).join(
+                State, 
+                University.state_id == State.id
+            ).filter(State.name == state)
+        
+        programme_types = query.distinct().order_by(ProgrammeType.name).all()
+        
+        # Format response
+        types_list = [{
+            'name': pt[0],
+            'category': pt[1],
+            'institution_type': pt[2]
+        } for pt in programme_types]
+        
+        return jsonify({
+            'status': 'success',
+            'data': types_list
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error in get_programme_types: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @bp.route('/universities', methods=['GET'])
 def get_universities():
     state = request.args.get('state')
     try:
+        query = (db.session.query(
+            University.university_name,
+            State.name.label('state'),
+            ProgrammeType.name.label('program_type')
+        )
+        .join(State, University.state_id == State.id)
+        .join(ProgrammeType, University.programme_type_id == ProgrammeType.id))
+        
         if state:
-            universities = University.query.filter_by(state=state).all()
-        else:
-            universities = University.query.all()
+            query = query.filter(State.name == state)
+            
+        universities = query.all()
+        
         return jsonify([{
             "university_name": uni.university_name,
             "state": uni.state,
@@ -97,96 +189,89 @@ def get_universities():
 
 @bp.route('/courses', methods=['POST'])
 def get_courses():
-    data = request.get_json()
-    state = data.get('state')
-    programme_types = data.get('programme_type', '').split(',')
-    load_all = data.get('load_all', False)
-    
     try:
-        base_query = """
-            WITH grouped_courses AS (
-                SELECT 
-                    c.id,
-                    c.course_name,
-                    c.code,
-                    COUNT(DISTINCT u.id) as institution_count,
-                    array_agg(
-                        DISTINCT jsonb_build_object(
-                            'university_name', u.university_name,
-                            'state', u.state,
-                            'program_type', u.program_type
-                        )
-                    ) as institutions
-                FROM course c
-                JOIN course_requirement cr ON c.id = cr.course_id
-                JOIN university u ON u.id = cr.university_id
-                WHERE 1=1
-        """
-        params = {}
+        # Add CSRF protection
+        if request.method == "POST":
+            csrf_token = request.headers.get('X-CSRF-TOKEN')
+            if not csrf_token:
+                current_app.logger.warning("CSRF token missing in request")
+                return jsonify({
+                    'status': 'error',
+                    'message': 'CSRF token is missing'
+                }), 400
+
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'status': 'error',
+                'message': 'No data provided'
+            }), 400
+
+        state = data.get('state')
+        programme_types = data.get('programme_type', '').split(',')
+        load_all = data.get('load_all', False)
+        
+        current_app.logger.debug(f"Getting courses for state: {state}, types: {programme_types}")
+        
+        # Build base query
+        query = db.session.query(
+            Course.id,
+            Course.course_name,
+            Course.code,
+            func.count(distinct(University.id)).label('institution_count')
+        ).join(
+            CourseRequirement,
+            Course.id == CourseRequirement.course_id
+        ).join(
+            University,
+            CourseRequirement.university_id == University.id
+        ).join(
+            State,
+            University.state_id == State.id
+        ).join(
+            ProgrammeType,
+            University.programme_type_id == ProgrammeType.id
+        )
+        
+        # Apply filters
+        if state and state != 'ALL':
+            query = query.filter(State.name == state)
         
         if programme_types and programme_types[0]:
-            base_query += " AND u.program_type = ANY(:program_types)"
-            params['program_types'] = programme_types
-            
-        if state and state != 'ALL':
-            base_query += " AND u.state = :state"
-            params['state'] = state
-            
-        base_query += """
-                GROUP BY c.id, c.course_name, c.code
-            ),
-            distinct_courses AS (
-                SELECT DISTINCT ON (LOWER(course_name))
-                    id,
-                    course_name,
-                    code,
-                    institution_count,
-                    institutions
-                FROM grouped_courses
-                ORDER BY LOWER(course_name), institution_count DESC
-            )
-            SELECT 
-                id,
-                course_name,
-                code,
-                institution_count,
-                institutions
-            FROM distinct_courses
-            ORDER BY course_name
-        """
+            query = query.filter(ProgrammeType.name.in_(programme_types))
         
-        # Get total count
-        count_query = "SELECT COUNT(*) FROM (" + base_query + ") AS count_query"
-        total = db.session.execute(text(count_query), params).scalar()
+        # Group and order
+        query = query.group_by(
+            Course.id,
+            Course.course_name,
+            Course.code
+        ).order_by(Course.course_name)
         
-        if not load_all:
-            base_query += " LIMIT :limit OFFSET :offset"
-            params['limit'] = 50
-            params['offset'] = (1 - 1) * 50
+        # Execute query
+        courses = query.all()
         
-        results = db.session.execute(text(base_query), params).fetchall()
+        # Format response
+        response_data = [{
+            'id': course.id,
+            'course_name': course.course_name,
+            'code': course.code,
+            'institution_count': course.institution_count
+        } for course in courses]
         
-        courses = [{
-            'id': row.id,
-            'course_name': row.course_name,
-            'code': row.code or '',
-            'institution_count': row.institution_count,
-            'institutions': row.institutions
-        } for row in results]
-        
-        current_app.logger.info(f"Found {len(courses)} unique courses out of {total} total matches")
+        current_app.logger.info(f"Found {len(response_data)} courses")
         
         return jsonify({
-            'courses': courses,
-            'total': total,
-            'page': 1,
-            'per_page': 50,
-            'pages': (total + 50 - 1) // 50
+            'status': 'success',
+            'courses': response_data,
+            'total': len(response_data)
         })
         
     except Exception as e:
-        current_app.logger.error(f"Error retrieving courses: {str(e)}")
-        return jsonify({'error': 'Failed to retrieve courses'}), 500
+        current_app.logger.error(f"Error getting courses: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 def validate_course_data(course, requirements):
     """Validate course data before sending"""
@@ -202,88 +287,66 @@ def validate_course_data(course, requirements):
         current_app.logger.error(f"Error validating course data: {str(e)}")
         return None
 
-@bp.route('/institution/<int:uni_id>')
-def get_institution_details(uni_id):
+@bp.route('/institution/<int:id>')
+def get_institution_details(id):
     try:
+        # Get query parameters
         selected_course = request.args.get('selected_course')
-        university = University.query.get_or_404(uni_id)
         
-        current_app.logger.debug(f"Fetching courses for university {uni_id}")
+        # Query university with eager loading of relationships
+        university = University.query\
+            .options(joinedload(University.state_info))\
+            .options(joinedload(University.programme_type_info))\
+            .options(joinedload(University.courses))\
+            .get_or_404(id)
         
-        # Get all requirements first
-        requirements = CourseRequirement.get_course_requirements(uni_id)
+        # Get requirements with proper joins
+        requirements = CourseRequirement.query\
+            .filter_by(university_id=id)\
+            .options(joinedload(CourseRequirement.course))\
+            .all()
         
-        # Log requirement details
-        current_app.logger.info(f"Found {len(requirements)} requirements for university {uni_id}")
+        current_app.logger.info(f"Found {len(requirements)} requirements for university {id}")
         
-        # Create requirements lookup dict with logging
-        req_lookup = {req.course_id: req for req in requirements} if requirements else {}
-        current_app.logger.debug(f"Created lookup for {len(req_lookup)} requirements")
+        # Create requirements lookup
+        req_lookup = {req.course_id: req for req in requirements}
         
-        courses = (Course.query
-                  .join(CourseRequirement, Course.id == CourseRequirement.course_id)
-                  .filter(CourseRequirement.university_id == uni_id)
-                  .order_by(Course.course_name)
-                  .all())
-
-        # Log course details
-        current_app.logger.info(f"Found {len(courses)} courses for university {uni_id}")
-        course_data = []
+        # Get courses with requirements
+        courses = Course.query\
+            .join(CourseRequirement)\
+            .filter(CourseRequirement.university_id == id)\
+            .order_by(Course.course_name)\
+            .all()
         
-        for course in courses:
-            req = req_lookup.get(course.id)
-            current_app.logger.debug(
-                f"Processing course {course.id} ({course.course_name}): "
-                f"Has requirement: {bool(req)}"
-            )
-            
-            if req:
-                current_app.logger.debug(
-                    f"Requirements for course {course.id}: "
-                    f"UTME: {bool(req.utme_requirements)}, "
-                    f"DE: {bool(req.direct_entry_requirements)}, "
-                    f"Subjects: {bool(req.get_subjects())}"
-                )
-            
-            course_data.append({
-                "id": course.id,
-                "course_name": course.course_name,
-                "utme_requirements": (
-                    req.utme_requirements 
-                    if req and req.utme_template 
-                    else "[Not Available]"  # Changed to explicit message
-                ),
-                "direct_entry_requirements": (
-                    req.direct_entry_requirements 
-                    if req and req.de_template 
-                    else "[Not Available]"  # Changed to explicit message
-                ),
-                "subjects": (
-                    req.get_subjects() 
-                    if req and req.subject_requirement 
-                    else "[Not Available]"  # Changed to explicit message
-                )
-            })
-
+        current_app.logger.info(f"Found {len(courses)} courses for university {id}")
+        
+        # Format response
         response_data = {
             "id": university.id,
             "university_name": university.university_name,
-            "state": university.state,
-            "program_type": university.program_type,
+            "state": university.state_info.name,  # Use state_info relationship
+            "program_type": university.programme_type_info.name,  # Use programme_type_info relationship
             "website": university.website,
             "established": university.established,
             "abbrv": university.abbrv,
             "selected_course": selected_course,
-            "courses": course_data
+            "courses": []
         }
-
-        if not requirements:
-            current_app.logger.warning(
-                f"No requirements found for university {uni_id}. "
-                f"Found {len(courses)} courses without requirements."
-            )
-
-        return jsonify(response_data), 200
+        
+        # Add course data
+        for course in courses:
+            req = req_lookup.get(course.id)
+            course_data = {
+                "id": course.id,
+                "course_name": course.course_name,
+                "utme_requirements": req.utme_requirements if req else None,
+                "direct_entry_requirements": req.direct_entry_requirements if req else None,
+                "subjects": req.subject_requirement.subjects if req and req.subject_requirement else None
+            }
+            response_data["courses"].append(course_data)
+        
+        return jsonify(response_data)
+        
     except Exception as e:
         current_app.logger.error(f"Error in get_institution_details: {str(e)}", exc_info=True)
         return jsonify({

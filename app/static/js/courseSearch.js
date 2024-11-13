@@ -1,133 +1,94 @@
 // app/static/js/courseSearch.js
+
 const CourseSearch = {
-  debounceTimeout: null,
+    initialize() {
+        this.searchInput = document.getElementById('courseSearch');
+        this.coursesList = document.getElementById('coursesList');
+        
+        if (!this.searchInput || !this.coursesList) {
+            console.warn('Course search elements not found');
+            return;
+        }
 
-  initialize() {
-    const searchInput = document.getElementById("courseSearch");
-    if (!searchInput) return;
+        this.setupEventListeners();
+    },
 
-    searchInput.value = AppState.modalState.courseSearchTerm;
+    setupEventListeners() {
+        let searchTimeout;
 
-    // Remove old event listener and add new one
-    const newSearchInput = searchInput.cloneNode(true);
-    searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+        this.searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const searchText = e.target.value.toLowerCase().trim();
 
-    newSearchInput.addEventListener("input", this.handleSearch.bind(this));
+            // Debounce search
+            searchTimeout = setTimeout(() => {
+                this.filterCourses(searchText);
+            }, 300);
+        });
 
-    // Initialize course count from the actual data
-    this.initializeCourseCount();
-  },
+        // Close expanded accordions when starting a new search
+        this.searchInput.addEventListener('focus', () => {
+            const expandedItems = this.coursesList.querySelectorAll('.accordion-collapse.show');
+            expandedItems.forEach(item => {
+                const button = item.previousElementSibling.querySelector('.accordion-button');
+                if (button) button.click();
+            });
+        });
+    },
 
-  initializeCourseCount() {
-    const coursesList = document.getElementById("coursesList");
-    if (coursesList) {
-      const totalCourses =
-        coursesList.querySelectorAll(".accordion-item").length;
-      this.updateCourseCount(totalCourses);
+    filterCourses(searchText) {
+        const courseItems = this.coursesList.querySelectorAll('.accordion-item');
+        let visibleCount = 0;
 
-      // Update the courses badge in the header
-      const coursesCounter = document.querySelector(
-        ".course-search-header .badge"
-      );
-      if (coursesCounter) {
-        coursesCounter.textContent = `${totalCourses || 0} course${
-          totalCourses !== 1 ? "s" : ""
-        }`;
-      }
+        courseItems.forEach(item => {
+            const courseName = item.querySelector('.accordion-button').textContent.toLowerCase();
+            const isVisible = !searchText || courseName.includes(searchText);
+            
+            item.style.display = isVisible ? '' : 'none';
+            if (isVisible) visibleCount++;
+        });
+
+        // Update course count
+        const courseCount = document.getElementById('courseCount');
+        if (courseCount) {
+            courseCount.textContent = `${visibleCount} course${visibleCount !== 1 ? 's' : ''}`;
+        }
+
+        // Show no results message if needed
+        this.toggleNoResultsMessage(visibleCount === 0, searchText);
+    },
+
+    toggleNoResultsMessage(show, searchText) {
+        let noResultsDiv = this.coursesList.querySelector('.no-results-message');
+        
+        if (show) {
+            if (!noResultsDiv) {
+                noResultsDiv = document.createElement('div');
+                noResultsDiv.className = 'no-results-message text-center py-4 text-muted';
+                noResultsDiv.innerHTML = `
+                    <i class="fas fa-search fa-2x mb-2"></i>
+                    <p class="mb-0">No courses found matching "${searchText}"</p>
+                `;
+                this.coursesList.appendChild(noResultsDiv);
+            }
+        } else if (noResultsDiv) {
+            noResultsDiv.remove();
+        }
+    },
+
+    highlightMatch(text, searchText) {
+        if (!searchText) return text;
+        const regex = new RegExp(`(${searchText})`, 'gi');
+        return text.replace(regex, '<strong>$1</strong>');
     }
-  },
-
-  handleSearch(event) {
-    clearTimeout(this.debounceTimeout);
-
-    this.debounceTimeout = setTimeout(() => {
-      const searchTerm = event.target.value.toLowerCase().trim();
-      AppState.modalState.courseSearchTerm = searchTerm;
-      this.filterCourses(searchTerm);
-    }, 300);
-  },
-
-  filterCourses(searchTerm) {
-    const coursesList = document.getElementById("coursesList");
-    if (!coursesList) return;
-
-    const items = coursesList.querySelectorAll(".accordion-item");
-    let visibleCount = 0;
-
-    items.forEach((item) => {
-      const courseName = item
-        .querySelector(".accordion-button")
-        .textContent.toLowerCase();
-      const isVisible = courseName.includes(searchTerm);
-
-      this.toggleCourseVisibility(item, isVisible);
-      if (isVisible) visibleCount++;
-    });
-
-    this.updateCourseCount(visibleCount);
-    this.updateNoResultsMessage(visibleCount, searchTerm);
-  },
-
-  toggleCourseVisibility(item, isVisible) {
-    if (isVisible) {
-      item.style.display = "block";
-      setTimeout(() => {
-        item.style.opacity = "1";
-        item.style.transform = "translateY(0)";
-      }, 50);
-    } else {
-      item.style.opacity = "0";
-      item.style.transform = "translateY(10px)";
-      setTimeout(() => {
-        item.style.display = "none";
-      }, 300);
-    }
-  },
-
-  updateCourseCount(visibleCount) {
-    const countElement = document.getElementById("courseCount");
-    if (countElement) {
-      countElement.textContent = `${visibleCount || 0} course${
-        visibleCount !== 1 ? "s" : ""
-      }`;
-
-      // Also update the courses badge in the header
-      const coursesCounter = document.querySelector(
-        ".course-search-header .badge"
-      );
-      if (coursesCounter) {
-        coursesCounter.textContent = `${visibleCount || 0} course${
-          visibleCount !== 1 ? "s" : ""
-        }`;
-      }
-    }
-  },
-
-  updateNoResultsMessage(visibleCount, searchTerm) {
-    const container = document.getElementById("coursesList");
-    let message = document.getElementById("noCoursesFound");
-
-    if (visibleCount === 0) {
-      if (!message) {
-        message = document.createElement("div");
-        message.id = "noCoursesFound";
-        message.className = "alert alert-info mt-3";
-        message.innerHTML = `
-          <div class="d-flex align-items-center">
-            <i class="fas fa-info-circle me-3 fa-lg"></i>
-            <div>
-              <p class="mb-1"><strong>No matching courses found</strong></p>
-              <p class="mb-0 small">Try adjusting your search terms</p>
-            </div>
-          </div>
-        `;
-        container.appendChild(message);
-      }
-    } else if (message) {
-      message.remove();
-    }
-  },
 };
 
-// Expose CourseSearch globally if needed for legacy code
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('courseSearch')) {
+        CourseSearch.initialize();
+    }
+});
+
+// Export for use in other files
 window.CourseSearch = CourseSearch;

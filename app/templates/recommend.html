@@ -312,14 +312,23 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<!-- First load utilities -->
 <script defer src="{{ url_for('static', filename='js/courseSearch.js') }}"></script>
+
+<!-- Then load feature-specific scripts -->
 <script src="{{ url_for('static', filename='js/institutionModal.js') }}"></script>
 <script src="{{ url_for('static', filename='js/recommend.js') }}"></script>
 <script src="{{ url_for('static', filename='js/bookmarks.js') }}"></script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    initializeBookmarkSystem();
+    // Initialize course search if needed
+    if (document.getElementById('courseSearch')) {
+      CourseSearch.initialize();
+    }
+    
+    // Initialize other features
+    initializeInstitutionModal();
     if (window.isAuthenticated) {
       fetchUserBookmarks();
     }

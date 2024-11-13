@@ -1,0 +1,52 @@
+graph TD
+    subgraph "Data Sources"
+        A1[Student Records]
+        A2[Institution Data]
+        A3[Exam Results]
+    end
+
+    subgraph "DataSpeak Platform"
+        B[Data Vectorization]
+        C[Natural Language Processing]
+        D[AI Analysis Engine]
+        E[Visualization Generator]
+        F[Dashboard Creator]
+        G[Compliance Monitor]
+    end
+
+    subgraph "User Interface"
+        H[Natural Language Query Input]
+        I[Real-time Visualizations]
+        J[Custom Dashboards]
+        K[Compliance Reports]
+    end
+
+    subgraph "Users"
+        L[Staff]
+        M[Regulators]
+        N[Policy Makers]
+        O[Institutions]
+    end
+
+    A1 --> B
+    A2 --> B
+    A3 --> B
+    B --> C
+    B --> D
+    H --> C
+    C --> D
+    D --> E
+    D --> F
+    D --> G
+    E --> I
+    F --> J
+    G --> K
+    L --> H
+    M --> J
+    N --> J
+    O --> J
+    I --> L
+    J --> M
+    J --> N
+    J --> O
+    K --> M
