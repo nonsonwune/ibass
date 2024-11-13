@@ -21,6 +21,7 @@ from ..utils.search import perform_search
 from sqlalchemy import or_, func, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import load_only
 
 bp = Blueprint("main", __name__)
 
@@ -39,13 +40,28 @@ def about():
 def search():
     query_text = request.args.get("q", "").strip()
     state = request.args.get("state")
-    types = request.args.getlist("type")  # Handle multiple type selections
+    types = request.args.getlist("type")
 
     try:
-        # Base universities query with proper joins
+        # Add caching for search results
+        cache_key = f"search_{query_text}_{state}_{'-'.join(sorted(types))}"
+        cached_results = cache.get(cache_key)
+
+        if cached_results:
+            return cached_results
+
+        # Optimize the query with specific columns selection
         universities_query = University.query\
             .join(State, University.state_id == State.id)\
             .join(ProgrammeType, University.programme_type_id == ProgrammeType.id)\
+            .options(
+                load_only(
+                    University.id,
+                    University.university_name,
+                    University.programme_type_id,
+                    University.state_id
+                )
+            )\
             .filter(
                 or_(
                     University.university_name.ilike(f"%{query_text}%"),
@@ -54,81 +70,58 @@ def search():
                 )
             )
 
-        # Base courses query using relationships
+        # Similar optimization for courses query
         courses_query = Course.query\
-            .join(CourseRequirement, CourseRequirement.course_id == Course.id)\
-            .join(University, University.id == CourseRequirement.university_id)\
-            .join(State, University.state_id == State.id)\
-            .join(ProgrammeType, University.programme_type_id == ProgrammeType.id)\
+            .join(CourseRequirement)\
+            .join(University)\
+            .options(
+                load_only(
+                    Course.id,
+                    Course.course_name
+                )
+            )\
             .filter(
                 or_(
                     Course.course_name.ilike(f"%{query_text}%"),
-                    University.abbrv.ilike(f"%{query_text}%"),
                     text("course.search_vector @@ plainto_tsquery('english', :query)")
                     .bindparams(query=query_text),
                 )
-            ).options(
-                joinedload(Course.requirements)
-                .joinedload(CourseRequirement.university)
-                .joinedload(University.state_info)
             )
 
-        # Get all matching results before filtering for filter options
-        all_matching_universities = universities_query.all()
-        all_matching_courses = courses_query.all()
-
-        # Extract available filter options from results using relationships
-        available_states = sorted(
-            list(set(uni.state_info.name for uni in all_matching_universities))
-        )
-        available_types = sorted(
-            list(set(uni.programme_type_info.name for uni in all_matching_universities))
-        )
-
-        # Apply filters if selected
+        # Apply filters
         if state:
             universities_query = universities_query.filter(State.name == state)
             courses_query = courses_query.filter(State.name == state)
 
         if types:
-            universities_query = universities_query.filter(
-                ProgrammeType.name.in_(types)
-            )
+            universities_query = universities_query.filter(ProgrammeType.name.in_(types))
             courses_query = courses_query.filter(ProgrammeType.name.in_(types))
 
-        # Get final filtered results
+        # Execute queries
         universities = universities_query.all()
         courses = courses_query.distinct(Course.id).all()
 
-        # Count results
-        universities_count = len(universities)
-        courses_count = len(courses)
-        total_results = universities_count + courses_count
-
-        return render_template(
+        # Cache the results
+        response = render_template(
             "search_results.html",
             query=query_text,
             universities=universities,
             courses=courses,
-            universities_count=universities_count,
-            courses_count=courses_count,
+            universities_count=len(universities),
+            courses_count=len(courses),
             states=available_states,
             institution_types=available_types,
             selected_state=state,
             selected_types=types,
-            total_results=total_results,
+            total_results=len(universities) + len(courses),
         )
+        
+        cache.set(cache_key, response, timeout=300)  # Cache for 5 minutes
+        return response
 
-    except SQLAlchemyError as e:
-        current_app.logger.error(f"Database error in search: {str(e)}")
-        flash(
-            "An error occurred while performing the search. Please try again.", "danger"
-        )
-        return redirect(url_for("main.home"))
     except Exception as e:
-        current_app.logger.error(f"Unexpected error in search: {str(e)}")
-        flash("An unexpected error occurred. Please try again.", "danger")
-        return redirect(url_for("main.home"))
+        current_app.logger.error(f"Search error: {str(e)}")
+        return jsonify({"error": "Search failed"}), 500
 
 
 @bp.route("/profile/<username>")

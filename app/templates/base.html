@@ -124,7 +124,11 @@
                     aria-label="Search" 
                     autocomplete="off" />
                 <button class="btn btn-outline-light" type="submit">
-                    <i class="fas fa-search"></i>
+                    <i class="fas fa-search search-icon"></i>
+                    <!-- Add loading spinner -->
+                    <div class="spinner-border spinner-border-sm search-spinner" role="status" style="display: none;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
                 </button>
             </div>
         </form>
