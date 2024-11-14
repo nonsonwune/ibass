@@ -5,7 +5,7 @@ from sqlalchemy import func, distinct
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from ..models.university import University, Course, CourseRequirement, State, ProgrammeType
-from ..models.interaction import Bookmark, Comment
+from ..models.interaction import Bookmark, Comment, InstitutionComment
 from ..extensions import db
 from ..config import Config
 from ..forms.comment import InstitutionCommentForm
@@ -340,11 +340,11 @@ def institution_details(id):
     university = University.query.get_or_404(id)
     courses = university.courses
     
-    # Get comments for this institution
-    comments = Comment.query.filter_by(
-        university_id=id,
+    # Fix: Use InstitutionComment instead of Comment
+    comments = InstitutionComment.query.filter_by(
+        institution_id=id,  # Note: using institution_id instead of university_id
         parent_id=None  # Get only top-level comments
-    ).order_by(Comment.date_posted.desc()).all()
+    ).order_by(InstitutionComment.date_posted.desc()).all()
     
     return render_template('institution_details.html',
                          university=university,

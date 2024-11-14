@@ -453,7 +453,6 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form id="commentForm" class="comment-form" novalidate>
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-header">
                     <h5 class="modal-title" id="addCommentModalLabel">
                         <i class="fas fa-comment-dots me-2"></i>Add a Comment
@@ -495,16 +494,15 @@
 {% endblock %}
 
 {% block extra_head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/institution_details.css') }}">
-<!-- Add nonce for additional security -->
-<meta name="csrf-nonce" content="{{ csrf_token()|safe }}">
 {% endblock %}
 
 {% block scripts %}
 <script>
     // Define globals first
-    window.isAuthenticated = "{{ current_user.is_authenticated|tojson }}";
-    window.csrfToken = "{{ csrf_token() }}";
+    window.isAuthenticated = "{{ current_user.is_authenticated|tojson|safe }}";
+    window.institutionId = "{{ university.id }}";
 </script>
 <!-- Load dependencies -->
 <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
