@@ -503,8 +503,8 @@
 {% block scripts %}
 <script>
     // Define globals first
-    window.isAuthenticated = {{ current_user.is_authenticated|tojson|safe }};
-    window.institutionId = {{ university.id }};
+    window.isAuthenticated = "{{ current_user.is_authenticated|tojson|safe }}";
+    window.institutionId = "{{ university.id }}";
     window.csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 </script>
 
