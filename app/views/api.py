@@ -1077,61 +1077,143 @@ def add_institution_comment(id):
         
     return redirect(url_for('university.institution_details', id=id))
 
-@bp.route('/institution/comment/<int:comment_id>/vote', methods=['POST'])
+@bp.route('/institution_comment/<int:comment_id>/vote', methods=['POST'])
 @login_required
 def vote_institution_comment(comment_id):
     try:
         data = request.get_json()
         vote_type = data.get('vote_type')
         
+        if vote_type not in ['like', 'dislike']:
+            return jsonify({'success': False, 'message': 'Invalid vote type'}), 400
+
         comment = InstitutionComment.query.get_or_404(comment_id)
         existing_vote = InstitutionCommentVote.query.filter_by(
             user_id=current_user.id,
             comment_id=comment_id
         ).first()
 
-        # Update both the comment score and user's total score
         if existing_vote:
             if existing_vote.vote_type == vote_type:
+                # Remove vote if clicking same button
                 db.session.delete(existing_vote)
                 if vote_type == 'like':
                     comment.likes -= 1
-                    comment.author.score = comment.author.calculate_score() - 1
+                    comment.author.score -= 1
                 else:
                     comment.dislikes -= 1
-                    comment.author.score = comment.author.calculate_score() + 1
+                    comment.author.score += 1
+                current_vote = None
             else:
+                # Change vote type
                 existing_vote.vote_type = vote_type
                 if vote_type == 'like':
                     comment.likes += 1
                     comment.dislikes -= 1
-                    comment.author.score = comment.author.calculate_score() + 2
+                    comment.author.score += 2
                 else:
                     comment.likes -= 1
                     comment.dislikes += 1
-                    comment.author.score = comment.author.calculate_score() - 2
+                    comment.author.score -= 2
+                current_vote = vote_type
         else:
-            vote = InstitutionCommentVote(
+            # New vote
+            new_vote = InstitutionCommentVote(
                 user_id=current_user.id,
                 comment_id=comment_id,
                 vote_type=vote_type
             )
-            db.session.add(vote)
             if vote_type == 'like':
                 comment.likes += 1
-                comment.author.score = comment.author.calculate_score() + 1
+                comment.author.score += 1
             else:
                 comment.dislikes += 1
-                comment.author.score = comment.author.calculate_score() - 1
+                comment.author.score -= 1
+            db.session.add(new_vote)
+            current_vote = vote_type
 
         db.session.commit()
-        
+
         return jsonify({
-            'status': 'success',
+            'success': True,
             'likes': comment.likes,
             'dislikes': comment.dislikes,
-            'author_score': comment.author.score
+            'user_vote': current_vote,
+            'user_id': comment.user_id,
+            'user_score': comment.author.score
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error processing vote: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error processing vote: {str(e)}'
+        }), 500
+
+@bp.route('/institution_comment/reply', methods=['POST'])
+@login_required
+def reply_institution_comment():
+    data = request.get_json()
+    content = data.get('content', '').strip()
+    parent_id = data.get('parent_id')
+    institution_id = data.get('institution_id')
+
+    if not content:
+        return jsonify({'success': False, 'message': 'Reply cannot be empty'}), 400
+
+    try:
+        reply = InstitutionComment(
+            content=content,
+            user_id=current_user.id,
+            parent_id=parent_id,
+            institution_id=institution_id
+        )
+        db.session.add(reply)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'reply': {
+                'id': reply.id,
+                'content': reply.content,
+                'author': current_user.username,
+                'author_score': current_user.score,
+                'date': reply.date_posted.strftime('%B %d, %Y at %H:%M'),
+                'likes': 0,
+                'dislikes': 0,
+                'user_id': current_user.id,
+                'is_admin': current_user.is_admin
+            }
         })
     except Exception as e:
         db.session.rollback()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        current_app.logger.error(f"Error adding reply: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@bp.route('/institution_comment/<int:comment_id>/delete', methods=['POST'])
+@login_required
+def delete_institution_comment(comment_id):
+    try:
+        comment = InstitutionComment.query.get_or_404(comment_id)
+        
+        if not (current_user.id == comment.user_id or current_user.is_admin):
+            return jsonify({
+                'success': False,
+                'message': 'You do not have permission to delete this comment'
+            }), 403
+
+        db.session.delete(comment)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Comment deleted successfully'
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting comment: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500

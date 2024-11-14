@@ -14,10 +14,25 @@ class User(UserMixin, db.Model):
     is_verified = db.Column(db.Integer, default=0, nullable=True)
     score = db.Column(db.Integer, default=0, nullable=False, index=True)
     
-    # Other relationships
+    # Relationships
     votes = db.relationship("Vote", backref="voter", lazy=True, cascade="all, delete-orphan")
     feedback = db.relationship("Feedback", backref="user", lazy=True, cascade="all, delete-orphan")
     bookmarks = db.relationship("Bookmark", backref="user", lazy=True, cascade="all, delete-orphan")
+    
+    # Update comment relationships to use back_populates instead of backref
+    comments = db.relationship(
+        "Comment",
+        back_populates="author",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+    
+    institution_comments = db.relationship(
+        "InstitutionComment",
+        back_populates="author",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
 
     def set_password(self, password):
         """Set the password hash for the user"""

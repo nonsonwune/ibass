@@ -15,7 +15,7 @@ class Comment(BaseModel):
     university_id = db.Column(db.Integer, db.ForeignKey('university.id'), nullable=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=True)
     
-    author = db.relationship('User', backref=db.backref('user_comments', lazy='dynamic'))
+    author = db.relationship('User', back_populates='comments')
     replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]))
     
     likes = db.Column(db.Integer, default=0)
@@ -91,30 +91,18 @@ class InstitutionComment(BaseModel):
     
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
-    date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    institution_id = db.Column(db.Integer, db.ForeignKey('university.id'), nullable=False)
+    date_posted = db.Column(db.DateTime, nullable=True, default=db.func.current_timestamp())
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    institution_id = db.Column(db.Integer, db.ForeignKey('university.id', ondelete='CASCADE'), nullable=False)
     likes = db.Column(db.Integer, default=0)
     dislikes = db.Column(db.Integer, default=0)
-    parent_id = db.Column(db.Integer, db.ForeignKey('institution_comment.id', ondelete='CASCADE'), nullable=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('institution_comment.id', ondelete='CASCADE'))
     
-    replies = db.relationship(
-        'InstitutionComment',
-        backref=db.backref('parent', remote_side=[id]),
-        lazy='dynamic',
-        cascade='all, delete-orphan',
-        order_by='InstitutionComment.date_posted.asc()'
-    )
+    institution = db.relationship('University', backref='comments', lazy=True)
+    author = db.relationship('User', back_populates='institution_comments')
     
-    votes = db.relationship(
-        'InstitutionCommentVote', 
-        backref='comment',
-        lazy=True,
-        cascade='all, delete-orphan'
-    )
-    
-    institution = db.relationship('University', backref='institution_comments')
-    author = db.relationship('User', backref=db.backref('institution_comments', lazy='dynamic'))
+    def __repr__(self):
+        return f'<InstitutionComment {self.id}>'
 
 class InstitutionCommentVote(BaseModel):
     __tablename__ = 'institution_comment_vote'
