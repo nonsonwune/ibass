@@ -117,10 +117,17 @@ function initializeVoting() {
   voteButtons.forEach((button) => {
     button.addEventListener("click", function (e) {
       e.preventDefault();
-      if (!window.isAuthenticated) {
-        window.location.href = "/auth/login";
+      
+      // Check authentication first
+      if (!window.isAuthenticated || window.isAuthenticated === "false") {
+        showToast('Please log in to vote', 'warning');
+        // Optionally redirect to login
+        setTimeout(() => {
+          window.location.href = '/auth/login';
+        }, 1500);
         return;
       }
+
       const commentId = this.getAttribute("data-comment-id");
       const action = this.getAttribute("data-vote-type");
       vote(commentId, action, this);
@@ -135,6 +142,16 @@ function initializeVoting() {
  * @param {HTMLElement} buttonElement - The button element that was clicked.
  */
 function vote(commentId, action, buttonElement) {
+  // Check authentication first
+  if (!window.isAuthenticated || window.isAuthenticated === "false") {
+    showToast('Please log in to vote', 'warning');
+    // Optionally redirect to login
+    setTimeout(() => {
+      window.location.href = '/auth/login';
+    }, 1500);
+    return;
+  }
+
   if (buttonElement.disabled) {
     return;
   }
@@ -250,6 +267,12 @@ function updateVoteUI(commentElement, data) {
  * Fetches the user's existing votes from the backend.
  */
 function fetchUserVotes() {
+  // Don't fetch if user is not authenticated
+  if (!window.isAuthenticated || window.isAuthenticated === "false") {
+    console.log("User not authenticated, skipping vote fetch");
+    return;
+  }
+
   fetch("/api/user_votes", {
     credentials: "same-origin",
     headers: {
