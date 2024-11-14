@@ -277,23 +277,12 @@
                 <i class="fas fa-plus-circle me-2"></i>Add Comment
             </button>
             {% else %}
-            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-sm px-3" 
-               data-bs-toggle="tooltip" data-bs-placement="top" title="Sign in to add a comment">
+            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-sm px-3">
                 <i class="fas fa-sign-in-alt me-2"></i>Login to Comment
             </a>
             {% endif %}
         </div>
         <div class="card-body">
-            {% if not current_user.is_authenticated %}
-            <div class="alert alert-info m-3 d-flex align-items-center" role="alert">
-                <i class="fas fa-info-circle me-3 fa-lg"></i>
-                <div>
-                    Sign in to join the conversation and interact with other members.
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Comments List -->
             <div id="commentsContainer" class="comment-list p-3">
                 {% if comments %}
                     {% for comment in comments %}
@@ -327,37 +316,89 @@
                                 <div class="btn-group">
                                     <button class="btn btn-sm btn-outline-primary vote-btn" 
                                             data-comment-id="{{ comment.id }}" 
-                                            data-vote-type="like">
+                                            data-vote-type="like"
+                                            {% if not current_user.is_authenticated %}disabled{% endif %}>
                                         <i class="fas fa-thumbs-up me-1"></i>
                                         <span class="like-count">({{ comment.likes }})</span>
                                     </button>
                                     <button class="btn btn-sm btn-outline-danger vote-btn" 
                                             data-comment-id="{{ comment.id }}" 
-                                            data-vote-type="dislike">
+                                            data-vote-type="dislike"
+                                            {% if not current_user.is_authenticated %}disabled{% endif %}>
                                         <i class="fas fa-thumbs-down me-1"></i>
                                         <span class="dislike-count">({{ comment.dislikes }})</span>
                                     </button>
                                     <button class="btn btn-sm btn-outline-secondary reply-btn" 
-                                            data-comment-id="{{ comment.id }}">
+                                            data-comment-id="{{ comment.id }}"
+                                            {% if not current_user.is_authenticated %}disabled{% endif %}>
                                         <i class="fas fa-reply me-1"></i>Reply
                                     </button>
                                 </div>
 
                                 {% if current_user.is_authenticated and (current_user.id == comment.user_id or current_user.is_admin) %}
                                 <div class="comment-actions">
-                                    <form action="{{ url_for('main.delete_comment', comment_id=comment.id) }}" 
-                                          method="POST" 
-                                          class="d-inline delete-comment-form">
-                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" 
-                                                class="btn btn-sm btn-danger" 
-                                                data-bs-toggle="tooltip" 
-                                                data-bs-placement="top" 
-                                                title="Delete comment">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </form>
+                                    <button class="btn btn-sm btn-danger delete-comment" 
+                                            data-comment-id="{{ comment.id }}">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
                                 </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Replies Container -->
+                            <div class="comment-replies mt-3" id="replies-{{ comment.id }}">
+                                {% if comment.replies %}
+                                    {% for reply in comment.replies %}
+                                    <div class="reply-card" id="comment-{{ reply.id }}">
+                                        <!-- Reply content similar to main comment -->
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="d-flex align-items-center">
+                                                <div class="user-avatar me-2">
+                                                    <i class="fas fa-user-circle text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-0 {% if reply.author.is_admin %}admin-username{% endif %}">
+                                                        {{ reply.author.username }}
+                                                        <span class="badge bg-primary-soft ms-1 user-score" 
+                                                              data-user-id="{{ reply.author.id }}">
+                                                            {{ reply.author.score }}
+                                                        </span>
+                                                    </h6>
+                                                    <small class="text-muted">
+                                                        {{ reply.date_posted.strftime('%B %d, %Y at %H:%M') }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="reply-content mb-2">
+                                            <p class="mb-0">{{ reply.content }}</p>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-sm btn-outline-primary vote-btn" 
+                                                        data-comment-id="{{ reply.id }}" 
+                                                        data-vote-type="like"
+                                                        {% if not current_user.is_authenticated %}disabled{% endif %}>
+                                                    <i class="fas fa-thumbs-up me-1"></i>
+                                                    <span class="like-count">({{ reply.likes }})</span>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger vote-btn" 
+                                                        data-comment-id="{{ reply.id }}" 
+                                                        data-vote-type="dislike"
+                                                        {% if not current_user.is_authenticated %}disabled{% endif %}>
+                                                    <i class="fas fa-thumbs-down me-1"></i>
+                                                    <span class="dislike-count">({{ reply.dislikes }})</span>
+                                                </button>
+                                            </div>
+                                            {% if current_user.is_authenticated and (current_user.id == reply.user_id or current_user.is_admin) %}
+                                            <button class="btn btn-sm btn-danger delete-comment" 
+                                                    data-comment-id="{{ reply.id }}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
                                 {% endif %}
                             </div>
                         </div>
@@ -490,6 +531,45 @@
     </div>
 </div>
 {% endif %}
+
+<!-- Reply Modal -->
+<div class="modal fade" id="replyModal" tabindex="-1" aria-labelledby="replyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="replyModalLabel">
+                    <i class="fas fa-reply me-2"></i>Reply to Comment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="original-comment mb-3">
+                    <h6 class="text-muted mb-2">Original Comment:</h6>
+                    <div class="parent-comment bg-light p-3 rounded"></div>
+                </div>
+                <div class="form-floating">
+                    <textarea class="form-control reply-textarea"
+                            placeholder="Write your reply"
+                            style="height: 100px"
+                            maxlength="200"
+                            required></textarea>
+                    <label>Your Reply</label>
+                    <div class="form-text text-end">
+                        <span class="reply-char-count">200</span> characters remaining
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary submit-reply">
+                    <i class="fas fa-paper-plane me-2"></i>Post Reply
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>

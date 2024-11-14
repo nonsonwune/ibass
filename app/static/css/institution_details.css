@@ -423,3 +423,39 @@
 .toast.show {
     opacity: 1;
 }
+
+.comment-card {
+    transition: all 0.3s ease;
+}
+
+.reply-card {
+    margin-left: 2rem;
+    padding: 1rem;
+    border-left: 3px solid #e9ecef;
+    margin-top: 1rem;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-username {
+    color: #dc3545;
+}
+
+.bg-primary-soft {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
