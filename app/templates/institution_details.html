@@ -345,7 +345,7 @@
 
                                 {% if current_user.is_authenticated and (current_user.id == comment.user_id or current_user.is_admin) %}
                                 <div class="comment-actions">
-                                    <form action="{{ url_for('main.delete_comment', comment_id=comment.id) }}" 
+                                    <form action="{{ url_for('api.delete_institution_comment', comment_id=comment.id) }}" 
                                           method="POST" 
                                           class="d-inline delete-comment-form">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -493,6 +493,45 @@
 
 <!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+<!-- Reply Modal -->
+<div class="modal fade" id="replyModal" tabindex="-1" aria-labelledby="replyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="replyModalLabel">
+                    <i class="fas fa-reply me-2"></i>Reply to Comment
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="original-comment mb-3">
+                    <h6 class="text-muted mb-2">Original Comment:</h6>
+                    <div class="parent-comment bg-light p-3 rounded"></div>
+                </div>
+                <div class="form-floating">
+                    <textarea class="form-control reply-textarea" 
+                            placeholder="Write your reply" 
+                            style="height: 100px" 
+                            maxlength="200" 
+                            required></textarea>
+                    <label>Your Reply</label>
+                    <div class="form-text text-end">
+                        <span class="reply-char-count">200</span> characters remaining
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary submit-reply">
+                    <i class="fas fa-paper-plane me-2"></i>Post Reply
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_head %}
