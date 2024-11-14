@@ -14,8 +14,7 @@ class User(UserMixin, db.Model):
     is_verified = db.Column(db.Integer, default=0, nullable=True)
     score = db.Column(db.Integer, default=0, nullable=False, index=True)
     
-    # Relationships
-    comments = db.relationship("Comment", backref="author", lazy=True, cascade="all, delete-orphan")
+    # Other relationships
     votes = db.relationship("Vote", backref="voter", lazy=True, cascade="all, delete-orphan")
     feedback = db.relationship("Feedback", backref="user", lazy=True, cascade="all, delete-orphan")
     bookmarks = db.relationship("Bookmark", backref="user", lazy=True, cascade="all, delete-orphan")
@@ -62,7 +61,7 @@ class User(UserMixin, db.Model):
 
     def calculate_score(self):
         """Calculate user score based on all comments and institution comments"""
-        regular_comment_score = sum(comment.score for comment in self.comments)
+        regular_comment_score = sum(comment.score for comment in self.user_comments)
         institution_comment_score = sum(comment.score for comment in self.institution_comments)
         return regular_comment_score + institution_comment_score
 

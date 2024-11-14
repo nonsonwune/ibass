@@ -94,3 +94,10 @@ class Config:
             "PRIVATE COLLEGES OF EDUCATION",
         ],
     }
+
+    # CSRF Protection Configuration
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = 3600  # 1 hour
+    WTF_CSRF_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE']  # Exclude GET requests
+    WTF_CSRF_SSL_STRICT = True
+    WTF_CSRF_CHECK_DEFAULT = True

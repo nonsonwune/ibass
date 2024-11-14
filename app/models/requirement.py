@@ -43,8 +43,8 @@ class CourseRequirement(BaseModel):
     __tablename__ = 'course_requirement'
     
     id = db.Column(db.Integer, primary_key=True)
-    university_id = db.Column(db.Integer, db.ForeignKey('university.id'), nullable=False)
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    university_id = db.Column(db.Integer, db.ForeignKey('university.id'), nullable=False)
     utme_template_id = db.Column(db.Integer, db.ForeignKey('utme_requirement_template.id'))
     de_template_id = db.Column(db.Integer, db.ForeignKey('direct_entry_requirement_template.id'))
     

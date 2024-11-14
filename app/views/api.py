@@ -17,6 +17,7 @@ from sqlalchemy import func
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 import time
+from ..forms.comment import InstitutionCommentForm
 
 bp = Blueprint('api', __name__)
 
@@ -1033,54 +1034,97 @@ def get_institution_comments(institution_id):
                 'author_score': comment.author.score,
                 'date': comment.date_posted.strftime('%B %d, %Y at %H:%M'),
                 'likes': comment.likes,
-                'dislikes': comment.dislikes,
-                'replies': [{
-                    'id': reply.id,
-                    'content': reply.content,
-                    'author': reply.author.username,
-                    'author_score': reply.author.score,
-                    'date': reply.date_posted.strftime('%B %d, %Y at %H:%M'),
-                    'likes': reply.likes,
-                    'dislikes': reply.dislikes
-                } for reply in comment.replies]
+                'dislikes': comment.dislikes
             } for comment in comments]
         })
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        current_app.logger.error(f"Error fetching comments: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @bp.route('/institution/<int:institution_id>/comment', methods=['POST'])
 @login_required
 def add_institution_comment(institution_id):
+    """Handle institution comment submission with proper validation and error handling"""
+    current_app.logger.info(f"Received comment submission for institution {institution_id}")
+    
     try:
+        # Validate institution exists
+        institution = University.query.get_or_404(institution_id)
+        current_app.logger.debug(f"Found institution: {institution.university_name}")
+
+        # Validate request content type
+        if not request.is_json:
+            current_app.logger.warning("Invalid content type received")
+            return jsonify({
+                "status": "error",
+                "message": "Content-Type must be application/json"
+            }), 415
+
+        # Parse and validate request data
         data = request.get_json()
-        content = data.get('content')
-        parent_id = data.get('parent_id')
+        if not data or 'content' not in data:
+            current_app.logger.warning("Missing comment content in request")
+            return jsonify({
+                "status": "error",
+                "message": "Comment content is required"
+            }), 400
 
-        comment = InstitutionComment(
-            content=content,
-            user_id=current_user.id,
-            institution_id=institution_id,
-            parent_id=parent_id
-        )
+        # Clean and validate content
+        content = bleach.clean(data['content'].strip(), tags=ALLOWED_TAGS, attributes=ALLOWED_ATTRIBUTES)
         
-        db.session.add(comment)
-        db.session.commit()
+        # Validate content length
+        if not content or len(content) > 200:
+            current_app.logger.warning(f"Invalid content length: {len(content) if content else 0}")
+            return jsonify({
+                "status": "error",
+                "message": "Comment must be between 1 and 200 characters"
+            }), 400
 
-        return jsonify({
-            'status': 'success',
-            'comment': {
-                'id': comment.id,
-                'content': comment.content,
-                'author': comment.author.username,
-                'author_score': comment.author.score,
-                'date': comment.date_posted.strftime('%B %d, %Y at %H:%M'),
-                'likes': 0,
-                'dislikes': 0
+        # Create new comment with proper error handling
+        try:
+            new_comment = InstitutionComment(
+                content=content,
+                user_id=current_user.id,  # Using user_id as per DB schema
+                institution_id=institution_id
+            )
+            
+            db.session.add(new_comment)
+            db.session.commit()
+            current_app.logger.info(f"Successfully created comment ID: {new_comment.id}")
+            
+            # Format successful response
+            response_data = {
+                "status": "success",
+                "comment": {
+                    "id": new_comment.id,
+                    "author": new_comment.author.username,  # Using the author relationship
+                    "content": new_comment.content,
+                    "date": new_comment.date_posted.strftime("%B %d, %Y at %H:%M"),
+                    "likes": new_comment.likes,
+                    "dislikes": new_comment.dislikes,
+                    "author_score": new_comment.author.score
+                }
             }
-        })
+            
+            return jsonify(response_data), 201
+
+        except SQLAlchemyError as db_error:
+            db.session.rollback()
+            current_app.logger.error(f"Database error: {str(db_error)}")
+            return jsonify({
+                "status": "error",
+                "message": "Failed to save comment"
+            }), 500
+
     except Exception as e:
-        db.session.rollback()
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        current_app.logger.error(f"Error processing comment: {str(e)}", exc_info=True)
+        return jsonify({
+            "status": "error",
+            "message": "An error occurred while processing your comment"
+        }), 500
 
 @bp.route('/institution/comment/<int:comment_id>/vote', methods=['POST'])
 @login_required

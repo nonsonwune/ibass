@@ -348,25 +348,32 @@
 }
 
 .comment-card {
-    background: #fff;
-    border-radius: 0.5rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    margin-bottom: 1.5rem;
-    transition: transform 0.3s ease;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
 }
 
-.comment-card:hover {
-    transform: translateY(-2px);
+.comment-card:last-child {
+    border-bottom: none;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #f0f2f5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 1.5rem;
+    color: #007bff;
+}
+
+.badge.bg-primary-soft {
+    background-color: rgba(0, 123, 255, 0.1);
+    color: #007bff;
 }
 
 .comment-actions {
@@ -401,4 +408,18 @@
         flex-direction: column;
         gap: 1rem;
     }
+}
+
+.comment-spinner {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+.toast {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.toast.show {
+    opacity: 1;
 }

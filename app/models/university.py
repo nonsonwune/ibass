@@ -122,20 +122,23 @@ class University(BaseModel):
             
         return states
 
-    # Restore the course_requirements relationship
+    # Update the course_requirements relationship with overlaps
     course_requirements = db.relationship(
         'CourseRequirement',
         back_populates='university',
-        cascade='all, delete-orphan'
+        cascade='all, delete-orphan',
+        overlaps="courses"
     )
     
+    # Update courses relationship with viewonly and overlaps
     courses = db.relationship(
         'Course',
         secondary='course_requirement',
         primaryjoin="University.id == CourseRequirement.university_id",
         secondaryjoin="CourseRequirement.course_id == Course.id",
-        back_populates='universities',
-        viewonly=True
+        backref=db.backref('universities', lazy='dynamic'),
+        viewonly=True,  # Make it read-only
+        overlaps="course_requirements,university"
     )
 
     @classmethod
@@ -164,30 +167,17 @@ class Course(BaseModel):
     __tablename__ = 'course'
     
     id = db.Column(db.Integer, primary_key=True)
-    course_name = db.Column(db.String(256), unique=True, nullable=False)
-    code = db.Column(db.String(50))
-    search_vector = db.Column(TSVECTOR)
+    course_name = db.Column(db.String(255), nullable=False)
     
-    __table_args__ = (
-        Index('idx_course_name', 'course_name'),
-        Index('idx_course_search', 'search_vector', postgresql_using='gin'),
-    )
-    
-    universities = db.relationship(
-        'University',
-        secondary='course_requirement',
-        primaryjoin="Course.id == CourseRequirement.course_id",
-        secondaryjoin="CourseRequirement.university_id == University.id",
-        back_populates='courses',
-        viewonly=True
-    )
-    
+    # Update requirements relationship with overlaps
     requirements = db.relationship(
         'CourseRequirement',
         back_populates='course',
-        cascade='all, delete-orphan',
-        lazy='joined'
+        lazy=True,
+        overlaps="courses,universities"
     )
+    
+    # The universities relationship is handled by the backref in University.courses
 
     @classmethod
     def search(cls, query_text=None, university_id=None, programme_type_id=None):
@@ -195,7 +185,6 @@ class Course(BaseModel):
         base_query = db.session.query(
             cls.id,
             cls.course_name,
-            cls.code,
             ProgrammeType.name.label('programme_type'),
             University.university_name
         ).select_from(cls)

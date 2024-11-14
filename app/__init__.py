@@ -1,5 +1,5 @@
 # app/__init__.py
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from .extensions import db, login_manager, mail, migrate, csrf, cache
 from .config import Config
 import logging
@@ -112,5 +112,9 @@ def create_app(config_class=Config):
     # Register CLI commands
     from .cli import init_app as init_cli
     init_cli(app)
+
+    @csrf.exempt
+    def get_requests():
+        return request.method == 'GET'
 
     return app

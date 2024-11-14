@@ -1,13 +1,14 @@
 # app/views/university.py
-from flask import Blueprint, render_template, request, jsonify, current_app, abort
+from flask import Blueprint, render_template, request, jsonify, current_app, abort, flash, redirect, url_for
 from flask_login import current_user
 from sqlalchemy import func, distinct
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from ..models.university import University, Course, CourseRequirement, State, ProgrammeType
-from ..models.interaction import Bookmark
+from ..models.interaction import Bookmark, Comment
 from ..extensions import db
 from ..config import Config
+from ..forms.comment import InstitutionCommentForm
 
 bp = Blueprint("university", __name__)
 
@@ -337,15 +338,18 @@ def get_course(course_id):
 @bp.route("/institution/<int:id>")
 def institution_details(id):
     university = University.query.get_or_404(id)
-    courses = Course.query\
-        .join(CourseRequirement)\
-        .filter(CourseRequirement.university_id == id)\
-        .options(joinedload(Course.requirements))\
-        .all()
+    courses = university.courses
     
-    return render_template('institution_details.html', 
-                         university=university, 
-                         courses=courses)
+    # Get comments for this institution
+    comments = Comment.query.filter_by(
+        university_id=id,
+        parent_id=None  # Get only top-level comments
+    ).order_by(Comment.date_posted.desc()).all()
+    
+    return render_template('institution_details.html',
+                         university=university,
+                         courses=courses,
+                         comments=comments)
 
 @bp.route("/institution/<int:id>/courses")
 def get_institution_courses(id):

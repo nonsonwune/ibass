@@ -487,6 +487,9 @@ function handleReplySubmission() {
     this.getAttribute("data-parent-level") || "0"
   );
 
+  console.log("Submitting reply for comment ID:", currentCommentId); // Log comment ID
+  console.log("Reply text:", replyTextarea.value.trim()); // Log reply text
+
   if (!currentCommentId) {
     console.error("No comment ID found for reply");
     return;
@@ -527,6 +530,8 @@ function submitReplyToServer(
   submitButton,
   originalButtonText
 ) {
+  console.log("Sending reply to server:", { commentId, replyText, parentLevel }); // Log data being sent
+
   fetch("/api/reply_comment", {
     method: "POST",
     headers: {
@@ -541,6 +546,7 @@ function submitReplyToServer(
   })
     .then((response) => response.json())
     .then((data) => {
+      console.log("Server response:", data); // Log server response
       if (data.success) {
         appendReplyToDOM(commentId, data.reply, parentLevel);
         showToast(data.message, "success");

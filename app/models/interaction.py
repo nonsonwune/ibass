@@ -8,31 +8,18 @@ from sqlalchemy import func, select
 class Comment(BaseModel):
     __tablename__ = 'comment'
     
+    id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    university_id = db.Column(db.Integer, db.ForeignKey('university.id'), nullable=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=True)
+    
+    author = db.relationship('User', backref=db.backref('user_comments', lazy='dynamic'))
+    replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]))
+    
     likes = db.Column(db.Integer, default=0)
     dislikes = db.Column(db.Integer, default=0)
-    parent_id = db.Column(db.Integer, db.ForeignKey('comment.id', ondelete='CASCADE'), nullable=True)
-    
-    # Relationship definitions
-    replies = db.relationship(
-        'Comment',
-        backref=db.backref(
-            'parent', 
-            remote_side='Comment.id'
-        ),
-        lazy='dynamic',
-        cascade='all, delete-orphan',
-        order_by='Comment.date_posted.asc()'
-    )
-    
-    votes = db.relationship(
-        'Vote', 
-        backref='comment',
-        lazy=True,
-        cascade='all, delete-orphan'
-    )
     
     __table_args__ = (
         db.Index('idx_comment_parent_date', 'parent_id', 'date_posted'),
@@ -102,18 +89,18 @@ class Bookmark(BaseModel):
 class InstitutionComment(BaseModel):
     __tablename__ = 'institution_comment'
     
+    id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     date_posted = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    institution_id = db.Column(db.Integer, db.ForeignKey('university.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    institution_id = db.Column(db.Integer, db.ForeignKey('university.id'), nullable=False)
     likes = db.Column(db.Integer, default=0)
     dislikes = db.Column(db.Integer, default=0)
     parent_id = db.Column(db.Integer, db.ForeignKey('institution_comment.id', ondelete='CASCADE'), nullable=True)
     
-    # Relationships
     replies = db.relationship(
         'InstitutionComment',
-        backref=db.backref('parent', remote_side='InstitutionComment.id'),
+        backref=db.backref('parent', remote_side=[id]),
         lazy='dynamic',
         cascade='all, delete-orphan',
         order_by='InstitutionComment.date_posted.asc()'
@@ -126,8 +113,8 @@ class InstitutionComment(BaseModel):
         cascade='all, delete-orphan'
     )
     
-    institution = db.relationship('University', backref='comments')
-    author = db.relationship('User', backref='institution_comments')
+    institution = db.relationship('University', backref='institution_comments')
+    author = db.relationship('User', backref=db.backref('institution_comments', lazy='dynamic'))
 
 class InstitutionCommentVote(BaseModel):
     __tablename__ = 'institution_comment_vote'

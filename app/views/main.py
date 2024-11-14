@@ -144,9 +144,16 @@ def profile(username):
     return render_template("profile.html", user=user)
 
 
-@bp.route("/contact", methods=["GET", "POST"])
+@bp.route("/contact", methods=['GET', 'POST'])
 def contact():
     form = ContactForm()
+    
+    # Get general comments (not associated with any university)
+    comments = Comment.query.filter_by(
+        university_id=None,  # Only get general comments
+        parent_id=None  # Only get top-level comments
+    ).order_by(Comment.date_posted.desc()).all()
+    
     if form.validate_on_submit():
         feedback = Feedback(
             name=form.name.data,
@@ -168,13 +175,9 @@ def contact():
 
         return redirect(url_for("main.contact"))
 
-    # Updated query with joinedload to eagerly load author with score
-    comments = (
-        Comment.query.options(joinedload(Comment.author))
-        .order_by(Comment.date_posted.desc())
-        .all()
-    )
-    return render_template("contact.html", form=form, comments=comments)
+    return render_template('contact.html', 
+                         form=form,
+                         comments=comments)
 
 
 @bp.route("/add_comment", methods=["POST"])
