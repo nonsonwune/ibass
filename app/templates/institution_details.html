@@ -452,7 +452,8 @@
 <div class="modal fade" id="addCommentModal" tabindex="-1" aria-labelledby="addCommentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form id="commentForm" class="comment-form" novalidate>
+            <form action="{{ url_for('api.add_institution_comment', id=university.id) }}" method="POST" class="comment-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-header">
                     <h5 class="modal-title" id="addCommentModalLabel">
                         <i class="fas fa-comment-dots me-2"></i>Add a Comment
@@ -463,6 +464,7 @@
                     <div class="form-floating mb-3">
                         <textarea class="form-control" 
                                 id="institutionComment" 
+                                name="content"
                                 style="height: 150px" 
                                 maxlength="200" 
                                 placeholder="Write your comment" 
@@ -501,13 +503,15 @@
 {% block scripts %}
 <script>
     // Define globals first
-    window.isAuthenticated = "{{ current_user.is_authenticated|tojson|safe }}";
-    window.institutionId = "{{ university.id }}";
+    window.isAuthenticated = {{ current_user.is_authenticated|tojson|safe }};
+    window.institutionId = {{ university.id }};
+    window.csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 </script>
+
 <!-- Load dependencies -->
 <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/state.js') }}"></script>
-<script src="{{ url_for('static', filename='js/voting.js') }}"></script>
-<!-- Load main script last -->
+
+<!-- Load main script -->
 <script src="{{ url_for('static', filename='js/institution_details.js') }}"></script>
 {% endblock %}
