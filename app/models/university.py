@@ -168,6 +168,9 @@ class Course(BaseModel):
     
     id = db.Column(db.Integer, primary_key=True)
     course_name = db.Column(db.String(255), nullable=False)
+    code = db.Column(db.String(50))
+    search_vector = db.Column(TSVECTOR)
+    normalized_name = db.Column(db.String(255))
     
     # Update requirements relationship with overlaps
     requirements = db.relationship(
@@ -177,7 +180,11 @@ class Course(BaseModel):
         overlaps="courses,universities"
     )
     
-    # The universities relationship is handled by the backref in University.courses
+    __table_args__ = (
+        db.UniqueConstraint('course_name', name='unique_course_name'),
+        db.Index('idx_course_normalized_name', 'normalized_name'),
+        db.Index('idx_course_search', 'search_vector', postgresql_using='gin')
+    )
 
     @classmethod
     def search(cls, query_text=None, university_id=None, programme_type_id=None):
@@ -185,6 +192,7 @@ class Course(BaseModel):
         base_query = db.session.query(
             cls.id,
             cls.course_name,
+            cls.code,
             ProgrammeType.name.label('programme_type'),
             University.university_name
         ).select_from(cls)
