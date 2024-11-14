@@ -1054,3 +1054,23 @@ html, body {
   bottom: 0;
   width: 100%;
 }
+
+/* Admin Username Styling */
+.admin-username {
+  color: var(--danger-color) !important;
+  font-weight: 600;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-username::after {
+  content: "Admin";
+  font-size: 0.65em;
+  background: var(--danger-color);
+  color: var(--text-light);
+  padding: 0.2em 0.5em;
+  border-radius: 3px;
+  margin-left: 0.5em;
+  font-weight: 500;
+}

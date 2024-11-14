@@ -204,12 +204,6 @@
   color: #1a2733 !important;
 }
 
-/* Admin Username */
-.admin-username {
-  color: var(--danger-color) !important;
-  font-weight: 600;
-}
-
 /* Reply Form */
 .reply-form-container {
   margin-top: 1rem;
