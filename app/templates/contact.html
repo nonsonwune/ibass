@@ -473,6 +473,6 @@ Finder{% endblock %} {% block extra_head %}
 <script src="{{ url_for('static', filename='js/comments.js') }}"></script>
 <script>
   window.isAuthenticated = "{{ current_user.is_authenticated|tojson|safe }}";
-  window.csrfToken = "{{ csrf_token()|tojson|safe }}";
+  window.csrfToken = "{{ csrf_token() }}";
 </script>
 {% endblock %}

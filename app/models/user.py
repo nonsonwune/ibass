@@ -26,13 +26,6 @@ class User(UserMixin, db.Model):
         lazy=True,
         cascade="all, delete-orphan"
     )
-    
-    institution_comments = db.relationship(
-        "InstitutionComment",
-        back_populates="author",
-        lazy=True,
-        cascade="all, delete-orphan"
-    )
 
     def set_password(self, password):
         """Set the password hash for the user"""
@@ -75,10 +68,8 @@ class User(UserMixin, db.Model):
         super(User, self).__init__(**kwargs)
 
     def calculate_score(self):
-        """Calculate user score based on all comments and institution comments"""
-        regular_comment_score = sum(comment.score for comment in self.user_comments)
-        institution_comment_score = sum(comment.score for comment in self.institution_comments)
-        return regular_comment_score + institution_comment_score
+        """Calculate user score based on comments"""
+        return sum(comment.score for comment in self.comments)
 
     @property
     def total_score(self):

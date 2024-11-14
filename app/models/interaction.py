@@ -15,7 +15,12 @@ class Comment(BaseModel):
     university_id = db.Column(db.Integer, db.ForeignKey('university.id'), nullable=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=True)
     
-    author = db.relationship('User', back_populates='comments')
+    author = db.relationship(
+        'User',
+        back_populates='comments',
+        lazy='joined'
+    )
+    university = db.relationship('University', back_populates='comments')
     replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]))
     
     likes = db.Column(db.Integer, default=0)
@@ -85,37 +90,3 @@ class Bookmark(BaseModel):
             'university_name': self.university.name if self.university else None,
             'course_name': self.course.name if self.course else None
         }
-
-class InstitutionComment(BaseModel):
-    __tablename__ = 'institution_comment'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
-    date_posted = db.Column(db.DateTime, nullable=True, default=db.func.current_timestamp())
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
-    institution_id = db.Column(db.Integer, db.ForeignKey('university.id', ondelete='CASCADE'), nullable=False)
-    likes = db.Column(db.Integer, default=0)
-    dislikes = db.Column(db.Integer, default=0)
-    parent_id = db.Column(db.Integer, db.ForeignKey('institution_comment.id', ondelete='CASCADE'))
-    
-    institution = db.relationship('University', backref='comments', lazy=True)
-    author = db.relationship('User', back_populates='institution_comments')
-    
-    def __repr__(self):
-        return f'<InstitutionComment {self.id}>'
-
-class InstitutionCommentVote(BaseModel):
-    __tablename__ = 'institution_comment_vote'
-    
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    comment_id = db.Column(db.Integer, db.ForeignKey('institution_comment.id', ondelete='CASCADE'), nullable=False)
-    vote_type = db.Column(db.String(10), nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    __table_args__ = (
-        db.UniqueConstraint('user_id', 'comment_id', name='user_institution_comment_uc'),
-        db.CheckConstraint(
-            vote_type.in_(['like', 'dislike']),
-            name='institution_vote_type_check'
-        )
-    )

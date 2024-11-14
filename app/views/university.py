@@ -5,10 +5,10 @@ from sqlalchemy import func, distinct
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from ..models.university import University, Course, CourseRequirement, State, ProgrammeType
-from ..models.interaction import Bookmark, Comment, InstitutionComment
+from ..models.interaction import Bookmark, Comment
 from ..extensions import db
 from ..config import Config
-from ..forms.comment import InstitutionCommentForm
+from ..forms.comment import CommentForm
 
 bp = Blueprint("university", __name__)
 
@@ -337,19 +337,24 @@ def get_course(course_id):
 
 @bp.route("/institution/<int:id>")
 def institution_details(id):
-    university = University.query.get_or_404(id)
-    courses = university.courses
-    
-    # Fix: Use InstitutionComment instead of Comment
-    comments = InstitutionComment.query.filter_by(
-        institution_id=id,  # Note: using institution_id instead of university_id
-        parent_id=None  # Get only top-level comments
-    ).order_by(InstitutionComment.date_posted.desc()).all()
-    
-    return render_template('institution_details.html',
-                         university=university,
-                         courses=courses,
-                         comments=comments)
+    try:
+        university = University.query.get_or_404(id)
+        courses = university.courses
+        
+        # Use the unified Comment model
+        comments = Comment.query.filter_by(
+            university_id=id,  # Using university_id
+            parent_id=None  # Get only top-level comments
+        ).order_by(Comment.date_posted.desc()).all()
+        
+        return render_template('institution_details.html',
+                             university=university,
+                             courses=courses,
+                             comments=comments)
+    except Exception as e:
+        current_app.logger.error(f"Error in institution_details: {str(e)}")
+        flash('An error occurred while loading the institution details.', 'danger')
+        return redirect(url_for('main.home'))
 
 @bp.route("/institution/<int:id>/courses")
 def get_institution_courses(id):

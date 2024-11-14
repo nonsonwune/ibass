@@ -133,8 +133,7 @@
                                             </div>
                                             {% if current_user.id == comment.user_id or current_user.is_admin %}
                                                 <button class="btn btn-sm btn-danger delete-comment"
-                                                        data-comment-id="{{ comment.id }}"
-                                                        data-comment-type="institution">
+                                                        data-comment-id="{{ comment.id }}">
                                                     <i class="fas fa-trash-alt"></i> Delete
                                                 </button>
                                             {% endif %}
@@ -323,13 +322,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function deleteComment(commentId, buttonElement) {
-        const commentType = buttonElement.dataset.commentType;
-        const endpoint = commentType === 'institution' 
-            ? `/api/delete_institution_comment/${commentId}`
-            : `/api/delete_comment/${commentId}`;
-
-        fetch(endpoint, {
-            method: 'POST',
+        fetch(`/api/comment/${commentId}`, {
+            method: 'DELETE',
             headers: {
                 'X-CSRFToken': csrfToken,
                 'Content-Type': 'application/json',

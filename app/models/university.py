@@ -7,6 +7,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import expression
 import re
 from .requirement import CourseRequirement
+from datetime import datetime
 
 # Define State model first
 class State(BaseModel):
@@ -161,6 +162,14 @@ class University(BaseModel):
             WHERE u.id = ud.id
         """
         return sql
+
+    # Update the comments relationship to point to the correct model
+    comments = db.relationship(
+        'Comment', 
+        back_populates='university', 
+        lazy='dynamic',
+        cascade='all, delete-orphan'
+    )
 
 # Then define Course model
 class Course(BaseModel):

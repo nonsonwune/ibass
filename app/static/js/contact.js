@@ -18,4 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
       background.style.backgroundPositionY = -(scrolled * 0.5) + "px";
     }
   });
+
+  // Fix CSRF token initialization
+  window.csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 });
