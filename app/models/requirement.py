@@ -550,7 +550,8 @@ class SpecialInstitutionalRequirement(BaseModel):
     # Relationships
     university = db.relationship(
         'University',
-        backref=db.backref('special_requirements', lazy=True, cascade='all, delete-orphan')
+        back_populates='special_institutional_requirements',
+        single_parent=True  # Add this flag since we have a unique constraint
     )
     
     __table_args__ = (

@@ -71,6 +71,15 @@ class University(BaseModel):
         cascade='all, delete-orphan'
     )
     
+    # Define special institutional requirements relationship
+    special_institutional_requirements = db.relationship(
+        'SpecialInstitutionalRequirement',
+        back_populates='university',
+        lazy='joined',
+        uselist=False,  # Since there's a unique constraint on university_id
+        cascade='all, delete-orphan'  # Move cascade to the "one" side of the relationship
+    )
+    
     # Add search vector column
     search_vector = db.Column(TSVECTOR)
 

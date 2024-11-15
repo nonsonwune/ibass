@@ -345,15 +345,13 @@ def institution_details(id):
         
         courses = university.courses
         
-        # Get special requirements using the new relationship name
+        # Get special requirements using the correct relationship name
         special_requirements = None
-        if university.special_requirements_list:
-            special_req = university.special_requirements_list[0] if university.special_requirements_list else None
-            if special_req:
-                special_requirements = {
-                    'requirements': special_req.requirements,
-                    'special_notes': special_req.special_notes
-                }
+        if university.special_institutional_requirements:
+            special_requirements = {
+                'requirements': university.special_institutional_requirements.requirements,
+                'special_notes': university.special_institutional_requirements.special_notes
+            }
         
         # Use the unified Comment model
         comments = Comment.query.filter_by(
