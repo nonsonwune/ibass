@@ -120,11 +120,7 @@ function initializeVoting() {
       
       // Check authentication first
       if (!window.isAuthenticated || window.isAuthenticated === "false") {
-        showToast('Please log in to vote', 'warning');
-        // Optionally redirect to login
-        setTimeout(() => {
-          window.location.href = '/auth/login';
-        }, 1500);
+        showAuthenticationPrompt('vote');
         return;
       }
 
@@ -144,11 +140,7 @@ function initializeVoting() {
 function vote(commentId, action, buttonElement) {
   // Check authentication first
   if (!window.isAuthenticated || window.isAuthenticated === "false") {
-    showToast('Please log in to vote', 'warning');
-    // Optionally redirect to login
-    setTimeout(() => {
-      window.location.href = '/auth/login';
-    }, 1500);
+    showAuthenticationPrompt('vote');
     return;
   }
 
@@ -365,6 +357,20 @@ function showToast(message, type = "info") {
   });
 }
 
+function showAuthenticationPrompt(action) {
+  const messages = {
+    comment: 'Please log in to add a comment',
+    reply: 'Please log in to reply',
+    vote: 'Please log in to vote'
+  };
+
+  showToast(messages[action], 'warning');
+  setTimeout(() => {
+    const currentPath = window.location.pathname;
+    window.location.href = `/auth/login?next=${encodeURIComponent(currentPath)}`;
+  }, 1500);
+}
+
 /**
  * Initialize the reply button functionality for a comment or reply card
  * @param {HTMLElement} card - The card element to initialize the reply button for
@@ -440,7 +446,7 @@ function initializeReplySystem() {
     button.addEventListener("click", function (e) {
       e.preventDefault();
       if (!window.isAuthenticated) {
-        window.location.href = "/auth/login";
+        showAuthenticationPrompt('reply');
         return;
       }
 

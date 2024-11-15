@@ -33,7 +33,13 @@ def login():
             login_user(user, remember=form.remember_me.data)
             flash('Logged in successfully.', 'success')
             
-            next_page = request.args.get('next')
+            # Get next page from either POST data or GET args
+            next_page = request.form.get('next') or request.args.get('next')
+            
+            # Validate the next URL to prevent open redirect vulnerability
+            if next_page and not next_page.startswith('/'):
+                next_page = None
+                
             if next_page:
                 return redirect(next_page)
             if user.is_admin:
@@ -79,8 +85,18 @@ def signup():
 @bp.route('/logout')
 @login_required
 def logout():
+    # Get the current page URL before logging out
+    current_page = request.referrer
+    
+    # Log the user out
     logout_user()
     flash('You have been logged out.', 'info')
+    
+    # Check if the current page requires login
+    if current_page and not current_page.endswith(('/login', '/signup', '/admin')):
+        return redirect(current_page)
+    
+    # Default to home page if current page requires login or no referrer
     return redirect(url_for('main.home'))
 
 @bp.route('/verify_email/<token>')

@@ -12,7 +12,7 @@ Finder{% endblock %} {% block content %}
             <p class="text-muted">Login to continue your educational journey</p>
           </div>
 
-          <form method="POST" action="{{ url_for('auth.login') }}">
+          <form method="POST" action="{{ url_for('auth.login', next=request.args.get('next', '')) }}">
             {{ form.hidden_tag() }}
 
             <div class="auth-input-group">
