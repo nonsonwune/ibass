@@ -17,6 +17,14 @@ const InstitutionDetails = {
 
     // Initialize comments functionality
     initializeComments() {
+        // Login to comment button
+        const loginPromptBtn = document.querySelector('#loginPromptBtn');
+        if (loginPromptBtn) {
+            loginPromptBtn.addEventListener('click', () => {
+                this.showAuthenticationPrompt('comment');
+            });
+        }
+
         // Add comment button
         const addCommentBtn = document.querySelector('[data-bs-target="#addCommentModal"]');
         if (addCommentBtn) {
