@@ -9,7 +9,7 @@
             <div class="col-md-8">
                 <h1 class="display-5 fw-bold mb-2">{{ university.university_name }}</h1>
                 <p class="lead mb-0 d-flex align-items-center">
-                    <i class="fas fa-map-marker-alt me-2"></i>{{ university.state_info.name }} 
+                    <i class="fas fa-map-marker-alt me-2"></i>{{ university.state_info.name }}
                     {% if university.established %}
                     <span class="mx-2">•</span>
                     <i class="fas fa-calendar-alt me-2"></i>Est. {{ university.established }}
@@ -18,12 +18,10 @@
             </div>
             <div class="col-md-4 text-md-end mt-3 mt-md-0">
                 {% if university.website %}
-                    <a href="{{ university.website }}" 
-                       target="_blank" 
-                       rel="noopener noreferrer" 
-                       class="btn btn-light btn-lg hover-lift">
-                        <i class="fas fa-external-link-alt me-2"></i>Visit Website
-                    </a>
+                <a href="{{ university.website }}" target="_blank" rel="noopener noreferrer"
+                    class="btn btn-light btn-lg hover-lift">
+                    <i class="fas fa-external-link-alt me-2"></i>Visit Website
+                </a>
                 {% endif %}
             </div>
         </div>
@@ -100,11 +98,8 @@
                 <div class="col-md-6">
                     <div class="search-wrapper">
                         <i class="fas fa-search search-icon"></i>
-                        <input type="text" 
-                               class="form-control" 
-                               id="courseSearch" 
-                               placeholder="Search courses..."
-                               aria-label="Search courses">
+                        <input type="text" class="form-control" id="courseSearch" placeholder="Search courses..."
+                            aria-label="Search courses">
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -113,11 +108,8 @@
                             <i class="fas fa-exchange-alt me-1"></i>Compare Selected
                         </button>
                         <div class="dropdown">
-                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
-                                    type="button" 
-                                    id="sortDropdown" 
-                                    data-bs-toggle="dropdown"
-                                    aria-expanded="false">
+                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+                                id="sortDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="fas fa-sort me-1"></i>Sort By
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="sortDropdown">
@@ -156,23 +148,19 @@
                                         </span>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input compare-checkbox" 
-                                               type="checkbox" 
-                                               value="{{ course.id }}" 
-                                               id="compareScroll{{ course.id }}"
-                                               aria-label="Select for comparison">
+                                        <input class="form-check-input compare-checkbox" type="checkbox"
+                                            value="{{ course.id }}" id="compareScroll{{ course.id }}"
+                                            aria-label="Select for comparison">
                                     </div>
                                 </div>
 
                                 <div class="course-actions mt-auto">
-                                    <button class="btn btn-sm btn-primary view-requirements-btn" 
-                                            type="button"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#courseModal{{ course.id }}">
+                                    <button class="btn btn-sm btn-primary view-requirements-btn" type="button"
+                                        data-bs-toggle="modal" data-bs-target="#courseModal{{ course.id }}">
                                         <i class="fas fa-info-circle me-1"></i>Requirements
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary share-course-btn" 
-                                            data-course-id="{{ course.id }}">
+                                    <button class="btn btn-sm btn-outline-secondary share-course-btn"
+                                        data-course-id="{{ course.id }}">
                                         <i class="fas fa-share-alt"></i>
                                     </button>
                                 </div>
@@ -199,20 +187,21 @@
                         <div class="row align-items-center">
                             <div class="col-md-6">
                                 <button class="btn btn-primary" id="compareSelectedBtn" disabled>
-                                    <i class="fas fa-exchange-alt me-2"></i>Compare Selected 
+                                    <i class="fas fa-exchange-alt me-2"></i>Compare Selected
                                     (<span id="selectedCount">0</span>)
                                 </button>
                             </div>
                             <div class="col-md-6 text-end">
                                 <div class="btn-group">
-                                    <button class="btn btn-outline-secondary dropdown-toggle" 
-                                            type="button" 
-                                            data-bs-toggle="dropdown">
+                                    <button class="btn btn-outline-secondary dropdown-toggle" type="button"
+                                        data-bs-toggle="dropdown">
                                         <i class="fas fa-sort me-2"></i>Sort By
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item sort-option" href="#" data-sort="name">Course Name</a></li>
-                                        <li><a class="dropdown-item sort-option" href="#" data-sort="type">Program Type</a></li>
+                                        <li><a class="dropdown-item sort-option" href="#" data-sort="name">Course
+                                                Name</a></li>
+                                        <li><a class="dropdown-item sort-option" href="#" data-sort="type">Program
+                                                Type</a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -222,9 +211,8 @@
                     <!-- Courses Grid -->
                     <div class="row g-4" id="allCoursesGrid">
                         {% for course in courses %}
-                        <div class="col-md-6 col-lg-4 course-item" 
-                             data-course-name="{{ course.course_name }}"
-                             data-program-type="{{ course.program_type }}">
+                        <div class="col-md-6 col-lg-4 course-item" data-course-name="{{ course.course_name }}"
+                            data-program-type="{{ course.program_type }}">
                             <!-- Course card content (same as scroll view) -->
                             <div class="card h-100">
                                 <div class="card-body">
@@ -236,23 +224,19 @@
                                             </span>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input compare-checkbox" 
-                                                   type="checkbox" 
-                                                   value="{{ course.id }}" 
-                                                   id="compareModal{{ course.id }}"
-                                                   aria-label="Select for comparison">
+                                            <input class="form-check-input compare-checkbox" type="checkbox"
+                                                value="{{ course.id }}" id="compareModal{{ course.id }}"
+                                                aria-label="Select for comparison">
                                         </div>
                                     </div>
 
                                     <div class="course-actions mt-auto">
-                                        <button class="btn btn-sm btn-primary view-requirements-btn" 
-                                                type="button"
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#courseModal{{ course.id }}">
+                                        <button class="btn btn-sm btn-primary view-requirements-btn" type="button"
+                                            data-bs-toggle="modal" data-bs-target="#courseModal{{ course.id }}">
                                             <i class="fas fa-info-circle me-1"></i>Requirements
                                         </button>
-                                        <button class="btn btn-sm btn-outline-secondary share-course-btn" 
-                                                data-course-id="{{ course.id }}">
+                                        <button class="btn btn-sm btn-outline-secondary share-course-btn"
+                                            data-course-id="{{ course.id }}">
                                             <i class="fas fa-share-alt"></i>
                                         </button>
                                     </div>
@@ -266,6 +250,99 @@
         </div>
     </div>
 
+    <!-- Special Institutional Requirements Section -->
+    <div class="container mb-4">
+        {% if special_requirements %}
+        <div class="card shadow-sm">
+            <div class="card-header bg-gradient">
+                <h3 class="h5 mb-0">
+                    <i class="fas fa-clipboard-list text-primary me-2"></i>Special Institutional Requirements
+                </h3>
+            </div>
+            <div class="card-body">
+                {% if special_requirements.requirements %}
+                <div class="row">
+                    {% if special_requirements.requirements.mathematics_requirement %}
+                    <div class="col-md-6 mb-4">
+                        <div class="requirement-section h-100">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="info-icon me-2">
+                                    <i class="fas fa-calculator text-primary"></i>
+                                </div>
+                                <h4 class="h6 mb-0">Mathematics Requirements</h4>
+                            </div>
+                            <div class="requirement-content">
+                                <p class="mb-2"><i class="fas fa-check text-success me-2"></i>{{
+                                    special_requirements.requirements.mathematics_requirement.condition }}</p>
+                                {% if special_requirements.requirements.mathematics_requirement.applicable_programs %}
+                                <div class="mt-2">
+                                    <h6 class="text-muted mb-2">Applicable Programs:</h6>
+                                    <ul class="list-unstyled mb-0">
+                                        {% for program in
+                                        special_requirements.requirements.mathematics_requirement.applicable_programs %}
+                                        <li><i class="fas fa-graduation-cap text-primary me-2"></i>{{ program }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if special_requirements.requirements.english_requirement %}
+                    <div class="col-md-6 mb-4">
+                        <div class="requirement-section h-100">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="info-icon me-2">
+                                    <i class="fas fa-book text-primary"></i>
+                                </div>
+                                <h4 class="h6 mb-0">English Requirements</h4>
+                            </div>
+                            <div class="requirement-content">
+                                <p class="mb-2"><i class="fas fa-check text-success me-2"></i>{{
+                                    special_requirements.requirements.english_requirement.condition }}</p>
+                                {% if special_requirements.requirements.english_requirement.applicable_programs %}
+                                <div class="mt-2">
+                                    <h6 class="text-muted mb-2">Applicable Programs:</h6>
+                                    <ul class="list-unstyled mb-0">
+                                        {% for program in special_requirements.requirements.english_requirement.applicable_programs %}
+                                        <li><i class="fas fa-graduation-cap text-primary me-2"></i>{{ program }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if special_requirements.special_notes %}
+                <div class="requirement-section mt-3">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="info-icon me-2">
+                            <i class="fas fa-info-circle text-primary"></i>
+                        </div>
+                        <h4 class="h6 mb-0">Additional Notes</h4>
+                    </div>
+                    <div class="requirement-content">
+                        <ul class="list-unstyled mb-0">
+                            {% for note in special_requirements.special_notes %}
+                            <li class="mb-2">
+                                <i class="fas fa-info text-info me-2"></i>{{ note }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
     <!-- Community Discussion Section -->
     <div class="card shadow-sm mt-4">
         <div class="card-header bg-gradient d-flex justify-content-between align-items-center py-3">
@@ -273,13 +350,14 @@
                 <i class="fas fa-comments me-2 text-primary"></i>Community Discussion
             </h2>
             {% if current_user.is_authenticated %}
-                <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#addCommentModal">
-                    <i class="fas fa-plus-circle me-2"></i>Add Comment
-                </button>
+            <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#addCommentModal">
+                <i class="fas fa-plus-circle me-2"></i>Add Comment
+            </button>
             {% else %}
-                <a href="{{ url_for('auth.login', next=request.path) }}" class="btn btn-outline-primary btn-sm px-3" data-bs-toggle="tooltip" data-bs-placement="top" title="Sign in to add a comment">
-                    <i class="fas fa-sign-in-alt me-2"></i>Login to Comment
-                </a>
+            <a href="{{ url_for('auth.login', next=request.path) }}" class="btn btn-outline-primary btn-sm px-3"
+                data-bs-toggle="tooltip" data-bs-placement="top" title="Sign in to add a comment">
+                <i class="fas fa-sign-in-alt me-2"></i>Login to Comment
+            </a>
             {% endif %}
         </div>
         <div class="card-body p-0">
@@ -304,7 +382,8 @@
                                     <div>
                                         <h6 class="mb-0 {% if comment.author.is_admin %}admin-username{% endif %}">
                                             {{ comment.author.username }}
-                                            <span class="badge bg-primary-soft ms-1 user-score" data-user-id="{{ comment.author.id }}">
+                                            <span class="badge bg-primary-soft ms-1 user-score"
+                                                data-user-id="{{ comment.author.id }}">
                                                 {{ comment.author.score }}
                                             </span>
                                         </h6>
@@ -319,23 +398,21 @@
                             </div>
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="btn-group">
-                                    <button class="btn btn-sm btn-outline-primary vote-btn" 
-                                            data-comment-id="{{ comment.id }}" 
-                                            data-vote-type="like"
-                                            {% if not current_user.is_authenticated %}disabled{% endif %}>
+                                    <button class="btn btn-sm btn-outline-primary vote-btn"
+                                        data-comment-id="{{ comment.id }}" data-vote-type="like" {% if not
+                                        current_user.is_authenticated %}disabled{% endif %}>
                                         <i class="fas fa-thumbs-up me-1"></i>
                                         <span class="like-count">({{ comment.likes }})</span>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-danger vote-btn" 
-                                            data-comment-id="{{ comment.id }}" 
-                                            data-vote-type="dislike"
-                                            {% if not current_user.is_authenticated %}disabled{% endif %}>
+                                    <button class="btn btn-sm btn-outline-danger vote-btn"
+                                        data-comment-id="{{ comment.id }}" data-vote-type="dislike" {% if not
+                                        current_user.is_authenticated %}disabled{% endif %}>
                                         <i class="fas fa-thumbs-down me-1"></i>
                                         <span class="dislike-count">({{ comment.dislikes }})</span>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-secondary reply-btn" 
-                                            data-comment-id="{{ comment.id }}"
-                                            {% if not current_user.is_authenticated %}disabled{% endif %}>
+                                    <button class="btn btn-sm btn-outline-secondary reply-btn"
+                                        data-comment-id="{{ comment.id }}" {% if not current_user.is_authenticated
+                                        %}disabled{% endif %}>
                                         <i class="fas fa-reply me-1"></i>Reply (0)
                                     </button>
                                 </div>
@@ -352,9 +429,11 @@
                                                     <i class="fas fa-user-circle text-primary"></i>
                                                 </div>
                                                 <div>
-                                                    <h6 class="mb-0 {% if reply.author.is_admin %}admin-username{% endif %}">
+                                                    <h6
+                                                        class="mb-0 {% if reply.author.is_admin %}admin-username{% endif %}">
                                                         {{ reply.author.username }}
-                                                        <span class="badge bg-primary-soft ms-1">{{ reply.author.score }}</span>
+                                                        <span class="badge bg-primary-soft ms-1">{{ reply.author.score
+                                                            }}</span>
                                                     </h6>
                                                     <small class="text-muted">
                                                         {{ reply.date_posted.strftime('%B %d, %Y at %H:%M') }}
@@ -387,7 +466,8 @@
 
     <!-- Add Comment Modal -->
     {% if current_user.is_authenticated %}
-    <div class="modal fade" id="addCommentModal" tabindex="-1" aria-labelledby="addCommentModalLabel" aria-hidden="true">
+    <div class="modal fade" id="addCommentModal" tabindex="-1" aria-labelledby="addCommentModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
@@ -395,11 +475,13 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form class="comment-form" action="{{ url_for('api.add_institution_comment', id=university.id) }}" method="POST">
+                    <form class="comment-form" action="{{ url_for('api.add_institution_comment', id=university.id) }}"
+                        method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <div class="mb-3">
                             <label for="comment" class="form-label">Your Comment</label>
-                            <textarea class="form-control" id="comment" name="content" rows="4" maxlength="200" required></textarea>
+                            <textarea class="form-control" id="comment" name="content" rows="4" maxlength="200"
+                                required></textarea>
                             <div class="form-text d-flex justify-content-between align-items-center mt-2">
                                 <span id="charCount">200 remaining</span>
                                 <span class="text-muted">Max 200 characters</span>
@@ -427,7 +509,8 @@
                     <form id="replyForm">
                         <div class="mb-3">
                             <label for="replyContent" class="form-label">Your Reply</label>
-                            <textarea class="form-control reply-textarea" id="replyContent" rows="3" maxlength="200" required></textarea>
+                            <textarea class="form-control reply-textarea" id="replyContent" rows="3" maxlength="200"
+                                required></textarea>
                             <div class="form-text d-flex justify-content-between align-items-center mt-2">
                                 <span class="reply-char-count">200 remaining</span>
                                 <span class="text-muted">Max 200 characters</span>
@@ -446,11 +529,8 @@
 
     <!-- Course Modals -->
     {% for course in courses %}
-    <div class="modal fade" 
-         id="courseModal{{ course.id }}" 
-         tabindex="-1" 
-         aria-labelledby="courseModalLabel{{ course.id }}" 
-         aria-hidden="true">
+    <div class="modal fade" id="courseModal{{ course.id }}" tabindex="-1"
+        aria-labelledby="courseModalLabel{{ course.id }}" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -464,47 +544,47 @@
                         <h6 class="fw-bold mb-4">Entry Requirements</h6>
 
                         {% for requirement in course.requirements %}
-                            {% if requirement.university_id == university.id %}
-                                {% if requirement.utme_requirements %}
-                                <div class="mb-4">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <i class="fas fa-check-circle text-success me-2"></i>
-                                        <h6 class="mb-0">UTME Requirements</h6>
-                                    </div>
-                                    <p class="ms-4 mb-0">{{ requirement.utme_requirements }}</p>
-                                </div>
-                                {% endif %}
+                        {% if requirement.university_id == university.id %}
+                        {% if requirement.utme_requirements %}
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <h6 class="mb-0">UTME Requirements</h6>
+                            </div>
+                            <p class="ms-4 mb-0">{{ requirement.utme_requirements }}</p>
+                        </div>
+                        {% endif %}
 
-                                {% if requirement.subject_requirement and requirement.subject_requirement.subjects %}
-                                <div class="mb-4">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <i class="fas fa-book text-primary me-2"></i>
-                                        <h6 class="mb-0">UTME Subjects</h6>
-                                    </div>
-                                    <p class="ms-4 mb-0">{{ requirement.subject_requirement.subjects }}</p>
-                                </div>
-                                {% endif %}
+                        {% if requirement.subject_requirement and requirement.subject_requirement.subjects %}
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-book text-primary me-2"></i>
+                                <h6 class="mb-0">UTME Subjects</h6>
+                            </div>
+                            <p class="ms-4 mb-0">{{ requirement.subject_requirement.subjects }}</p>
+                        </div>
+                        {% endif %}
 
-                                {% if requirement.subjects %}
-                                <div class="mb-4">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <i class="fas fa-book text-primary me-2"></i>
-                                        <h6 class="mb-0">Required Subjects</h6>
-                                    </div>
-                                    <p class="ms-4 mb-0">{{ requirement.subjects }}</p>
-                                </div>
-                                {% endif %}
+                        {% if requirement.subjects %}
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-book text-primary me-2"></i>
+                                <h6 class="mb-0">Required Subjects</h6>
+                            </div>
+                            <p class="ms-4 mb-0">{{ requirement.subjects }}</p>
+                        </div>
+                        {% endif %}
 
-                                {% if requirement.direct_entry_requirements %}
-                                <div class="mb-4">
-                                    <div class="d-flex align-items-center mb-2">
-                                        <i class="fas fa-door-open text-warning me-2"></i>
-                                        <h6 class="mb-0">Direct Entry Requirements</h6>
-                                    </div>
-                                    <p class="ms-4 mb-0">{{ requirement.direct_entry_requirements }}</p>
-                                </div>
-                                {% endif %}
-                            {% endif %}
+                        {% if requirement.direct_entry_requirements %}
+                        <div class="mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-door-open text-warning me-2"></i>
+                                <h6 class="mb-0">Direct Entry Requirements</h6>
+                            </div>
+                            <p class="ms-4 mb-0">{{ requirement.direct_entry_requirements }}</p>
+                        </div>
+                        {% endif %}
+                        {% endif %}
                         {% endfor %}
                     </div>
                 </div>

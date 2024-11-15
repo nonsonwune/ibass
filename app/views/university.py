@@ -338,8 +338,22 @@ def get_course(course_id):
 @bp.route("/institution/<int:id>")
 def institution_details(id):
     try:
-        university = University.query.get_or_404(id)
+        university = University.query.options(
+            joinedload(University.state_info),
+            joinedload(University.programme_type_info)
+        ).get_or_404(id)
+        
         courses = university.courses
+        
+        # Get special requirements using the new relationship name
+        special_requirements = None
+        if university.special_requirements_list:
+            special_req = university.special_requirements_list[0] if university.special_requirements_list else None
+            if special_req:
+                special_requirements = {
+                    'requirements': special_req.requirements,
+                    'special_notes': special_req.special_notes
+                }
         
         # Use the unified Comment model
         comments = Comment.query.filter_by(
@@ -350,7 +364,8 @@ def institution_details(id):
         return render_template('institution_details.html',
                              university=university,
                              courses=courses,
-                             comments=comments)
+                             comments=comments,
+                             special_requirements=special_requirements)
     except Exception as e:
         current_app.logger.error(f"Error in institution_details: {str(e)}")
         flash('An error occurred while loading the institution details.', 'danger')

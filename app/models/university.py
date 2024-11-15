@@ -7,6 +7,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import expression
 import re
 from .requirement import CourseRequirement
+from .special_requirement import SpecialRequirement
 from datetime import datetime
 
 # Define State model first
@@ -61,6 +62,14 @@ class University(BaseModel):
     # Update relationships to use back_populates instead of backref
     state_info = db.relationship('State', back_populates='universities', lazy='joined')
     programme_type_info = db.relationship('ProgrammeType', back_populates='universities', lazy='joined')
+    
+    # Define special requirements relationship explicitly
+    special_requirements_list = db.relationship(
+        'SpecialRequirement',
+        backref='university',
+        lazy='joined',
+        cascade='all, delete-orphan'
+    )
     
     # Add search vector column
     search_vector = db.Column(TSVECTOR)

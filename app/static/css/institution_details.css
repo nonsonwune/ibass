@@ -189,6 +189,59 @@
     margin: 1rem 0;
 }
 
+/* Special Institutional Requirements Section */
+.requirement-section {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    transition: all 0.3s ease;
+}
+
+.requirement-section:hover {
+    background: rgba(0, 97, 242, 0.02);
+}
+
+.requirement-section .info-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(0, 97, 242, 0.1);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    color: #0061f2;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.requirement-section:hover .info-icon {
+    background: #0061f2;
+    color: white;
+    transform: scale(1.05);
+}
+
+.requirement-content {
+    padding-left: 3.5rem;
+}
+
+.requirement-content ul li {
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.requirement-content ul li:last-child {
+    margin-bottom: 0;
+}
+
+.card-header.bg-gradient {
+    background: linear-gradient(45deg, #0061f2, #00a6fb);
+    color: white;
+    border-bottom: none;
+    padding: 1rem 1.25rem;
+}
+
 /* Animations */
 @keyframes fadeIn {
     from { 
