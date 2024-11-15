@@ -20,8 +20,17 @@ class Comment(BaseModel):
         back_populates='comments',
         lazy='joined'
     )
-    university = db.relationship('University', back_populates='comments')
-    replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]))
+    university = db.relationship(
+        'University',
+        back_populates='comments',
+        lazy='joined'
+    )
+    replies = db.relationship(
+        'Comment',
+        backref=db.backref('parent', remote_side=[id]),
+        lazy='dynamic',
+        cascade='all, delete-orphan'
+    )
     
     likes = db.Column(db.Integer, default=0)
     dislikes = db.Column(db.Integer, default=0)
@@ -36,7 +45,7 @@ class Comment(BaseModel):
     
     @hybrid_property
     def reply_count(self):
-        return self.replies.count()
+        return len(self.replies.all())
     
     @reply_count.expression
     def reply_count(cls):
@@ -47,6 +56,9 @@ class Comment(BaseModel):
             .scalar_subquery()
             .label('reply_count')
         )
+
+    def __repr__(self):
+        return f'<Comment {self.id} by {self.author.username} on {self.date_posted}>'
 
 class Vote(BaseModel):
     __tablename__ = 'vote'

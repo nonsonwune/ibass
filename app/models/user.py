@@ -20,12 +20,7 @@ class User(UserMixin, db.Model):
     bookmarks = db.relationship("Bookmark", backref="user", lazy=True, cascade="all, delete-orphan")
     
     # Update comment relationships to use back_populates instead of backref
-    comments = db.relationship(
-        "Comment",
-        back_populates="author",
-        lazy=True,
-        cascade="all, delete-orphan"
-    )
+    comments = db.relationship('Comment', back_populates='author', lazy='dynamic')
 
     def set_password(self, password):
         """Set the password hash for the user"""

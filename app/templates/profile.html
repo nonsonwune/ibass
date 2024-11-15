@@ -70,52 +70,24 @@
                 <!-- Comments Tab -->
                 <div class="tab-pane fade" id="comments" role="tabpanel" aria-labelledby="comments-tab">
                     <h3 class="mb-3">Comments</h3>
-                    {% if user.comments or user.institution_comments %}
+                    {% if user.comments %}
                         <div id="commentsList">
                             {% for comment in user.comments %}
                                 <div class="card mb-3 comment-card" data-comment-id="{{ comment.id }}">
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <div>
-                                                <span class="badge bg-info me-2">Contact</span>
-                                                Contact Form
-                                            </div>
-                                            <small class="text-muted">
-                                                {{ comment.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}
-                                            </small>
-                                        </div>
-                                        <p class="card-text">{{ comment.content }}</p>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="comment-stats">
-                                                <span class="me-3">
-                                                    <i class="fas fa-thumbs-up"></i> {{ comment.likes|default(0) }}
-                                                </span>
-                                                <span>
-                                                    <i class="fas fa-thumbs-down"></i> {{ comment.dislikes|default(0) }}
-                                                </span>
-                                            </div>
-                                            {% if current_user.id == comment.user_id or current_user.is_admin %}
-                                                <button class="btn btn-sm btn-danger delete-comment"
-                                                        data-comment-id="{{ comment.id }}">
-                                                    <i class="fas fa-trash-alt"></i> Delete
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-
-                            {% for comment in user.institution_comments %}
-                                <div class="card mb-3 comment-card" data-comment-id="{{ comment.id }}">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <div>
-                                                <span class="badge bg-primary me-2">Institution</span>
-                                                <a href="#" class="institution-link" data-bs-toggle="modal"
-                                                   data-bs-target="#institutionModal" 
-                                                   data-uni-id="{{ comment.institution_id }}">
-                                                    {{ comment.institution.university_name }}
-                                                </a>
+                                                {% if comment.university_id %}
+                                                    <span class="badge bg-primary me-2">Institution</span>
+                                                    <a href="#" class="institution-link" data-bs-toggle="modal"
+                                                       data-bs-target="#institutionModal" 
+                                                       data-uni-id="{{ comment.university_id }}">
+                                                        {{ comment.university.university_name if comment.university else 'Unknown Institution' }}
+                                                    </a>
+                                                {% else %}
+                                                    <span class="badge bg-info me-2">Contact</span>
+                                                    Contact Form
+                                                {% endif %}
                                             </div>
                                             <small class="text-muted">
                                                 {{ comment.date_posted.strftime('%Y-%m-%d %H:%M:%S') }}
