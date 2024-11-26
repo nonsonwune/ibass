@@ -1,8 +1,8 @@
 """Add special requirements table
 
-Revision ID: add_special_requirements
-Revises: 
-Create Date: 2024-01-16 12:00:00.000000
+Revision ID: 44f225073901
+Revises: 44f225073900
+Create Date: 2024-11-25
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers, used by Alembic.
-revision = 'add_special_requirements'
-down_revision = None  # Update this with your previous migration
+revision = '44f225073901'
+down_revision = '44f225073900'
 branch_labels = None
 depends_on = None
 

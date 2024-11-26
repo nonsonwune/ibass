@@ -1,16 +1,15 @@
 """add university id to comment
 
-Revision ID: add_university_id_to_comment
-Revises: previous_migration_id
-Create Date: 2024-11-14 08:00:00.000000
-
+Revision ID: 44f225073902
+Revises: 44f225073901
+Create Date: 2024-11-25
 """
 from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = 'add_university_id_to_comment'
-down_revision = 'previous_migration_id'  # replace with your last migration id
+revision = '44f225073902'
+down_revision = '44f225073901'  
 branch_labels = None
 depends_on = None
 

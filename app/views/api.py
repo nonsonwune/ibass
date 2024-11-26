@@ -1119,3 +1119,53 @@ def add_institution_comment(id):
         current_app.logger.error(f"Error adding comment: {str(e)}")
         flash('An error occurred while adding your comment', 'danger')
         return redirect(url_for('university.institution_details', id=id))
+
+@bp.route('/featured-institutions')
+def get_featured_institutions():
+    try:
+        current_app.logger.debug("Fetching featured institutions")
+        
+        # Query featured institutions
+        featured = University.query\
+            .filter_by(is_featured=True)\
+            .join(State, University.state_id == State.id)\
+            .join(ProgrammeType, University.programme_type_id == ProgrammeType.id)\
+            .options(
+                joinedload(University.state_info),
+                joinedload(University.programme_type_info)
+            )\
+            .order_by(func.random())\
+            .limit(6)\
+            .all()
+        
+        current_app.logger.debug(f"Found {len(featured)} featured institutions")
+        
+        # Transform to response format
+        institutions = []
+        for inst in featured:
+            try:
+                institution = {
+                    'id': inst.id,
+                    'name': inst.university_name,
+                    'state': inst.state_info.name if inst.state_info else 'Unknown',
+                    'type': inst.programme_type_info.name if inst.programme_type_info else 'Unknown',
+                    'courses_count': len(inst.courses) if hasattr(inst, 'courses') else 0
+                }
+                institutions.append(institution)
+            except Exception as inst_error:
+                current_app.logger.error(f"Error processing institution {inst.id}: {str(inst_error)}")
+                continue
+        
+        current_app.logger.debug(f"Processed {len(institutions)} institutions successfully")
+        
+        return jsonify({
+            'status': 'success',
+            'institutions': institutions
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error fetching featured institutions: {str(e)}", exc_info=True)
+        return jsonify({
+            'status': 'error',
+            'message': 'Failed to fetch featured institutions',
+            'details': str(e) if current_app.debug else None
+        }), 500

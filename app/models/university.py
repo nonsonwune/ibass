@@ -57,6 +57,7 @@ class University(BaseModel):
     website = db.Column(db.String(255))
     established = db.Column(db.Integer)
     abbrv = db.Column(db.String(255))  # Added this column to match database schema
+    is_featured = db.Column(db.Boolean, default=False, nullable=False)
     search_vector = db.Column(TSVECTOR)
     
     # Update relationships to use back_populates instead of backref

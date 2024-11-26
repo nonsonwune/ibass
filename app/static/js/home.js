@@ -13,7 +13,13 @@ const DOM = {
     step2: document.getElementById("step2"),
     courseSuggestions: document.getElementById("courseSuggestions"),
     scrollPrompt: document.querySelector(".scroll-prompt"),
-    selectedTypesContainer: document.querySelector(".selected-types")
+    selectedTypesContainer: document.querySelector(".selected-types"),
+    featuredSection: document.getElementById("featuredSection"),
+    featuredGrid: document.getElementById("featuredInstitutions"),
+    featuredPagination: document.getElementById("featuredPagination"),
+    featuredPrev: document.getElementById("prevFeatured"),
+    featuredNext: document.getElementById("nextFeatured"),
+    loadingPlaceholder: document.getElementById("loadingPlaceholder")
 };
 
 // Define state management
@@ -409,6 +415,168 @@ const NAVIGATION_HANDLER = {
     }
 };
 
+const FEATURED_HANDLER = {
+    currentPage: 0,
+    itemsPerPage: 3,
+    institutions: [],
+
+    async loadFeaturedInstitutions() {
+        try {
+            if (DOM.loadingPlaceholder) {
+                DOM.loadingPlaceholder.style.display = 'block';
+            }
+            if (DOM.featuredGrid) {
+                DOM.featuredGrid.style.display = 'none';
+            }
+
+            const response = await fetch("/api/featured-institutions");
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            
+            const data = await response.json();
+            console.log("Featured institutions data:", data);
+
+            if (data.status === 'success' && Array.isArray(data.institutions)) {
+                this.institutions = data.institutions;
+            } else {
+                throw new Error('Invalid data format from API');
+            }
+            
+            if (DOM.loadingPlaceholder) {
+                DOM.loadingPlaceholder.style.display = 'none';
+            }
+            if (DOM.featuredGrid) {
+                DOM.featuredGrid.style.display = 'grid';
+            }
+
+            this.renderInstitutions();
+            this.setupPagination();
+            this.initializeObserver();
+        } catch (error) {
+            console.error("Error loading featured institutions:", error);
+            if (DOM.loadingPlaceholder) {
+                DOM.loadingPlaceholder.style.display = 'none';
+            }
+            if (DOM.featuredGrid) {
+                UTILS.showError(
+                    "Failed to load featured institutions. Please refresh the page.",
+                    DOM.featuredGrid
+                );
+            }
+        }
+    },
+
+    renderInstitutions() {
+        if (!DOM.featuredGrid || !Array.isArray(this.institutions)) return;
+
+        const start = this.currentPage * this.itemsPerPage;
+        const end = start + this.itemsPerPage;
+        const pageInstitutions = this.institutions.slice(start, end);
+
+        DOM.featuredGrid.innerHTML = pageInstitutions.map(institution => `
+            <div class="institution-card" data-aos="fade-up">
+                <div class="institution-header">
+                    <div class="institution-icon">
+                        <i class="fas fa-university"></i>
+                    </div>
+                    <h3 class="h5 mb-2">${institution.name}</h3>
+                    <div class="section-badge">
+                        <span class="badge bg-primary">${institution.type}</span>
+                    </div>
+                </div>
+                <div class="institution-body">
+                    <div class="institution-stat">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>${institution.state}</span>
+                    </div>
+                    <div class="institution-stat">
+                        <i class="fas fa-book"></i>
+                        <span>${institution.courses_count} Courses</span>
+                    </div>
+                    <a href="/institution/${institution.id}" class="btn btn-primary mt-3 w-100">
+                        View Details
+                    </a>
+                </div>
+            </div>
+        `).join('');
+
+        // Trigger AOS animations
+        if (window.AOS) {
+            window.AOS.refresh();
+        }
+    },
+
+    setupPagination() {
+        if (!DOM.featuredPagination) return;
+
+        const totalPages = Math.ceil(this.institutions.length / this.itemsPerPage);
+        DOM.featuredPagination.innerHTML = Array.from({ length: totalPages }, (_, i) => `
+            <div class="pagination-dot ${i === this.currentPage ? 'active' : ''}" 
+                 data-page="${i}" 
+                 role="button" 
+                 tabindex="0"
+                 aria-label="Page ${i + 1}">
+            </div>
+        `).join('');
+
+        DOM.featuredPagination.addEventListener('click', (e) => {
+            const dot = e.target.closest('.pagination-dot');
+            if (dot) {
+                this.currentPage = parseInt(dot.dataset.page);
+                this.updateUI();
+            }
+        });
+
+        // Update navigation buttons state
+        if (DOM.featuredPrev) {
+            DOM.featuredPrev.disabled = this.currentPage === 0;
+        }
+        if (DOM.featuredNext) {
+            DOM.featuredNext.disabled = this.currentPage === totalPages - 1;
+        }
+    },
+
+    updateUI() {
+        this.renderInstitutions();
+        this.setupPagination();
+    },
+
+    initializeObserver() {
+        if (!DOM.featuredSection || !window.IntersectionObserver) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    DOM.featuredGrid.classList.add('loaded');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        observer.observe(DOM.featuredSection);
+    },
+
+    setupEventListeners() {
+        if (DOM.featuredPrev) {
+            DOM.featuredPrev.addEventListener('click', () => {
+                if (this.currentPage > 0) {
+                    this.currentPage--;
+                    this.updateUI();
+                }
+            });
+        }
+
+        if (DOM.featuredNext) {
+            DOM.featuredNext.addEventListener('click', () => {
+                const totalPages = Math.ceil(this.institutions.length / this.itemsPerPage);
+                if (this.currentPage < totalPages - 1) {
+                    this.currentPage++;
+                    this.updateUI();
+                }
+            });
+        }
+    }
+};
+
 // Finally, add the event listener
 document.addEventListener("DOMContentLoaded", function () {
     console.log("DOM Content Loaded");
@@ -445,4 +613,8 @@ document.addEventListener("DOMContentLoaded", function () {
     if (DOM.findInstitutionBtn) {
         COURSE_HANDLER.setupFindInstitutionButton();
     }
+
+    // Initialize featured institutions
+    FEATURED_HANDLER.loadFeaturedInstitutions();
+    FEATURED_HANDLER.setupEventListeners();
 });

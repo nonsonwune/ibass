@@ -7,6 +7,7 @@
 <!-- Include additional CSS files -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
+<link href="{{ url_for('static', filename='css/featured.css') }}" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
@@ -158,6 +159,50 @@
   </div>
 </section>
 
+<!-- Enhanced Featured Institutions Section -->
+<section class="featured-section py-5" id="featuredSection">
+  <div class="container">
+      <!-- Enhanced Header with Decorative Elements -->
+      <div class="featured-header text-center mb-5" data-aos="fade-up">
+          <div class="section-badge mb-3">
+              <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">
+                  <i class="fas fa-star me-2"></i>Featured
+              </span>
+          </div>
+          <h2 class="display-5 mb-3">Featured Institutions</h2>
+          <p class="lead text-muted col-md-8 mx-auto">
+              Discover our hand-picked selection of top Nigerian institutions, carefully chosen for their academic excellence and outstanding achievements
+          </p>
+      </div>
+
+      <!-- Enhanced Loading State -->
+      <div id="loadingPlaceholder" class="py-5">
+          <div class="loading-wrapper text-center">
+              <div class="loading-pulse mb-3"></div>
+              <p class="text-muted">Discovering exceptional institutions...</p>
+          </div>
+      </div>
+
+      <!-- Enhanced Grid Layout -->
+      <div class="featured-grid" id="featuredInstitutions">
+          <!-- Cards will be inserted here via JavaScript -->
+      </div>
+
+      <!-- Enhanced Navigation Controls -->
+      <div class="featured-controls text-center mt-5" data-aos="fade-up">
+          <button class="btn btn-outline-primary rounded-circle me-2" id="prevFeatured" aria-label="Previous institutions">
+              <i class="fas fa-chevron-left"></i>
+          </button>
+          <div class="featured-pagination d-inline-flex align-items-center mx-3" role="navigation">
+              <!-- Pagination dots will be inserted here -->
+          </div>
+          <button class="btn btn-outline-primary rounded-circle ms-2" id="nextFeatured" aria-label="Next institutions">
+              <i class="fas fa-chevron-right"></i>
+          </button>
+      </div>
+  </div>
+</section>
+
 <section class="features-section py-5 bg-light">
   <div class="container">
     <h2 class="text-center mb-5" data-aos="fade-up">Why Choose Us?</h2>
@@ -223,4 +268,5 @@
   });
 </script>
 <script defer src="{{ url_for('static', filename='js/home.js') }}"></script>
+<script src="{{ url_for('static', filename='js/featured.js') }}"></script>
 {% endblock %}
