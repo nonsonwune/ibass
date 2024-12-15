@@ -182,3 +182,8 @@ production_dump.sql
 /data
 /data/
 .cursurrules
+go.mod
+go.sum
+migrate.go
+migrate_db.sh
+migrate_db.py
