@@ -1,19 +1,24 @@
 # app/config.py
 import os
-from dotenv import load_dotenv
 import logging
+from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s: %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-
 class Config:
+    # -------------------------------
+    # Logging Configuration
+    # -------------------------------
+    LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+    SQLALCHEMY_LOG_LEVEL = os.getenv('SQLALCHEMY_LOG_LEVEL', 'WARNING')
+
+    # -------------------------------
+    # Debug Configuration
+    # -------------------------------
+    DEBUG = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
+    SQLALCHEMY_ECHO = os.getenv('SQLALCHEMY_ECHO', 'false').lower() == 'true'
+
     # -------------------------------
     # Secret Key Configuration
     # -------------------------------
@@ -39,7 +44,7 @@ class Config:
     # SQLAlchemy Configuration
     # -------------------------------
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ECHO = False  # Set to False in production
+    SQLALCHEMY_ECHO = False  # Disable SQL echo by default
     
     # Configure connection pool
     SQLALCHEMY_ENGINE_OPTIONS = {

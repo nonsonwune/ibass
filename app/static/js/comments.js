@@ -6,12 +6,14 @@ document.addEventListener("DOMContentLoaded", function () {
   initializeVoting();
   initializeTooltips();
 
-  if (window.isAuthenticated) {
+  // Check authentication once
+  if (window.isAuthenticated && window.isAuthenticated !== "false") {
+    console.log("User authenticated, initializing interactive features");
     fetchUserVotes();
+    initializeReplySystem();
+  } else {
+    console.log("User not authenticated, skipping interactive features");
   }
-
-  // Then set up replies
-  initializeReplySystem();
   
   // Finally, update counts and sort
   setTimeout(() => {
@@ -259,12 +261,6 @@ function updateVoteUI(commentElement, data) {
  * Fetches the user's existing votes from the backend.
  */
 function fetchUserVotes() {
-  // Don't fetch if user is not authenticated
-  if (!window.isAuthenticated || window.isAuthenticated === "false") {
-    console.log("User not authenticated, skipping vote fetch");
-    return;
-  }
-
   fetch("/api/user_votes", {
     credentials: "same-origin",
     headers: {
@@ -274,7 +270,6 @@ function fetchUserVotes() {
   })
     .then((response) => {
       if (response.redirected || response.status === 401) {
-        console.log("User not authenticated");
         return null;
       }
       if (!response.ok) {
@@ -431,9 +426,8 @@ function initializeReplyButtonForCard(card, parentLevel) {
  */
 function initializeReplySystem() {
   const replyModal = document.getElementById("replyModal");
-
   if (!replyModal) {
-    console.error("Reply modal not found in DOM");
+    console.log("Reply modal not found - expected for unauthenticated users");
     return;
   }
 

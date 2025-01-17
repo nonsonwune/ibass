@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
 from ..models.user import User
-from ..models.interaction import Comment
+from ..models.interaction import Comment, Vote
 from ..models.feedback import Feedback
 from ..models.university import University, Course
 from ..models.requirement import CourseRequirement
@@ -11,6 +11,8 @@ from ..forms.admin import DeleteUserForm, DeleteCommentForm, DeleteFeedbackForm,
 from ..utils.decorators import admin_required
 from ..extensions import db
 from sqlalchemy.orm import joinedload
+from flask import current_app
+from ..models.interaction import Bookmark
 
 bp = Blueprint('admin', __name__)
 
@@ -63,12 +65,31 @@ def delete_user(user_id):
     form = DeleteUserForm()
     if form.validate_on_submit():
         try:
-            db.session.delete(user)
+            # Begin transaction
+            with db.session.begin_nested():
+                # Delete related data first
+                Comment.query.filter_by(user_id=user_id).delete()
+                Vote.query.filter_by(user_id=user_id).delete()
+                Bookmark.query.filter_by(user_id=user_id).delete()
+                
+                # Finally delete the user
+                db.session.delete(user)
+            
+            # Commit the transaction
             db.session.commit()
-            flash('User deleted successfully.', 'success')
+            current_app.logger.info(f'Successfully deleted user {user_id} and all related data')
+            flash('User and all related data deleted successfully.', 'success')
+            
         except SQLAlchemyError as e:
             db.session.rollback()
-            flash('An error occurred while deleting the user. Please try again.', 'danger')
+            error_msg = str(e)
+            current_app.logger.error(f'Error deleting user {user_id}: {error_msg}', exc_info=True)
+            flash(f'An error occurred while deleting the user: {error_msg}', 'danger')
+        except Exception as e:
+            db.session.rollback()
+            error_msg = str(e)
+            current_app.logger.error(f'Unexpected error deleting user {user_id}: {error_msg}', exc_info=True)
+            flash('An unexpected error occurred while deleting the user.', 'danger')
     else:
         flash('Invalid CSRF token.', 'danger')
 

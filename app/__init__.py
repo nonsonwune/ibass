@@ -44,21 +44,89 @@ def register_blueprints(app):
     app.register_blueprint(api_bp, url_prefix='/api')  # api_bp handles all /api routes
 
 def setup_logging(app):
-    if not app.debug and not app.testing:
-        if not os.path.exists('logs'):
-            os.mkdir('logs')
-        file_handler = RotatingFileHandler(
-            'logs/university_finder.log',
-            maxBytes=10240,
-            backupCount=10
-        )
-        file_handler.setFormatter(logging.Formatter(
-            '%(asctime)s %(levelname)s: %(message)s'
-        ))
-        file_handler.setLevel(logging.INFO)
-        app.logger.addHandler(file_handler)
-        app.logger.setLevel(logging.INFO)
-        app.logger.info('University Finder startup')
+    import logging
+    from logging.handlers import RotatingFileHandler
+    import os
+
+    # Create logs directory if it doesn't exist
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+
+    # Configure root logger to only show INFO and above in terminal
+    logging.basicConfig(level=getattr(logging, app.config['LOG_LEVEL']))
+    root_logger = logging.getLogger()
+    
+    # Remove existing handlers from root logger
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    
+    # Add console handler for important logs only
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter('%(levelname)s: %(message)s')
+    console_handler.setFormatter(console_formatter)
+    root_logger.addHandler(console_handler)
+
+    # Configure formatters
+    file_formatter = logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    detailed_formatter = logging.Formatter(
+        '%(asctime)s %(levelname)s [%(name)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    # Application log handler (file only)
+    app_handler = RotatingFileHandler(
+        'logs/application.log',
+        maxBytes=10240,
+        backupCount=10
+    )
+    app_handler.setFormatter(file_formatter)
+    app_handler.setLevel(getattr(logging, app.config['LOG_LEVEL']))
+    app.logger.addHandler(app_handler)
+    app.logger.setLevel(getattr(logging, app.config['LOG_LEVEL']))
+
+    # SQL query log handler (file only)
+    sql_handler = RotatingFileHandler(
+        'logs/sql.log',
+        maxBytes=10240,
+        backupCount=5
+    )
+    sql_handler.setFormatter(detailed_formatter)
+    sql_handler.setLevel(getattr(logging, app.config['SQLALCHEMY_LOG_LEVEL']))
+
+    # Configure SQLAlchemy logging
+    sql_logger = logging.getLogger('sqlalchemy.engine')
+    sql_logger.addHandler(sql_handler)
+    sql_logger.setLevel(getattr(logging, app.config['SQLALCHEMY_LOG_LEVEL']))
+    sql_logger.propagate = False  # Prevent duplicate logs
+    
+    # Remove duplicate handlers if any
+    for handler in sql_logger.handlers[:-1]:
+        sql_logger.removeHandler(handler)
+
+    # Query timing log handler (file only)
+    timing_handler = RotatingFileHandler(
+        'logs/query_timing.log',
+        maxBytes=10240,
+        backupCount=5
+    )
+    timing_handler.setFormatter(detailed_formatter)
+    timing_handler.setLevel(logging.DEBUG)
+
+    # Configure query timing logging
+    timing_logger = logging.getLogger('query_timing')
+    timing_logger.addHandler(timing_handler)
+    timing_logger.setLevel(logging.DEBUG)
+    timing_logger.propagate = False  # Prevent duplicate logs
+    
+    # Remove duplicate handlers if any
+    for handler in timing_logger.handlers[:-1]:
+        timing_logger.removeHandler(handler)
+
+    app.logger.info('Logging setup completed')
 
 def register_error_handlers(app):
     @app.errorhandler(404)
