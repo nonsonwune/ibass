@@ -85,6 +85,14 @@
 - Added transaction management for user deletion
 - Enhanced error messages with specific details
 
+### 2025-01-17 13:58:00 WAT
+- Fixed programme types endpoint inconsistency
+- Standardized API endpoint naming convention to use hyphens
+- Updated frontend to use consistent endpoint paths
+- Fixed server host and port configuration
+- Resolved 404 errors for programme types endpoint
+- Verified successful integration with frontend
+
 ## Issue Description
 ### Error Details
 1. Query Timing and Logging Issues:
@@ -100,6 +108,8 @@
    - Missing critical endpoints (search, bookmarks, votes)
    - Model reference errors (Institution vs University)
    - Logger reference errors (app vs current_app)
+   - Endpoint naming inconsistency (underscores vs hyphens)
+   - Server host and port configuration mismatches
    - Incomplete error handling in admin operations
    - Missing model imports in admin views
 
@@ -110,6 +120,7 @@
    - Modal integration issues for institution details
    - Reply modal initialization errors for unauthenticated users
    - Focus management issues in modals
+   - Endpoint path inconsistencies in API calls
 
 4. Database Transaction Issues:
    - Lack of atomic transactions for critical operations
@@ -134,6 +145,8 @@
    - Missing route handlers
    - Model naming inconsistencies
    - Incorrect Flask application context usage
+   - Inconsistent endpoint naming conventions (underscores vs hyphens)
+   - Server configuration mismatches
    - Incomplete error handling in admin routes
    - Missing required model imports
    - Incomplete dependency management
@@ -145,6 +158,7 @@
    - Modal component integration issues
    - Improper authentication state handling
    - Incorrect ARIA attribute usage
+   - Inconsistent API endpoint path usage
 
 4. Database Operations:
    - Missing transaction management
@@ -170,6 +184,8 @@
    - Verified response formats
    - Checked model references
    - Validated Flask context usage
+   - Audited endpoint naming conventions
+   - Verified server configuration
    - Tested admin route error handling
    - Audited model imports and dependencies
    - Verified model availability in views
@@ -182,6 +198,7 @@
    - Reviewed authentication state handling
    - Tested focus management in modals
    - Validated ARIA attributes usage
+   - Verified API endpoint path consistency
 
 4. Database Operations:
    - Analyzed query patterns and performance
@@ -207,6 +224,8 @@
    - Added comprehensive error handling
    - Fixed model references
    - Corrected Flask context usage
+   - Standardized endpoint naming to use hyphens
+   - Configured correct server host and port
    - Improved admin route error handling
    - Added missing model imports
    - Fixed dependency issues
@@ -220,6 +239,7 @@
    - Improved focus management
    - Removed problematic aria-hidden attributes
    - Added proper authentication checks for components
+   - Updated API endpoint paths for consistency
 
 4. Database Operations:
    - Implemented atomic transactions
@@ -238,6 +258,8 @@
    - Validated response formats
    - Verified model imports
    - Tested dependency resolution
+   - Verified endpoint naming consistency
+   - Tested server configuration
 
 2. Frontend Testing:
    - Validated accessibility compliance
@@ -246,6 +268,7 @@
    - Tested modal behavior
    - Verified focus management
    - Validated authentication flows
+   - Verified API endpoint path consistency
 
 3. Database Testing:
    - Tested transaction management
@@ -262,6 +285,7 @@
    - Accessibility testing with screen readers
    - Dependency verification
    - Import validation
+   - API endpoint path consistency verification
 
 ## Final Outcome
 - All API endpoints functioning correctly
@@ -276,6 +300,8 @@
 - Complete model dependencies
 - Proper import management
 - Reliable user deletion functionality
+- Consistent API endpoint naming
+- Correct server configuration
 
 ## Lessons Learned
 1. API Development:
@@ -284,6 +310,8 @@
    - Value of proper documentation
    - Critical nature of proper imports
    - Importance of dependency management
+   - Necessity of consistent endpoint naming conventions
+   - Significance of proper server configuration
 
 2. Frontend Integration:
    - Importance of accessibility compliance
@@ -291,6 +319,7 @@
    - Value of proper error management
    - Critical nature of proper authentication state handling
    - Importance of ARIA attributes and focus management
+   - Necessity of consistent API endpoint paths
 
 3. Database Management:
    - Importance of transaction management
@@ -305,4 +334,6 @@
    - Need for consistent error handling
    - Critical nature of accessibility compliance
    - Importance of dependency verification
-   - Value of import validation 
+   - Value of import validation
+   - Necessity of consistent naming conventions
+   - Significance of proper configuration management 

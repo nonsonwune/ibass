@@ -27,7 +27,7 @@ import logging
 timing_logger = logging.getLogger('query_timing')
 sql_logger = logging.getLogger('sqlalchemy.engine')
 
-bp = Blueprint('api', __name__)
+bp = Blueprint('api', __name__, url_prefix='/api')
 
 # Define allowed tags and attributes for sanitization
 ALLOWED_TAGS = ['b', 'i', 'u', 'em', 'strong', 'a']

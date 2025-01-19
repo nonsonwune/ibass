@@ -104,7 +104,7 @@ const INSTITUTION_HANDLER = {
         try {
             const response = await fetch(
                 selectedState === "ALL" 
-                    ? '/api/programme_types'
+                    ? '/api/programme-types'
                     : `/api/programme-types/${encodeURIComponent(selectedState)}`
             );
 
