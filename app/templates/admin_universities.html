@@ -4,14 +4,14 @@ Institutions Finder{% endblock %} {% block content %}
 <div class="container my-5">
   <h1 class="mb-4 text-center">Manage Universities</h1>
 
-  <!-- Search bar -->
+  <!-- Search and Filter Controls -->
   <div class="row mb-3">
-    <div class="col-md-6">
+    <div class="col-md-3">
       <a href="{{ url_for('admin.add_university') }}" class="btn btn-success"
         >Add New University</a
       >
     </div>
-    <div class="col-md-6">
+    <div class="col-md-3">
       <input
         type="text"
         id="universitySearch"
@@ -20,9 +20,27 @@ Institutions Finder{% endblock %} {% block content %}
         onkeyup="filterUniversities()"
       />
     </div>
+    <div class="col-md-3">
+      <select id="featuredFilter" class="form-select" onchange="filterUniversities()">
+        <option value="all">All Universities</option>
+        <option value="featured">Featured Only</option>
+        <option value="not-featured">Not Featured</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <div class="featured-count alert alert-info mb-0 py-2">
+        Featured: <span id="featuredCount">{{ universities|selectattr('is_featured')|list|length }}</span>/6
+      </div>
+    </div>
   </div>
 
   {% if universities %}
+  <div class="alert alert-warning alert-dismissible fade" role="alert" id="featuredLimitAlert" style="display: none;">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <span class="alert-message"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
   <table class="table table-striped" id="universitiesTable">
     <thead>
       <tr>
@@ -32,18 +50,35 @@ Institutions Finder{% endblock %} {% block content %}
         <th>Program Type</th>
         <th>Website</th>
         <th>Established</th>
+        <th>Featured</th>
         <th>Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for university in universities %}
-      <tr>
+      <tr data-featured="{{ university.is_featured|lower }}">
         <td>{{ university.id }}</td>
         <td>{{ university.university_name }}</td>
-        <td>{{ university.state }}</td>
-        <td>{{ university.program_type }}</td>
+        <td>{{ university.state_info.name if university.state_info else '' }}</td>
+        <td>{{ university.programme_type_info.name if university.programme_type_info else '' }}</td>
         <td>{{ university.website }}</td>
         <td>{{ university.established }}</td>
+        <td>
+          <form
+            action="{{ url_for('admin.toggle_featured', university_id=university.id) }}"
+            method="POST"
+            class="featured-form"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button
+              type="submit"
+              class="btn btn-sm {% if university.is_featured %}btn-warning{% else %}btn-outline-warning{% endif %}"
+              title="{% if university.is_featured %}Remove from featured{% else %}Add to featured{% endif %}"
+            >
+              <i class="fas fa-star"></i>
+            </button>
+          </form>
+        </td>
         <td>
           <a
             href="{{ url_for('admin.edit_university', university_id=university.id) }}"
@@ -74,21 +109,51 @@ Institutions Finder{% endblock %} {% block content %}
   {% endif %}
 </div>
 
-<!-- Add this script at the end of your template -->
+<!-- Update the filtering script -->
 <script>
+  function showAlert(message, type = 'warning') {
+    const alert = document.getElementById('featuredLimitAlert');
+    alert.querySelector('.alert-message').textContent = message;
+    alert.classList.remove('alert-warning', 'alert-danger', 'alert-success');
+    alert.classList.add(`alert-${type}`);
+    alert.classList.add('show');
+    alert.style.display = 'block';
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      alert.classList.remove('show');
+      setTimeout(() => {
+        alert.style.display = 'none';
+      }, 150);
+    }, 5000);
+  }
+
+  function updateFeaturedCount(count) {
+    document.getElementById('featuredCount').textContent = count;
+  }
+
   function filterUniversities() {
     const input = document.getElementById("universitySearch");
     const filter = input.value.toLowerCase();
+    const featuredFilter = document.getElementById("featuredFilter").value;
     const table = document.getElementById("universitiesTable");
     const rows = table.getElementsByTagName("tr");
 
     // Loop through all table rows, start from index 1 to skip the header
     for (let i = 1; i < rows.length; i++) {
-      const universityNameCell = rows[i].getElementsByTagName("td")[1]; // Index 1 is the University Name column
+      const universityNameCell = rows[i].getElementsByTagName("td")[1];
+      const row = rows[i];
+      const isFeatured = row.getAttribute("data-featured") === "true";
+      
       if (universityNameCell) {
-        const universityName =
-          universityNameCell.textContent || universityNameCell.innerText;
-        if (universityName.toLowerCase().indexOf(filter) > -1) {
+        const universityName = universityNameCell.textContent || universityNameCell.innerText;
+        const matchesSearch = universityName.toLowerCase().indexOf(filter) > -1;
+        const matchesFeatured = 
+          featuredFilter === "all" || 
+          (featuredFilter === "featured" && isFeatured) || 
+          (featuredFilter === "not-featured" && !isFeatured);
+
+        if (matchesSearch && matchesFeatured) {
           rows[i].style.display = "";
         } else {
           rows[i].style.display = "none";
@@ -96,5 +161,50 @@ Institutions Finder{% endblock %} {% block content %}
       }
     }
   }
+
+  // Add event listeners for form submissions to prevent page reload
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.featured-form').forEach(form => {
+      form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const button = form.querySelector('button');
+        const isFeatured = button.classList.contains('btn-warning');
+        
+        try {
+          const response = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(new FormData(form))
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            // Toggle button appearance
+            button.classList.toggle('btn-warning');
+            button.classList.toggle('btn-outline-warning');
+            button.title = isFeatured ? 'Add to featured' : 'Remove from featured';
+            
+            // Update row data attribute
+            const row = form.closest('tr');
+            row.setAttribute('data-featured', (!isFeatured).toString());
+            
+            // Update featured count
+            updateFeaturedCount(data.featured_count);
+            
+            // Reapply filters
+            filterUniversities();
+          } else {
+            showAlert(data.error, 'danger');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          showAlert('Failed to update featured status', 'danger');
+        }
+      });
+    });
+  });
 </script>
 {% endblock %}

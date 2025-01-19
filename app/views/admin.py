@@ -1,11 +1,11 @@
 # app/views/admin.py
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from sqlalchemy.exc import SQLAlchemyError
 from ..models.user import User
 from ..models.interaction import Comment, Vote
 from ..models.feedback import Feedback
-from ..models.university import University, Course
+from ..models.university import University, Course, State, ProgrammeType
 from ..models.requirement import CourseRequirement
 from ..forms.admin import DeleteUserForm, DeleteCommentForm, DeleteFeedbackForm, UniversityForm, CourseForm
 from ..utils.decorators import admin_required
@@ -14,9 +14,9 @@ from sqlalchemy.orm import joinedload
 from flask import current_app
 from ..models.interaction import Bookmark
 
-bp = Blueprint('admin', __name__)
+bp = Blueprint('admin', __name__, url_prefix='/admin')
 
-@bp.route('/admin')
+@bp.route('/')
 @login_required
 @admin_required
 def admin_dashboard():
@@ -131,58 +131,92 @@ def delete_feedback(feedback_id):
 
 
 # University Management Routes
-@bp.route('/admin/universities')
+@bp.route('/universities')
 @login_required
 @admin_required
-def admin_universities():
-    universities = University.query.all()
+def universities():
+    universities = University.query.options(
+        db.joinedload(University.state_info),
+        db.joinedload(University.programme_type_info)
+    ).all()
     return render_template('admin_universities.html', universities=universities)
 
-@bp.route('/admin/university/add', methods=['GET', 'POST'])
+@bp.route('/university/add', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def add_university():
     form = UniversityForm()
+    
+    # Populate select fields with choices
+    states = State.query.order_by(State.name).all()
+    programme_types = ProgrammeType.query.order_by(ProgrammeType.name).all()
+    form.state.choices = [(state.name, state.name) for state in states]
+    form.program_type.choices = [(pt.name, pt.name) for pt in programme_types]
+    
     if form.validate_on_submit():
+        state = State.query.filter_by(name=form.state.data).first()
+        programme_type = ProgrammeType.query.filter_by(name=form.program_type.data).first()
+        
         university = University(
             university_name=form.university_name.data,
-            state=form.state.data,
-            program_type=form.program_type.data,
+            state_info=state,
+            programme_type_info=programme_type,
             website=form.website.data,
-            established=form.established.data
+            established=form.established.data,
+            abbrv=form.abbrv.data
         )
         try:
             db.session.add(university)
             db.session.commit()
             flash('University added successfully.', 'success')
-            return redirect(url_for('admin.admin_universities'))
+            return redirect(url_for('admin.universities'))
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(f'Error adding university: {str(e)}', 'danger')
     return render_template('admin_edit_university.html', form=form)
 
-@bp.route('/admin/university/edit/<int:university_id>', methods=['GET', 'POST'])
+@bp.route('/university/edit/<int:university_id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def edit_university(university_id):
-    university = University.query.get_or_404(university_id)
+    university = University.query.options(
+        db.joinedload(University.state_info),
+        db.joinedload(University.programme_type_info)
+    ).get_or_404(university_id)
+    
     form = UniversityForm(obj=university)
+    
+    # Populate select fields with choices
+    states = State.query.order_by(State.name).all()
+    programme_types = ProgrammeType.query.order_by(ProgrammeType.name).all()
+    form.state.choices = [(state.name, state.name) for state in states]
+    form.program_type.choices = [(pt.name, pt.name) for pt in programme_types]
+    
+    # Manually set the form data for state and program type
+    if not form.is_submitted():
+        form.state.data = university.state_info.name if university.state_info else ''
+        form.program_type.data = university.programme_type_info.name if university.programme_type_info else ''
+        form.website.data = university.website
+        form.established.data = university.established
+        form.abbrv.data = university.abbrv
+    
     if form.validate_on_submit():
         university.university_name = form.university_name.data
-        university.state = form.state.data
-        university.program_type = form.program_type.data
+        university.state_info = State.query.filter_by(name=form.state.data).first()
+        university.programme_type_info = ProgrammeType.query.filter_by(name=form.program_type.data).first()
         university.website = form.website.data
         university.established = form.established.data
+        university.abbrv = form.abbrv.data
         try:
             db.session.commit()
             flash('University updated successfully.', 'success')
-            return redirect(url_for('admin.admin_universities'))
+            return redirect(url_for('admin.universities'))
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(f'Error updating university: {str(e)}', 'danger')
     return render_template('admin_edit_university.html', form=form, university=university)
 
-@bp.route('/admin/university/delete/<int:university_id>', methods=['POST'])
+@bp.route('/university/delete/<int:university_id>', methods=['POST'])
 @login_required
 @admin_required
 def delete_university(university_id):
@@ -194,13 +228,48 @@ def delete_university(university_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(f'Error deleting university: {str(e)}', 'danger')
-    return redirect(url_for('admin.admin_universities'))
+    return redirect(url_for('admin.universities'))
 
-# Course Management Routes
-@bp.route('/admin/courses')
+@bp.route('/university/toggle_featured/<int:university_id>', methods=['POST'])
 @login_required
 @admin_required
-def admin_courses():
+def toggle_featured(university_id):
+    try:
+        university = University.query.get_or_404(university_id)
+        
+        # If trying to feature a university
+        if not university.is_featured:
+            # Count current featured universities
+            featured_count = University.query.filter_by(is_featured=True).count()
+            if featured_count >= 6:
+                return jsonify({
+                    'success': False,
+                    'error': 'Maximum limit of 6 featured institutions reached'
+                }), 400
+        
+        university.is_featured = not university.is_featured
+        db.session.commit()
+        
+        # Return current featured count along with success
+        featured_count = University.query.filter_by(is_featured=True).count()
+        return jsonify({
+            'success': True,
+            'is_featured': university.is_featured,
+            'featured_count': featured_count
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f'Error toggling featured status for university {university_id}: {str(e)}')
+        return jsonify({
+            'success': False,
+            'error': 'Failed to update featured status'
+        }), 500
+
+# Course Management Routes
+@bp.route('/courses')
+@login_required
+@admin_required
+def courses():
     page = request.args.get('page', 1, type=int)
     courses = (Course.query
               .options(
@@ -211,7 +280,7 @@ def admin_courses():
               .paginate(page=page, per_page=50, error_out=False))
     return render_template('admin_courses.html', courses=courses)
 
-@bp.route('/admin/course/add', methods=['GET', 'POST'])
+@bp.route('/course/add', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def add_course():
@@ -229,13 +298,13 @@ def add_course():
             db.session.add(course)
             db.session.commit()
             flash('Course added successfully.', 'success')
-            return redirect(url_for('admin.admin_courses'))
+            return redirect(url_for('admin.courses'))
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(f'Error adding course: {str(e)}', 'danger')
     return render_template('admin_edit_course.html', form=form)
 
-@bp.route('/admin/course/edit/<int:course_id>', methods=['GET', 'POST'])
+@bp.route('/course/edit/<int:course_id>', methods=['GET', 'POST'])
 @login_required
 @admin_required
 def edit_course(course_id):
@@ -252,13 +321,13 @@ def edit_course(course_id):
         try:
             db.session.commit()
             flash('Course updated successfully.', 'success')
-            return redirect(url_for('admin.admin_courses'))
+            return redirect(url_for('admin.courses'))
         except SQLAlchemyError as e:
             db.session.rollback()
             flash(f'Error updating course: {str(e)}', 'danger')
     return render_template('admin_edit_course.html', form=form, course=course)
 
-@bp.route('/admin/course/delete/<int:course_id>', methods=['POST'])
+@bp.route('/course/delete/<int:course_id>', methods=['POST'])
 @login_required
 @admin_required
 def delete_course(course_id):
@@ -270,4 +339,4 @@ def delete_course(course_id):
     except SQLAlchemyError as e:
         db.session.rollback()
         flash(f'Error deleting course: {str(e)}', 'danger')
-    return redirect(url_for('admin.admin_courses'))
+    return redirect(url_for('admin.courses'))

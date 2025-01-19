@@ -13,8 +13,8 @@ class CourseForm(FlaskForm):
 
 class UniversityForm(FlaskForm):
     university_name = StringField('University Name', validators=[DataRequired(), Length(max=256)])
-    state = StringField('State', validators=[DataRequired(), Length(max=50)])
-    program_type = StringField('Program Type', validators=[DataRequired(), Length(max=50)])
+    state = SelectField('State', validators=[DataRequired()])
+    program_type = SelectField('Program Type', validators=[DataRequired()])
     website = StringField('Website', validators=[Optional(), Length(max=255)])
     established = IntegerField('Year Established', validators=[Optional()])
     abbrv = StringField('Abbreviation', validators=[Optional(), Length(max=255)])
