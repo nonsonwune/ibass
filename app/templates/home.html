@@ -36,7 +36,22 @@
 
     <div class="wizard-wrapper" data-aos="fade-up" data-aos-delay="200">
       <div id="wizard-container" class="mx-auto bg-white rounded-4 shadow-lg p-4">
-
+        <!-- Enhanced step indicators -->
+        <div class="step-indicators mb-4">
+          <div class="step active">
+            <span class="step-number">1</span>
+            <span class="step-title">Location</span>
+          </div>
+          <div class="step">
+            <span class="step-number">2</span>
+            <span class="step-title">Institution Type</span>
+          </div>
+          <div class="step">
+            <span class="step-number">3</span>
+            <span class="step-title">Course</span>
+          </div>
+        </div>
+        
         <!-- Step 1: Location and Institution Type Selection -->
         <div class="wizard-step active" id="step1">
           <h3 class="text-center mb-4">Choose Your Preferred Location</h3>
@@ -53,7 +68,10 @@
               </select>
             </div>
           </div>
+        </div>
 
+        <!-- Step 2: Institution Type Selection -->
+        <div class="wizard-step" id="step2" inert>
           <h4 class="text-center mb-3">Select Institution Type</h4>
           <div class="selected-types mb-3" role="region" aria-live="polite"></div>
           <div
@@ -65,18 +83,27 @@
             <!-- Institution type cards will be inserted here via JavaScript -->
           </div>
 
-          <button
-            id="nextStep"
-            class="btn btn-primary btn-lg w-100 mt-4 d-flex align-items-center justify-content-center gap-2"
-            disabled
-            aria-label="Continue to next step"
-          >
-            Continue <i class="fas fa-arrow-right" aria-hidden="true"></i>
-          </button>
+          <div class="d-grid gap-3">
+            <button
+              id="nextStep"
+              class="btn btn-primary btn-lg d-flex align-items-center justify-content-center gap-2"
+              disabled
+              aria-label="Continue to next step"
+            >
+              Continue <i class="fas fa-arrow-right" aria-hidden="true"></i>
+            </button>
+            <button
+              id="prevStepFromType"
+              class="btn btn-outline-secondary btn-lg d-flex align-items-center justify-content-center gap-2"
+              aria-label="Go back to location selection"
+            >
+              <i class="fas fa-arrow-left" aria-hidden="true"></i> Back
+            </button>
+          </div>
         </div>
 
-        <!-- Step 2: Course Selection -->
-        <div class="wizard-step" id="step2" aria-hidden="true">
+        <!-- Step 3: Course Selection -->
+        <div class="wizard-step" id="step3" inert>
           <h3 class="text-center mb-4">Choose Your Course</h3>
 
           <div
@@ -160,46 +187,39 @@
 </section>
 
 <!-- Enhanced Featured Institutions Section -->
-<section class="featured-section py-5" id="featuredSection">
+<section class="featured-section" id="featuredSection">
   <div class="container">
-      <!-- Enhanced Header with Decorative Elements -->
-      <div class="featured-header text-center mb-5" data-aos="fade-up">
-          <div class="section-badge mb-3">
-              <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill">
-                  <i class="fas fa-star me-2"></i>Featured
-              </span>
-          </div>
-          <h2 class="display-5 mb-3">Featured Institutions</h2>
-          <p class="lead text-muted col-md-8 mx-auto">
-              Discover our hand-picked selection of top Nigerian institutions, carefully chosen for their academic excellence and outstanding achievements
-          </p>
-      </div>
+    <div class="featured-header">
+      <span class="badge bg-primary-subtle text-primary px-3 py-2 rounded-pill mb-3">
+        <i class="fas fa-star me-2"></i>Featured
+      </span>
+      <h2 class="display-5 mb-3">Featured Institutions</h2>
+      <p class="lead text-muted">
+        Discover our hand-picked selection of top Nigerian institutions
+      </p>
+    </div>
 
-      <!-- Enhanced Loading State -->
-      <div id="loadingPlaceholder" class="py-5">
-          <div class="loading-wrapper text-center">
-              <div class="loading-pulse mb-3"></div>
-              <p class="text-muted">Discovering exceptional institutions...</p>
-          </div>
+    <!-- Loading State -->
+    <div id="loadingPlaceholder" class="loading-state">
+      <div class="spinner-grow text-primary mb-3" role="status">
+        <span class="visually-hidden">Loading institutions...</span>
       </div>
+      <p class="text-muted">Loading featured institutions...</p>
+    </div>
 
-      <!-- Enhanced Grid Layout -->
-      <div class="featured-grid" id="featuredInstitutions">
-          <!-- Cards will be inserted here via JavaScript -->
-      </div>
+    <!-- Featured Grid -->
+    <div class="featured-grid" id="featuredInstitutions"></div>
 
-      <!-- Enhanced Navigation Controls -->
-      <div class="featured-controls text-center mt-5" data-aos="fade-up">
-          <button class="btn btn-outline-primary rounded-circle me-2" id="prevFeatured" aria-label="Previous institutions">
-              <i class="fas fa-chevron-left"></i>
-          </button>
-          <div class="featured-pagination d-inline-flex align-items-center mx-3" role="navigation">
-              <!-- Pagination dots will be inserted here -->
-          </div>
-          <button class="btn btn-outline-primary rounded-circle ms-2" id="nextFeatured" aria-label="Next institutions">
-              <i class="fas fa-chevron-right"></i>
-          </button>
-      </div>
+    <!-- Navigation Controls -->
+    <div class="featured-controls">
+      <button id="prevFeatured" class="btn-nav" aria-label="Previous institutions">
+        <i class="fas fa-chevron-left"></i>
+      </button>
+      <div class="featured-pagination" id="featuredPagination"></div>
+      <button id="nextFeatured" class="btn-nav" aria-label="Next institutions">
+        <i class="fas fa-chevron-right"></i>
+      </button>
+    </div>
   </div>
 </section>
 
@@ -259,14 +279,21 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<!-- Include additional JavaScript files -->
+<!-- Load AOS first -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
 <script>
-  AOS.init({
-    duration: 800,
-    once: true
+  // Initialize AOS with proper defaults
+  document.addEventListener('DOMContentLoaded', () => {
+    AOS.init({
+      duration: 800,
+      once: true,
+      initClassName: 'aos-init',
+      animatedClassName: 'aos-animate'
+    });
   });
 </script>
-<script defer src="{{ url_for('static', filename='js/home.js') }}"></script>
+
+<!-- Load featured.js before home.js -->
 <script src="{{ url_for('static', filename='js/featured.js') }}"></script>
+<script src="{{ url_for('static', filename='js/home.js') }}"></script>
 {% endblock %}

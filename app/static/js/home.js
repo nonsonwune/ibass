@@ -11,6 +11,7 @@ const DOM = {
     loadingSpinner: document.getElementById("loadingSpinner"),
     step1: document.getElementById("step1"),
     step2: document.getElementById("step2"),
+    step3: document.getElementById("step3"),
     courseSuggestions: document.getElementById("courseSuggestions"),
     scrollPrompt: document.querySelector(".scroll-prompt"),
     selectedTypesContainer: document.querySelector(".selected-types"),
@@ -19,7 +20,8 @@ const DOM = {
     featuredPagination: document.getElementById("featuredPagination"),
     featuredPrev: document.getElementById("prevFeatured"),
     featuredNext: document.getElementById("nextFeatured"),
-    loadingPlaceholder: document.getElementById("loadingPlaceholder")
+    loadingPlaceholder: document.getElementById("loadingPlaceholder"),
+    prevStepFromType: document.getElementById("prevStepFromType")
 };
 
 // Define state management
@@ -57,7 +59,57 @@ const UTILS = {
     }
 };
 
-// Then define your handlers
+// Define Error Handling Utilities
+const ErrorHandler = {
+    showError(message, container = null) {
+        console.error(message);
+        const errorEl = document.createElement('div');
+        errorEl.className = 'alert alert-danger';
+        errorEl.innerHTML = `
+            <i class="fas fa-exclamation-circle me-2"></i>
+            ${message}
+        `;
+        
+        if (container) {
+            container.innerHTML = '';
+            container.appendChild(errorEl);
+        } else {
+            document.body.appendChild(errorEl);
+            setTimeout(() => errorEl.remove(), 5000);
+        }
+    },
+    
+    async wrapAsync(fn, errorMessage) {
+        try {
+            return await fn();
+        } catch (error) {
+            console.error(error);
+            this.showError(errorMessage);
+            throw error;
+        }
+    }
+};
+
+// Define Component Initialization
+const ComponentManager = {
+    components: new Set(),
+    
+    register(id, initFn) {
+        this.components.add({ id, initFn });
+    },
+    
+    async initializeAll() {
+        for (const component of this.components) {
+            try {
+                await component.initFn();
+            } catch (error) {
+                ErrorHandler.showError(`Failed to initialize ${component.id}`);
+            }
+        }
+    }
+};
+
+// Define LOCATION_HANDLER with proper binding
 const LOCATION_HANDLER = {
     async loadLocations() {
         console.log("loadLocations called");
@@ -71,7 +123,8 @@ const LOCATION_HANDLER = {
             console.log("Raw response data:", data);
             
             if (Array.isArray(data)) {
-                this.populateLocations(data);
+                // Use arrow function to maintain this context
+                await this.populateLocations(data);
             } else {
                 throw new Error('Invalid locations data format');
             }
@@ -84,8 +137,12 @@ const LOCATION_HANDLER = {
         }
     },
 
-    populateLocations(locations) {
+    populateLocations: function(locations) {
         console.log("populateLocations called with:", locations);
+        if (!DOM.locationSelect) {
+            console.error("Location select element not found");
+            return;
+        }
         DOM.locationSelect.innerHTML = '<option value="">Select a State</option>';
 
         locations.forEach((location) => {
@@ -115,6 +172,9 @@ const INSTITUTION_HANDLER = {
             const data = await response.json();
             console.log("Creating type cards for:", data.data);
             this.createTypeCards(data.data);
+            
+            // Automatically move to step 2 after loading institution types
+            NAVIGATION_HANDLER.moveToStep2();
         } catch (error) {
             console.error("Error loading programme types:", error);
             UTILS.showError(
@@ -385,17 +445,78 @@ const COURSE_HANDLER = {
 };
 
 const NAVIGATION_HANDLER = {
+    updateStepIndicators(currentStep) {
+        const steps = document.querySelectorAll('.step-indicators .step');
+        steps.forEach((step, index) => {
+            if (index < currentStep) {
+                step.classList.add('completed');
+                step.classList.remove('active');
+            } else if (index === currentStep) {
+                step.classList.add('active');
+                step.classList.remove('completed');
+            } else {
+                step.classList.remove('active', 'completed');
+            }
+        });
+    },
+
     moveToStep2() {
-        if (DOM.locationSelect.value && STATE.selectedTypes.size > 0) {
+        if (DOM.locationSelect.value) {
             console.log("Moving to step 2");
             const wizardContainer = document.getElementById("wizard-container");
             wizardContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+            // First, blur any focused element in step 1
+            if (document.activeElement && DOM.step1.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+
             setTimeout(() => {
-                DOM.step1.classList.remove("active");
-                DOM.step1.setAttribute("aria-hidden", "true");
+                // Remove inert from step 2 before making it active
+                DOM.step2.removeAttribute('inert');
                 DOM.step2.classList.add("active");
-                DOM.step2.setAttribute("aria-hidden", "false");
+                
+                // Focus the first interactive element in step 2
+                const firstInteractive = DOM.step2.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                if (firstInteractive) {
+                    firstInteractive.focus();
+                }
+
+                // Now safe to make step 1 inert
+                DOM.step1.classList.remove("active");
+                DOM.step1.setAttribute('inert', '');
+                
+                this.updateStepIndicators(1);
+            }, 500);
+        }
+    },
+
+    moveToStep3() {
+        if (STATE.selectedTypes.size > 0) {
+            console.log("Moving to step 3");
+            const wizardContainer = document.getElementById("wizard-container");
+            wizardContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // First, blur any focused element in step 2
+            if (document.activeElement && DOM.step2.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+
+            setTimeout(() => {
+                // Remove inert from step 3 before making it active
+                DOM.step3.removeAttribute('inert');
+                DOM.step3.classList.add("active");
+                
+                // Focus the course search input in step 3
+                if (DOM.courseSearch) {
+                    DOM.courseSearch.focus();
+                }
+
+                // Now safe to make step 2 inert
+                DOM.step2.classList.remove("active");
+                DOM.step2.setAttribute('inert', '');
+                
+                this.updateStepIndicators(2);
 
                 // Load courses for selected location and types
                 COURSE_HANDLER.loadCourses(
@@ -408,213 +529,118 @@ const NAVIGATION_HANDLER = {
 
     moveToStep1() {
         console.log("Moving back to step 1");
-        DOM.step2.classList.remove("active");
-        DOM.step2.setAttribute("aria-hidden", "true");
+        
+        // First, blur any focused element in step 2
+        if (document.activeElement && DOM.step2.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+
+        // Remove inert from step 1 before making it active
+        DOM.step1.removeAttribute('inert');
         DOM.step1.classList.add("active");
-        DOM.step1.setAttribute("aria-hidden", "false");
+        
+        // Focus the location select
+        if (DOM.locationSelect) {
+            DOM.locationSelect.focus();
+        }
+
+        // Now safe to make step 2 inert
+        DOM.step2.classList.remove("active");
+        DOM.step2.setAttribute('inert', '');
+        
+        this.updateStepIndicators(0);
+    },
+
+    moveBackFromStep3() {
+        console.log("Moving back to step 2");
+        
+        // First, blur any focused element in step 3
+        if (document.activeElement && DOM.step3.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
+
+        // Remove inert from step 2 before making it active
+        DOM.step2.removeAttribute('inert');
+        DOM.step2.classList.add("active");
+        
+        // Focus the first selected institution type card or the grid
+        const firstSelected = DOM.institutionTypesGrid.querySelector('.institution-card.selected') || DOM.institutionTypesGrid;
+        if (firstSelected) {
+            firstSelected.focus();
+        }
+
+        // Now safe to make step 3 inert
+        DOM.step3.classList.remove("active");
+        DOM.step3.setAttribute('inert', '');
+        
+        this.updateStepIndicators(1);
     }
 };
 
-const FEATURED_HANDLER = {
-    currentPage: 0,
-    itemsPerPage: 3,
-    institutions: [],
-
-    async loadFeaturedInstitutions() {
-        try {
-            if (DOM.loadingPlaceholder) {
-                DOM.loadingPlaceholder.style.display = 'block';
-            }
-            if (DOM.featuredGrid) {
-                DOM.featuredGrid.style.display = 'none';
-            }
-
-            const response = await fetch("/api/featured-institutions");
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            
-            const data = await response.json();
-            console.log("Featured institutions data:", data);
-
-            if (data.status === 'success' && Array.isArray(data.institutions)) {
-                this.institutions = data.institutions;
-            } else {
-                throw new Error('Invalid data format from API');
-            }
-            
-            if (DOM.loadingPlaceholder) {
-                DOM.loadingPlaceholder.style.display = 'none';
-            }
-            if (DOM.featuredGrid) {
-                DOM.featuredGrid.style.display = 'grid';
-            }
-
-            this.renderInstitutions();
-            this.setupPagination();
-            this.initializeObserver();
-        } catch (error) {
-            console.error("Error loading featured institutions:", error);
-            if (DOM.loadingPlaceholder) {
-                DOM.loadingPlaceholder.style.display = 'none';
-            }
-            if (DOM.featuredGrid) {
-                UTILS.showError(
-                    "Failed to load featured institutions. Please refresh the page.",
-                    DOM.featuredGrid
-                );
-            }
-        }
-    },
-
-    renderInstitutions() {
-        if (!DOM.featuredGrid || !Array.isArray(this.institutions)) return;
-
-        const start = this.currentPage * this.itemsPerPage;
-        const end = start + this.itemsPerPage;
-        const pageInstitutions = this.institutions.slice(start, end);
-
-        DOM.featuredGrid.innerHTML = pageInstitutions.map(institution => `
-            <div class="institution-card" data-aos="fade-up">
-                <div class="institution-header">
-                    <div class="institution-icon">
-                        <i class="fas fa-university"></i>
-                    </div>
-                    <h3 class="h5 mb-2">${institution.name}</h3>
-                    <div class="section-badge">
-                        <span class="badge bg-primary">${institution.type}</span>
-                    </div>
-                </div>
-                <div class="institution-body">
-                    <div class="institution-stat">
-                        <i class="fas fa-map-marker-alt"></i>
-                        <span>${institution.state}</span>
-                    </div>
-                    <div class="institution-stat">
-                        <i class="fas fa-book"></i>
-                        <span>${institution.courses_count} Courses</span>
-                    </div>
-                    <a href="/institution/${institution.id}" class="btn btn-primary mt-3 w-100">
-                        View Details
-                    </a>
-                </div>
-            </div>
-        `).join('');
-
-        // Trigger AOS animations
-        if (window.AOS) {
-            window.AOS.refresh();
-        }
-    },
-
-    setupPagination() {
-        if (!DOM.featuredPagination) return;
-
-        const totalPages = Math.ceil(this.institutions.length / this.itemsPerPage);
-        DOM.featuredPagination.innerHTML = Array.from({ length: totalPages }, (_, i) => `
-            <div class="pagination-dot ${i === this.currentPage ? 'active' : ''}" 
-                 data-page="${i}" 
-                 role="button" 
-                 tabindex="0"
-                 aria-label="Page ${i + 1}">
-            </div>
-        `).join('');
-
-        DOM.featuredPagination.addEventListener('click', (e) => {
-            const dot = e.target.closest('.pagination-dot');
-            if (dot) {
-                this.currentPage = parseInt(dot.dataset.page);
-                this.updateUI();
-            }
-        });
-
-        // Update navigation buttons state
-        if (DOM.featuredPrev) {
-            DOM.featuredPrev.disabled = this.currentPage === 0;
-        }
-        if (DOM.featuredNext) {
-            DOM.featuredNext.disabled = this.currentPage === totalPages - 1;
-        }
-    },
-
-    updateUI() {
-        this.renderInstitutions();
-        this.setupPagination();
-    },
-
-    initializeObserver() {
-        if (!DOM.featuredSection || !window.IntersectionObserver) return;
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    DOM.featuredGrid.classList.add('loaded');
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.1 });
-
-        observer.observe(DOM.featuredSection);
-    },
-
-    setupEventListeners() {
-        if (DOM.featuredPrev) {
-            DOM.featuredPrev.addEventListener('click', () => {
-                if (this.currentPage > 0) {
-                    this.currentPage--;
-                    this.updateUI();
-                }
-            });
-        }
-
-        if (DOM.featuredNext) {
-            DOM.featuredNext.addEventListener('click', () => {
-                const totalPages = Math.ceil(this.institutions.length / this.itemsPerPage);
-                if (this.currentPage < totalPages - 1) {
-                    this.currentPage++;
-                    this.updateUI();
-                }
-            });
-        }
-    }
-};
-
-// Finally, add the event listener
+// Remove duplicate DOMContentLoaded listener and consolidate initialization
 document.addEventListener("DOMContentLoaded", function () {
     console.log("DOM Content Loaded");
     
-    // Verify DOM elements
-    console.log("Location Select Element:", DOM.locationSelect);
+    // Register components with proper binding
+    ComponentManager.register('locations', () => LOCATION_HANDLER.loadLocations());
+    ComponentManager.register('featured', () => {
+        if (typeof FEATURED_HANDLER === 'undefined') {
+            console.error('FEATURED_HANDLER not loaded. Ensure featured.js is included before home.js');
+            return;
+        }
+        return FEATURED_HANDLER.loadFeaturedInstitutions();
+    });
     
-    // Initialize handlers
-    if (LOCATION_HANDLER && typeof LOCATION_HANDLER.loadLocations === 'function') {
-        console.log("Calling loadLocations");
-        LOCATION_HANDLER.loadLocations();
-    } else {
-        console.error("LOCATION_HANDLER not properly initialized");
+    // Initialize all components
+    ComponentManager.initializeAll();
+    
+    // Add event listeners
+    if (DOM.locationSelect) {
+        DOM.locationSelect.addEventListener('change', async (event) => {
+            console.log("Location changed to:", event.target.value);
+            await INSTITUTION_HANDLER.handleLocationChange(event.target.value);
+        });
     }
 
-    // Add change event listener for location select
-    DOM.locationSelect.addEventListener('change', async function(event) {
-        console.log("Location changed to:", event.target.value);
-        await INSTITUTION_HANDLER.handleLocationChange(event.target.value);
-    });
+    if (DOM.nextStepBtn) {
+        DOM.nextStepBtn.addEventListener("click", () => {
+            console.log("Next step button clicked");
+            if (DOM.step1.classList.contains("active")) {
+                NAVIGATION_HANDLER.moveToStep2();
+            } else if (DOM.step2.classList.contains("active")) {
+                NAVIGATION_HANDLER.moveToStep3();
+            }
+        });
+    }
 
-    // Add navigation button handlers
-    DOM.nextStepBtn.addEventListener("click", () => {
-        console.log("Next step button clicked");
-        NAVIGATION_HANDLER.moveToStep2();
-    });
+    // Add event listener for the new back button in step 2
+    if (DOM.prevStepFromType) {
+        DOM.prevStepFromType.addEventListener("click", () => {
+            console.log("Back to location selection clicked");
+            NAVIGATION_HANDLER.moveToStep1();
+            // Clear selected institution types when going back
+            STATE.selectedTypes.clear();
+            INSTITUTION_HANDLER.updateSelectedTypesDisplay();
+        });
+    }
 
-    DOM.prevStepBtn.addEventListener("click", () => {
-        console.log("Previous step button clicked");
-        NAVIGATION_HANDLER.moveToStep1();
-    });
+    if (DOM.prevStepBtn) {
+        DOM.prevStepBtn.addEventListener("click", () => {
+            console.log("Previous step button clicked");
+            if (DOM.step2.classList.contains("active")) {
+                NAVIGATION_HANDLER.moveToStep1();
+            } else if (DOM.step3.classList.contains("active")) {
+                NAVIGATION_HANDLER.moveBackFromStep3();
+            }
+        });
+    }
 
-    // Initialize find institution button
     if (DOM.findInstitutionBtn) {
         COURSE_HANDLER.setupFindInstitutionButton();
     }
 
-    // Initialize featured institutions
-    FEATURED_HANDLER.loadFeaturedInstitutions();
-    FEATURED_HANDLER.setupEventListeners();
+    // Setup featured institutions event listeners
+    if (typeof FEATURED_HANDLER !== 'undefined' && FEATURED_HANDLER.setupEventListeners) {
+        FEATURED_HANDLER.setupEventListeners();
+    }
 });
