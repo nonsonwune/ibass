@@ -364,8 +364,6 @@ def atomic_transaction():
         db.session.rollback()
         current_app.logger.error(f"Transaction failed: {str(e)}")
         raise
-    finally:
-        db.session.close()
 
 @bp.route('/bookmark', methods=['POST'])
 @login_required
@@ -568,6 +566,60 @@ def search_institutions():
             'status': 'error',
             'message': 'An error occurred while searching institutions'
         }), 500
+
+@bp.route('/reply_comment', methods=['POST'])
+@login_required
+def reply_comment():
+    try:
+        # Get JSON data from the request
+        data = request.get_json()
+        parent_comment_id = data.get('parent_comment_id')
+        reply_text = data.get('reply')
+        parent_level = data.get('parent_level', 0)
+
+        # Validate input
+        if not parent_comment_id or not reply_text:
+            return jsonify({"success": False, "message": "Missing required fields"}), 400
+
+        # Fetch the parent comment
+        parent_comment = Comment.query.get_or_404(parent_comment_id)
+
+        # Check reply depth (optional, based on your app's rules)
+        if int(parent_level) >= 3:
+            return jsonify({"success": False, "message": "Maximum reply depth reached"}), 400
+
+        # Create a new reply
+        new_reply = Comment(
+            content=reply_text,
+            user_id=current_user.id,
+            parent_id=parent_comment_id,
+            university_id=parent_comment.university_id  # Inherit from parent comment
+        )
+
+        # Save to database
+        db.session.add(new_reply)
+        db.session.commit()
+
+        # Return success response with reply details
+        return jsonify({
+            "success": True,
+            "message": "Reply added successfully",
+            "reply": {
+                "id": new_reply.id,
+                "content": new_reply.content,
+                "username": current_user.username,
+                "date_posted": new_reply.date_posted.strftime('%Y-%m-%d %H:%M:%S'),
+                "likes": 0,
+                "dislikes": 0,
+                "is_admin": current_user.is_admin
+            }
+        }), 201
+
+    except Exception as e:
+        # Roll back on error
+        db.session.rollback()
+        current_app.logger.error(f"Error adding reply: {str(e)}")
+        return jsonify({"success": False, "message": "An error occurred while adding your reply"}), 500
 
 @bp.route('/vote/<int:comment_id>/<vote_type>', methods=['POST'])
 @login_required

@@ -426,16 +426,10 @@ function initializeReplyButtonForCard(card, parentLevel) {
  */
 function initializeReplySystem() {
   const replyModal = document.getElementById("replyModal");
-  if (!replyModal) {
-    console.log("Reply modal not found - expected for unauthenticated users");
-    return;
-  }
+  if (!replyModal) return;
 
   const modal = new bootstrap.Modal(replyModal);
-  let currentCommentId = null;
-  let currentParentLevel = 0;
 
-  // Handle reply button clicks
   document.querySelectorAll(".reply-btn").forEach((button) => {
     button.addEventListener("click", function (e) {
       e.preventDefault();
@@ -445,56 +439,37 @@ function initializeReplySystem() {
       }
 
       const commentId = this.getAttribute("data-comment-id");
-      const parentLevel = parseInt(
-        this.getAttribute("data-parent-level") || "0"
-      );
+      console.log("Reply button clicked, commentId:", commentId); // Debug
 
+      if (!commentId) {
+        console.error("No comment ID on reply button");
+        return;
+      }
+
+      const parentLevel = parseInt(this.getAttribute("data-parent-level") || "0");
       if (parentLevel >= 3) {
         showToast("Maximum reply depth reached", "warning");
         return;
       }
 
       const commentCard = this.closest(".comment-card, .reply-card");
-      if (!commentCard) {
-        console.error("Parent comment/reply card not found");
-        return;
-      }
-
-      const contentElement = commentCard.querySelector(
-        ".comment-content, .reply-content"
-      );
-      if (!contentElement) {
-        console.error("Content element not found");
-        return;
-      }
-
-      currentCommentId = commentId;
-      currentParentLevel = parentLevel;
-
+      const contentElement = commentCard.querySelector(".comment-content, .reply-content");
       const parentComment = replyModal.querySelector(".parent-comment");
-      if (parentComment) {
+      if (parentComment && contentElement) {
         parentComment.innerHTML = escapeHTML(contentElement.textContent.trim());
       }
+
+      const submitButton = replyModal.querySelector(".submit-reply");
+      submitButton.setAttribute("data-parent-id", commentId);
+      console.log("Set data-parent-id to:", commentId); // Debug
 
       modal.show();
     });
   });
 
-  // Handle character count for replies
-  const replyTextarea = replyModal.querySelector(".reply-textarea");
-  const charCount = replyModal.querySelector(".reply-char-count");
-
-  if (replyTextarea && charCount) {
-    replyTextarea.addEventListener("input", function () {
-      const remaining = 200 - this.value.length;
-      charCount.textContent = remaining;
-      charCount.classList.toggle("text-danger", remaining < 20);
-    });
-  }
-
-  // Handle reply submission
   const submitButton = replyModal.querySelector(".submit-reply");
   if (submitButton) {
+    submitButton.removeEventListener("click", handleReplySubmission);
     submitButton.addEventListener("click", handleReplySubmission);
   }
 }
@@ -505,16 +480,12 @@ function initializeReplySystem() {
 function handleReplySubmission() {
   const replyModal = document.getElementById("replyModal");
   const replyTextarea = replyModal.querySelector(".reply-textarea");
+  console.log("Submit button data-parent-id:", this.getAttribute("data-parent-id")); // Debug
   const currentCommentId = this.getAttribute("data-parent-id");
-  const currentParentLevel = parseInt(
-    this.getAttribute("data-parent-level") || "0"
-  );
-
-  console.log("Submitting reply for comment ID:", currentCommentId); // Log comment ID
-  console.log("Reply text:", replyTextarea.value.trim()); // Log reply text
 
   if (!currentCommentId) {
     console.error("No comment ID found for reply");
+    showToast("Error: No comment ID found", "danger");
     return;
   }
 
@@ -525,17 +496,10 @@ function handleReplySubmission() {
   }
 
   const originalText = this.innerHTML;
-  this.innerHTML =
-    '<span class="spinner-border spinner-border-sm me-1"></span>Posting...';
+  this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Posting...';
   this.disabled = true;
 
-  submitReplyToServer(
-    currentCommentId,
-    replyText,
-    currentParentLevel,
-    this,
-    originalText
-  );
+  submitReplyToServer(currentCommentId, replyText, this.getAttribute("data-parent-level") || "0", this, originalText);
 }
 
 /**
