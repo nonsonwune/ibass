@@ -187,3 +187,4 @@ go.sum
 migrate.go
 migrate_db.sh
 migrate_db.py
+migrate_down.go
